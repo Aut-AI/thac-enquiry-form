@@ -1179,12 +1179,12 @@ async function submitToSupabase(payload, email) {
       const ref = data[0]?.job_number || 'TH —';
       showSuccess(ref, email);
     } else {
-      // For demo/testing — show success anyway
-      showSuccess('TH ' + Math.floor(5000 + Math.random() * 1000), email);
+      // FIXED
+      alert('Submission failed. Please try again.');
     }
   } catch (err) {
     // For demo/testing — show success
-    showSuccess('TH ' + Math.floor(5000 + Math.random() * 1000), email);
+    alert('Submission failed. Please try again.');
   }
 }
 
