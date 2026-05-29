@@ -290,6 +290,11 @@ function renderJob() {
               <div class="field-value">
                 <strong>${job.site_postcode || '—'}</strong>
                 ${job.site_postcode ? `<br><a href="https://maps.google.com/?q=${job.site_postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);">View on Google Maps →</a>` : ''}
+                ${job.site_lat
+                  ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">📍 ${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}</div>`
+                  : job.site_postcode
+                    ? `<div style="margin-top:6px;"><button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">📍 Get Coordinates</button></div>`
+                    : ''}
               </div>
             </div>
             <div class="detail-field">
@@ -590,6 +595,38 @@ async function submitPaid() {
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// GEOCODING
+// ============================================================
+
+async function geocodePostcode() {
+  if (!job.site_postcode) { showToast('No postcode on this job', 'error'); return; }
+  if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY === 'YOUR_GOOGLE_MAPS_KEY_HERE') {
+    showToast('Google Maps API key not configured', 'error'); return;
+  }
+
+  showToast('Geocoding…', 'warning');
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(job.site_postcode)}&key=${GOOGLE_MAPS_KEY}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.status !== 'OK' || !data.results.length) {
+      showToast('Could not geocode postcode: ' + (data.status || 'unknown error'), 'error');
+      return;
+    }
+
+    const { lat, lng } = data.results[0].geometry.location;
+    await dbUpdate('jobs', `id=eq.${jobId}`, { site_lat: lat, site_lng: lng });
+    job.site_lat = lat;
+    job.site_lng = lng;
+    showToast('Coordinates saved — job will appear on the map');
+    renderJob();
+  } catch (e) {
+    showToast('Geocoding error: ' + e.message, 'error');
   }
 }
 

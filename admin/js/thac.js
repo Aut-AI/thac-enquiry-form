@@ -2,6 +2,9 @@
    THAC Admin CRM — Shared Utilities
    ============================================================ */
 
+// Google Maps API key — replace with your key from Google Cloud Console
+const GOOGLE_MAPS_KEY = 'YOUR_GOOGLE_MAPS_KEY_HERE';
+
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================
@@ -187,6 +190,9 @@ function renderSidebar(activePage) {
         </a>
         <a href="jobs.html" class="nav-item ${activePage === 'jobs' ? 'active' : ''}" data-page="jobs">
           <span class="nav-icon">💼</span> Jobs
+        </a>
+        <a href="map.html" class="nav-item ${activePage === 'map' ? 'active' : ''}" data-page="map">
+          <span class="nav-icon">🗺️</span> Live Map
         </a>
         <a href="clients.html" class="nav-item ${activePage === 'clients' ? 'active' : ''}" data-page="clients">
           <span class="nav-icon">👥</span> Clients

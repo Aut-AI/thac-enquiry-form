@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — Live Map</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+<style>
+#mapCanvas {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+.map-legend {
+  position: absolute;
+  bottom: 32px;
+  left: 32px;
+  background: white;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  z-index: 10;
+  pointer-events: none;
+}
+.map-legend-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: var(--text);
+}
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.map-stats {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: white;
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  z-index: 10;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.map-stat { text-align: center; }
+.map-stat-value { font-size: 20px; font-weight: 700; color: var(--green-dark); }
+.map-stat-label { font-size: 11px; color: var(--text-muted); }
+.map-no-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+}
+</style>
+</head>
+<body>
+<div class="app-layout" id="app" style="height:100vh;overflow:hidden;"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+let mapInstance = null;
+let infoWindow  = null;
+let mapJobs     = [];
+
+const DOT_COLORS = {
+  pending_approval: '#6b7280',
+  red:      '#ef4444',
+  orange:   '#f97316',
+  yellow:   '#eab308',
+  green:    '#22c55e',
+  archived: '#d1d5db',
+};
+
+const DOT_LABELS = {
+  pending_approval: 'Pending Approval',
+  red:      'Unallocated',
+  orange:   'Claimed',
+  yellow:   'Attended',
+  green:    'Report Sent',
+};
+
+async function init() {
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('map')}
+    <div class="main-content" style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
+      <div class="topbar" style="flex-shrink:0;">
+        <div class="topbar-title">Live Map</div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshMap()">↻ Refresh</button>
+        <span style="font-size:13px;color:var(--text-muted)" id="mapStatus">Loading jobs…</span>
+      </div>
+      <div id="mapCanvas"></div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="map-legend-title">Dispatch State</div>
+        ${Object.entries(DOT_LABELS).map(([state, label]) => `
+          <div class="legend-row">
+            <div class="legend-dot" style="background:${DOT_COLORS[state]};"></div>
+            ${label}
+          </div>`).join('')}
+      </div>
+
+      <!-- Stats overlay -->
+      <div class="map-stats" id="mapStats" style="display:none;">
+        <div class="map-stat">
+          <div class="map-stat-value" id="statPlotted">—</div>
+          <div class="map-stat-label">Plotted</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-value" id="statNoCoords" style="color:var(--text-muted);font-size:16px;">—</div>
+          <div class="map-stat-label">No coords</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await loadEnquiryBadge();
+
+  if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY === 'YOUR_GOOGLE_MAPS_KEY_HERE') {
+    document.getElementById('mapCanvas').innerHTML = `
+      <div class="map-no-key">
+        <div style="font-size:48px;">🗺️</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text);">Google Maps API key not set</div>
+        <div style="max-width:400px;text-align:center;line-height:1.6;">
+          Add your key to <strong>admin/js/thac.js</strong>:<br>
+          <code style="background:#f3f4f6;padding:4px 8px;border-radius:4px;font-size:12px;">const GOOGLE_MAPS_KEY = 'your-key-here';</code>
+        </div>
+        <a href="https://console.cloud.google.com" target="_blank" class="btn btn-primary" style="margin-top:8px;">Open Google Cloud Console →</a>
+      </div>`;
+    document.getElementById('mapStatus').textContent = 'API key required';
+    return;
+  }
+
+  loadMapsApi();
+}
+
+function loadMapsApi() {
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&callback=initMap&v=weekly`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = () => {
+    document.getElementById('mapStatus').textContent = 'Failed to load Maps API — check your key';
+  };
+  document.head.appendChild(script);
+}
+
+window.initMap = async function() {
+  mapInstance = new google.maps.Map(document.getElementById('mapCanvas'), {
+    center: { lat: 52.4, lng: -1.5 }, // Centre of England
+    zoom: 7,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
+  });
+
+  infoWindow = new google.maps.InfoWindow();
+  await fetchAndPlot();
+};
+
+async function fetchAndPlot() {
+  document.getElementById('mapStatus').textContent = 'Loading jobs…';
+  try {
+    const jobs = await dbGet('jobs', {
+      'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount',
+      'is_archived': 'not.eq.true',
+      'order': 'created_at.desc',
+      'limit': 200
+    });
+
+    mapJobs = jobs || [];
+    plotJobs(mapJobs);
+  } catch (e) {
+    document.getElementById('mapStatus').textContent = 'Error loading jobs: ' + e.message;
+  }
+}
+
+function plotJobs(jobs) {
+  // Clear existing markers
+  if (window._markers) window._markers.forEach(m => m.setMap(null));
+  window._markers = [];
+
+  const plotted   = jobs.filter(j => j.site_lat && j.site_lng);
+  const noCoords  = jobs.filter(j => !j.site_lat || !j.site_lng);
+
+  document.getElementById('statPlotted').textContent  = plotted.length;
+  document.getElementById('statNoCoords').textContent = noCoords.length;
+  document.getElementById('mapStats').style.display   = 'flex';
+  document.getElementById('mapStatus').textContent    =
+    `${plotted.length} job${plotted.length !== 1 ? 's' : ''} plotted` +
+    (noCoords.length ? ` · ${noCoords.length} missing coordinates` : '');
+
+  if (plotted.length === 0) return;
+
+  const bounds = new google.maps.LatLngBounds();
+
+  plotted.forEach(job => {
+    const pos   = { lat: Number(job.site_lat), lng: Number(job.site_lng) };
+    const color = DOT_COLORS[job.dispatch_state] || '#6b7280';
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+      <circle cx="11" cy="11" r="9" fill="${color}" stroke="white" stroke-width="2.5"/>
+    </svg>`;
+
+    const marker = new google.maps.Marker({
+      position: pos,
+      map: mapInstance,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+        scaledSize: new google.maps.Size(22, 22),
+        anchor: new google.maps.Point(11, 11),
+      },
+      title: job.reference || job.id,
+    });
+
+    marker.addListener('click', () => {
+      const dispatchLabel = DOT_LABELS[job.dispatch_state] || job.dispatch_state || '—';
+      infoWindow.setContent(`
+        <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:210px;">
+          <div style="font-weight:700;font-size:15px;color:#1a3d2b;margin-bottom:2px;">${job.reference || '—'}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:10px;">${getSurveyLabel(job.survey_type || job.job_type)}</div>
+          <div style="font-size:13px;margin-bottom:3px;">📍 ${job.site_postcode || '—'}</div>
+          <div style="font-size:13px;margin-bottom:3px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px;vertical-align:middle;"></span>
+            ${dispatchLabel}
+          </div>
+          ${job.agreed_amount ? `<div style="font-size:13px;margin-bottom:10px;">💰 £${Number(job.agreed_amount).toLocaleString()}</div>` : '<div style="margin-bottom:10px;"></div>'}
+          <a href="job-detail.html?id=${job.id}"
+             style="display:block;background:#1a3d2b;color:white;padding:7px 12px;border-radius:7px;
+                    text-decoration:none;text-align:center;font-size:12px;font-weight:600;">
+            View Job →
+          </a>
+        </div>`);
+      infoWindow.open(mapInstance, marker);
+    });
+
+    window._markers.push(marker);
+    bounds.extend(pos);
+  });
+
+  if (plotted.length > 1) {
+    mapInstance.fitBounds(bounds, { padding: 60 });
+  } else if (plotted.length === 1) {
+    mapInstance.setCenter(bounds.getCenter());
+    mapInstance.setZoom(13);
+  }
+}
+
+async function refreshMap() {
+  if (!mapInstance) return;
+  infoWindow.close();
+  await fetchAndPlot();
+}
+
+init();
+</script>
+</body>
+</html>
