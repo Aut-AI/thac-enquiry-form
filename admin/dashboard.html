@@ -58,6 +58,30 @@ async function init() {
           </div>
         </div>
 
+        <!-- Revenue Summary -->
+        <div class="stat-grid" id="revenueGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;">
+          <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
+            <div class="stat-label" style="color:#16a34a;">💰 This Month</div>
+            <div class="stat-value" id="revMonth" style="color:#16a34a;">—</div>
+            <div class="stat-sub">Invoiced in <span id="revMonthLabel"></span></div>
+          </div>
+          <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
+            <div class="stat-label" style="color:#16a34a;">📊 This Year</div>
+            <div class="stat-value" id="revYear" style="color:#16a34a;">—</div>
+            <div class="stat-sub">Total invoiced <span id="revYearLabel"></span></div>
+          </div>
+          <div class="stat-card" style="background:#fefce8;border-left:3px solid #ca8a04;">
+            <div class="stat-label" style="color:#ca8a04;">⏳ Outstanding</div>
+            <div class="stat-value" id="revOutstanding" style="color:#ca8a04;">—</div>
+            <div class="stat-sub">Invoiced, not yet paid</div>
+          </div>
+          <div class="stat-card" style="background:#fef2f2;border-left:3px solid #dc2626;">
+            <div class="stat-label" style="color:#dc2626;">⚠️ Overdue</div>
+            <div class="stat-value" id="revOverdue" style="color:#dc2626;">—</div>
+            <div class="stat-sub">30+ days unpaid</div>
+          </div>
+        </div>
+
         <!-- Two column layout -->
         <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;">
 
@@ -86,6 +110,7 @@ async function init() {
 
   await Promise.all([
     loadStats(),
+    loadRevenue(),
     loadUrgencyDashboard(),
     loadRecentEnquiries(),
     loadEnquiryBadge()
@@ -110,6 +135,65 @@ async function loadStats() {
     document.getElementById('statLow').textContent      = low?.length      || 0;
   } catch (e) {
     console.error('Stats error:', e);
+  }
+}
+
+// ============================================================
+// REVENUE SUMMARY
+// ============================================================
+
+async function loadRevenue() {
+  try {
+    const now   = new Date();
+    const month = now.getMonth();
+    const year  = now.getFullYear();
+
+    document.getElementById('revMonthLabel').textContent =
+      now.toLocaleString('en-GB', { month: 'long' });
+    document.getElementById('revYearLabel').textContent = year;
+
+    const jobs = await dbGet('jobs', {
+      'select': 'invoice1_date,invoice1_amount,invoice1_paid,invoice2_date,invoice2_amount,invoice2_paid',
+      'invoice1_date': 'not.is.null'
+    });
+
+    if (!jobs) return;
+
+    let thisMonth = 0, thisYear = 0, outstanding = 0, overdue = 0;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    jobs.forEach(j => {
+      // Invoice 1
+      if (j.invoice1_date) {
+        const d = new Date(j.invoice1_date);
+        const amt = Number(j.invoice1_amount) || 0;
+        if (d.getFullYear() === year && d.getMonth() === month) thisMonth += amt;
+        if (d.getFullYear() === year) thisYear += amt;
+        if (!j.invoice1_paid) {
+          outstanding += amt;
+          if (d < thirtyDaysAgo) overdue += amt;
+        }
+      }
+      // Invoice 2
+      if (j.invoice2_date) {
+        const d = new Date(j.invoice2_date);
+        const amt = Number(j.invoice2_amount) || 0;
+        if (d.getFullYear() === year && d.getMonth() === month) thisMonth += amt;
+        if (d.getFullYear() === year) thisYear += amt;
+        if (!j.invoice2_paid) {
+          outstanding += amt;
+          if (d < thirtyDaysAgo) overdue += amt;
+        }
+      }
+    });
+
+    const fmt = n => n > 0 ? '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '£0';
+    document.getElementById('revMonth').textContent       = fmt(thisMonth);
+    document.getElementById('revYear').textContent        = fmt(thisYear);
+    document.getElementById('revOutstanding').textContent = fmt(outstanding);
+    document.getElementById('revOverdue').textContent     = fmt(overdue);
+  } catch (e) {
+    console.error('Revenue error:', e);
   }
 }
 
