@@ -20,8 +20,6 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
-        with:
-          version: latest
 
       - name: Deploy Edge Functions
         env:
@@ -34,6 +32,7 @@ jobs:
           supabase functions deploy notify-surveyor-claimed --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-field-data-uploaded --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-report-sent --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-quote-accepted --project-ref lemppaqgpntadeylzzwn
 
       - name: Set secrets
         env:

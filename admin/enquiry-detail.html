@@ -353,6 +353,13 @@ function renderEnquiry() {
               <label>Type</label>
               <div class="field-value">${enquiry.enquiry_type === 'amendment' ? 'Amendment' : 'New Survey'}</div>
             </div>
+            ${enquiry.accepted_at ? `
+            <div class="detail-field">
+              <label>Accepted</label>
+              <div class="field-value" style="color:var(--green-dark);font-weight:600;">
+                ✅ ${formatDateTime(enquiry.accepted_at)}
+              </div>
+            </div>` : ''}
           </div>
         </div>
 
