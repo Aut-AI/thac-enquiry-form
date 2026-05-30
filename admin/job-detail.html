@@ -301,9 +301,29 @@ function renderJob() {
               <label>Survey Type</label>
               <div class="field-value">${getSurveyLabel(job.survey_type || job.job_type)}</div>
             </div>
-            <div class="detail-field">
+            <div class="detail-field" style="grid-column:1/-1">
               <label>Survey Date</label>
-              <div class="field-value">${formatDate(job.survey_date)}</div>
+              <div id="surveyDateDisplay" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                ${job.survey_date
+                  ? `<span style="font-weight:600;color:${job.survey_date_confirmed ? 'var(--green-mid)' : '#f97316'};">
+                       ${job.survey_date_confirmed ? '🟢 Confirmed' : '🟠 Proposed'}: ${formatDate(job.survey_date)}
+                     </span>`
+                  : `<span style="color:var(--text-muted);">Not set</span>`}
+                <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">
+                  ${job.survey_date ? 'Edit' : 'Set date'}
+                </button>
+              </div>
+              <div id="surveyDateEdit" style="display:none;margin-top:8px;">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input type="date" class="form-control" id="surveyDateInput" value="${job.survey_date || ''}" style="width:auto;">
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400;">
+                    <input type="checkbox" id="surveyDateConfirmed" ${job.survey_date_confirmed ? 'checked' : ''}>
+                    Client confirmed
+                  </label>
+                  <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Cancel</button>
+                  <button class="btn btn-primary btn-sm" onclick="saveSurveyDate()">Save</button>
+                </div>
+              </div>
             </div>
             <div class="detail-field">
               <label>SLA Deadline</label>
@@ -592,6 +612,33 @@ async function submitPaid() {
     Object.assign(job, updates);
     closePaidModal();
     showToast('Invoice marked as paid');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// SURVEY DATE
+// ============================================================
+
+function toggleSurveyDateEdit() {
+  const display = document.getElementById('surveyDateDisplay');
+  const edit    = document.getElementById('surveyDateEdit');
+  const isEditing = edit.style.display !== 'none';
+  display.style.display = isEditing ? '' : 'none';
+  edit.style.display    = isEditing ? 'none' : '';
+}
+
+async function saveSurveyDate() {
+  const date      = document.getElementById('surveyDateInput').value;
+  const confirmed = document.getElementById('surveyDateConfirmed').checked;
+  if (!date) { showToast('Please select a date', 'error'); return; }
+  try {
+    await dbUpdate('jobs', `id=eq.${jobId}`, { survey_date: date, survey_date_confirmed: confirmed });
+    job.survey_date           = date;
+    job.survey_date_confirmed = confirmed;
+    showToast(confirmed ? 'Survey date confirmed ✅' : 'Survey date saved as proposed 🟠');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');

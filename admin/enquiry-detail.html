@@ -340,6 +340,19 @@ async function updateStatus() {
 // ============================================================
 // CONVERT TO JOB
 // ============================================================
+function calcSlaDeadline(deadlineTier) {
+  const daysMap = { '1day': 1, '3days': 3, '5days': 5, '10days': 10 };
+  const days = daysMap[deadlineTier] || 5;
+  let count = 0;
+  let date = new Date();
+  while (count < days) {
+    date.setDate(date.getDate() + 1);
+    const dow = date.getDay();
+    if (dow !== 0 && dow !== 6) count++; // skip weekends
+  }
+  return date.toISOString().slice(0, 10);
+}
+
 function openConvertModal() {
   // Pre-fill from enquiry data
   document.getElementById('cvtName').value = enquiry.contact_name || '';
@@ -408,6 +421,7 @@ async function confirmConvert() {
     const amount = document.getElementById('cvtAmount').value;
     const surchargeMap = { '1day': 150, '3days': 50, '5days': 0, '10days': 0 };
     const urgency_surcharge = surchargeMap[enquiry.deadline_tier] ?? null;
+    const sla_deadline = calcSlaDeadline(enquiry.deadline_tier);
 
     const jobData = await dbInsert('jobs', {
       survey_type: document.getElementById('cvtSurveyType').value,
@@ -420,6 +434,7 @@ async function confirmConvert() {
       agreed_amount: amount ? parseFloat(amount) : null,
       urgency_surcharge: urgency_surcharge || null,
       estimated_tree_count: enquiry.tree_count_band || null,
+      sla_deadline,
       arranging_client_id: clientId,
       internal_notes: document.getElementById('cvtNotes').value.trim() || null,
     });
