@@ -171,14 +171,14 @@ function renderView() {
           </div>
         </div>
 
-        ${surveyor.professional_memberships || surveyor.qualifications ? `
+        ${surveyor.memberships || surveyor.qualifications ? `
         <div class="card">
           <div class="card-title">Qualifications</div>
           <div class="detail-grid">
-            ${surveyor.professional_memberships ? `
+            ${surveyor.memberships ? `
             <div class="detail-field" style="grid-column:1/-1">
               <label>Professional Memberships</label>
-              <div class="field-value">${surveyor.professional_memberships}</div>
+              <div class="field-value">${surveyor.memberships}</div>
             </div>` : ''}
             ${surveyor.qualifications ? `
             <div class="detail-field" style="grid-column:1/-1">
@@ -348,7 +348,7 @@ function renderEdit() {
           <div class="card-title">Qualifications</div>
           <div class="form-group">
             <label>Professional Memberships</label>
-            <input type="text" class="form-control" id="eMemberships" value="${esc(surveyor.professional_memberships)}" placeholder="e.g. AA, ICFor">
+            <input type="text" class="form-control" id="eMemberships" value="${esc(surveyor.memberships)}" placeholder="e.g. AA, ICFor">
           </div>
           <div class="form-group">
             <label>Qualifications</label>
@@ -403,7 +403,7 @@ async function saveSurveyor() {
     pl_expiry_date:           document.getElementById('ePlExp').value              || null,
     dbs_number:               document.getElementById('eDbsNum').value.trim()      || null,
     dbs_expiry_date:          document.getElementById('eDbsExp').value             || null,
-    professional_memberships: document.getElementById('eMemberships').value.trim() || null,
+    memberships:              document.getElementById('eMemberships').value.trim() || null,
     qualifications:           document.getElementById('eQuals').value.trim()       || null,
     notes:                    document.getElementById('eNotes').value.trim()       || null,
   };
