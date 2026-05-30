@@ -2,8 +2,8 @@
    THAC Admin CRM — Shared Utilities
    ============================================================ */
 
-// Google Maps API key — replace with your key from Google Cloud Console
-const GOOGLE_MAPS_KEY = 'YOUR_GOOGLE_MAPS_KEY_HERE';
+// Google Maps API key — AIzaSyBf06LywaBHDNOCzj4Z8Cm0W6XAwk7iETc
+const GOOGLE_MAPS_KEY = 'AIzaSyBf06LywaBHDNOCzj4Z8Cm0W6XAwk7iETc';
 
 // ============================================================
 // TOAST NOTIFICATIONS
