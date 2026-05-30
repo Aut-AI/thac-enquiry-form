@@ -1,0 +1,42 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - 'admin/supabase/functions/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        working-directory: admin
+        run: |
+          supabase functions deploy notify-new-enquiry --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-job-created --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-job-approved --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-surveyor-claimed --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-field-data-uploaded --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy notify-report-sent --project-ref lemppaqgpntadeylzzwn
+
+      - name: Set secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        working-directory: admin
+        run: |
+          supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} --project-ref lemppaqgpntadeylzzwn
+          supabase secrets set SB_THAC_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} --project-ref lemppaqgpntadeylzzwn
