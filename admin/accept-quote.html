@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accept Quote — Trevor Heaps Arboricultural</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: #f0f7f4;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 48px 40px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  text-align: center;
+}
+.logo {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.brand {
+  font-size: 14px;
+  color: #1a3c2e;
+  font-weight: 600;
+  margin-bottom: 40px;
+  letter-spacing: 0.02em;
+}
+.icon { font-size: 56px; margin-bottom: 20px; }
+h1 { font-size: 24px; font-weight: 700; color: #1a3c2e; margin-bottom: 12px; }
+.sub { font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 28px; }
+.ref {
+  display: inline-block;
+  background: #f0f7f4;
+  border: 1px solid #c8e6d4;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a3c2e;
+  margin-bottom: 32px;
+  font-family: monospace;
+}
+.detail-box {
+  background: #f8faf9;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #e8eeeb;
+  font-size: 14px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { color: #666; }
+.detail-value { font-weight: 600; color: #1a1a1a; }
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  margin-bottom: 12px;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.88; }
+.btn-accept { background: #1a3c2e; color: white; }
+.btn-decline { background: #f3f4f6; color: #374151; }
+.footer { font-size: 12px; color: #999; margin-top: 24px; line-height: 1.6; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1a3c2e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="spinner"></div>
+  <p style="color:#666;font-size:14px;">Loading your quote…</p>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://lemppaqgpntadeylzzwn.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
+
+const SURVEY_LABELS = {
+  planning_stage1: 'Planning — Stage 1 (BS5837)',
+  planning_stage2: 'Planning — Stage 2 (AIA/AMS/TPP)',
+  health_safety:   'Tree Condition / Risk Survey',
+  insurer_mortgage:'Insurer / Mortgage Lender',
+  subsidence:      'Building Damage / Subsidence',
+  nhbc:            'Foundation Depths (NHBC)',
+  site_visit:      'Site Visit & Advice',
+  resistograph:    'Resistograph Testing',
+  bs5837:          'BS5837 Tree Survey (Planning)',
+  vta:             'Visual Tree Assessment',
+  amendment:       'Amendment',
+  other:           'Other',
+};
+
+const DEADLINE_LABELS = {
+  '1day':   'Within 1 working day',
+  '3days':  'Within 3 working days',
+  '5days':  'Within 5 working days',
+  '10days': 'Within 10 working days',
+};
+
+const params = new URLSearchParams(window.location.search);
+const id     = params.get('id');
+const action = params.get('action') || 'accept'; // 'accept' or 'decline'
+
+async function supabaseGet(table, query) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  return res.json();
+}
+
+async function supabasePatch(table, filter, data) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(data)
+  });
+}
+
+async function init() {
+  const card = document.getElementById('card');
+
+  if (!id) {
+    showError('Invalid link — no enquiry reference found.');
+    return;
+  }
+
+  try {
+    const data = await supabaseGet('enquiries',
+      `id=eq.${id}&select=id,job_number,contact_name,survey_type,site_postcode,deadline_tier,quoted_price,status&limit=1`
+    );
+
+    if (!data || !data.length) {
+      showError('Quote not found. Please contact us directly.');
+      return;
+    }
+
+    const enq = data[0];
+
+    // Already actioned
+    if (enq.status === 'accepted') {
+      showDone('✅', 'Already Accepted', `This quote (${enq.job_number || id.slice(0,8).toUpperCase()}) has already been accepted. We'll be in touch shortly.`, enq);
+      return;
+    }
+    if (enq.status === 'declined') {
+      showDone('❌', 'Already Declined', `This quote was previously declined. If you've changed your mind, please contact us directly.`, enq);
+      return;
+    }
+
+    if (action === 'decline') {
+      showDeclineConfirm(enq);
+    } else {
+      showAcceptConfirm(enq);
+    }
+  } catch (e) {
+    showError('Something went wrong. Please contact us directly.');
+  }
+}
+
+function showAcceptConfirm(enq) {
+  const price = enq.quoted_price ? '£' + Number(enq.quoted_price).toLocaleString() + ' + VAT' : 'Custom quote';
+  document.getElementById('card').innerHTML = `
+    <div class="logo">🌳</div>
+    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="icon">📋</div>
+    <h1>Confirm Your Quote</h1>
+    <p class="sub">Please review the details below and confirm your acceptance.</p>
+    <div class="ref">${enq.job_number || 'Quote'}</div>
+    <div class="detail-box">
+      <div class="detail-row">
+        <span class="detail-label">Client</span>
+        <span class="detail-value">${enq.contact_name || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Survey Type</span>
+        <span class="detail-value">${SURVEY_LABELS[enq.survey_type] || enq.survey_type || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Site Postcode</span>
+        <span class="detail-value">${enq.site_postcode || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Deadline</span>
+        <span class="detail-value">${DEADLINE_LABELS[enq.deadline_tier] || enq.deadline_tier || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Quote</span>
+        <span class="detail-value" style="color:#1a3c2e;font-size:16px;">${price}</span>
+      </div>
+    </div>
+    <button class="btn btn-accept" onclick="acceptQuote('${enq.id}', '${enq.job_number || ''}')">
+      ✅ Accept Quote
+    </button>
+    <button class="btn btn-decline" onclick="window.location.search='?id=${enq.id}&action=decline'">
+      I'd like to decline
+    </button>
+    <div class="footer">
+      By clicking Accept you confirm your agreement to the quote above.<br>
+      Payment is due 30 days from invoice date.
+    </div>
+  `;
+}
+
+function showDeclineConfirm(enq) {
+  document.getElementById('card').innerHTML = `
+    <div class="logo">🌳</div>
+    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="icon">🤔</div>
+    <h1>Decline This Quote?</h1>
+    <p class="sub">We're sorry to hear that. Are you sure you'd like to decline?</p>
+    <div class="ref">${enq.job_number || 'Quote'}</div>
+    <button class="btn btn-decline" style="margin-bottom:12px;" onclick="declineQuote('${enq.id}')">
+      Yes, decline this quote
+    </button>
+    <button class="btn btn-accept" onclick="window.location.search='?id=${enq.id}'">
+      ← Go back
+    </button>
+  `;
+}
+
+async function acceptQuote(enquiryId, ref) {
+  const btn = document.querySelector('.btn-accept');
+  btn.textContent = 'Confirming…';
+  btn.disabled = true;
+  try {
+    await supabasePatch('enquiries', `id=eq.${enquiryId}`,
+      { status: 'accepted', accepted_at: new Date().toISOString() }
+    );
+    showDone('✅', 'Quote Accepted!',
+      `Thank you! We've received your acceptance for ${ref || 'your quote'}. Trevor will be in touch shortly to arrange the survey.`,
+      { job_number: ref }
+    );
+  } catch (e) {
+    btn.textContent = '✅ Accept Quote';
+    btn.disabled = false;
+    alert('Something went wrong — please try again or contact us directly.');
+  }
+}
+
+async function declineQuote(enquiryId) {
+  const btn = document.querySelector('.btn-decline');
+  btn.textContent = 'Declining…';
+  btn.disabled = true;
+  try {
+    await supabasePatch('enquiries', `id=eq.${enquiryId}`, { status: 'declined' });
+    document.getElementById('card').innerHTML = `
+      <div class="logo">🌳</div>
+      <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+      <div class="icon">👋</div>
+      <h1>Quote Declined</h1>
+      <p class="sub">No problem at all. If you change your mind or have any questions, please don't hesitate to get in touch.</p>
+      <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.<br>Thank you for considering us.</div>
+    `;
+  } catch (e) {
+    btn.textContent = 'Yes, decline this quote';
+    btn.disabled = false;
+    alert('Something went wrong — please try again or contact us directly.');
+  }
+}
+
+function showDone(icon, title, message, enq) {
+  document.getElementById('card').innerHTML = `
+    <div class="logo">🌳</div>
+    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="icon">${icon}</div>
+    <h1>${title}</h1>
+    <p class="sub">${message}</p>
+    ${enq?.job_number ? `<div class="ref">${enq.job_number}</div>` : ''}
+    <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+  `;
+}
+
+function showError(msg) {
+  document.getElementById('card').innerHTML = `
+    <div class="logo">🌳</div>
+    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="icon">⚠️</div>
+    <h1>Something went wrong</h1>
+    <p class="sub">${msg}</p>
+    <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -394,6 +394,10 @@ function buildQuoteEmail() {
   const deadlineLabel = getDeadlineLabel(enquiry.deadline_tier);
   const price = '£' + Number(enquiry.quoted_price).toLocaleString() + ' + VAT';
   const subject = `Your Tree Survey Quote — ${enquiry.job_number || 'THAC'} | ${price}`;
+
+  const acceptLink = `https://ciaran-aut-ai.github.io/thac-admin/accept-quote.html?id=${enquiryId}`;
+  const declineLink = `https://ciaran-aut-ai.github.io/thac-admin/accept-quote.html?id=${enquiryId}&action=decline`;
+
   const body = [
     `Dear ${enquiry.contact_name || 'there'},`,
     '',
@@ -405,10 +409,14 @@ function buildQuoteEmail() {
     `Deadline:      ${deadlineLabel}`,
     `Quote:         ${price}`,
     '',
-    `To accept this quote, please reply to this email or call us directly. ` +
-    `Once accepted, we will send you a short form to confirm the site details.`,
+    `To accept or decline this quote, simply click one of the links below:`,
     '',
-    `This quote is valid for 30 days from today.`,
+    `Accept: ${acceptLink}`,
+    `Decline: ${declineLink}`,
+    '',
+    `Or reply to this email if you have any questions.`,
+    '',
+    `This quote is valid for 30 days from today. Payment is due 30 days from invoice date.`,
     '',
     `Kind regards,`,
     `Trevor Heaps`,
