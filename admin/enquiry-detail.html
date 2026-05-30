@@ -265,6 +265,29 @@ function renderEnquiry() {
         </div>
         `}
 
+        <!-- Internal Notes -->
+        <div class="card">
+          <div class="card-title">
+            Internal Notes
+            <button class="btn btn-secondary btn-sm" id="enqNoteBtn" onclick="toggleEnqNote()">
+              ${enquiry.internal_notes ? 'Edit' : 'Add note'}
+            </button>
+          </div>
+          <div id="enqNoteDisplay">
+            ${enquiry.internal_notes
+              ? `<div style="font-size:13px;line-height:1.6;background:var(--amber-light);padding:12px;border-radius:8px;">${enquiry.internal_notes}</div>`
+              : `<div style="font-size:13px;color:var(--text-muted);">No notes yet — log calls, follow-ups, or quote discussions here.</div>`}
+          </div>
+          <div id="enqNoteEditor" style="display:none;margin-top:8px;">
+            <textarea class="form-control" id="enqNoteText" rows="4"
+              placeholder="e.g. Called 30 May — client happy with quote, confirming by Friday...">${enquiry.internal_notes || ''}</textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-secondary" onclick="toggleEnqNote()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveEnqNote()">Save Note</button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Right column -->
@@ -293,8 +316,12 @@ function renderEnquiry() {
         <div class="card">
           <div class="card-title">Quick Actions</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <a href="mailto:${enquiry.contact_email}?subject=Re: Your Tree Survey Enquiry ${enquiry.job_number || ''}" class="btn btn-secondary w-100" style="justify-content:center;">
-              📧 Email Client
+            ${!isAmendment && enquiry.quoted_price ? `
+            <a href="${buildQuoteEmail()}" class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);">
+              📧 Send Quote Email
+            </a>` : ''}
+            <a href="mailto:${enquiry.contact_email}?subject=Re: Your Arboricultural Survey Enquiry ${enquiry.job_number || ''}" class="btn btn-secondary w-100" style="justify-content:center;">
+              📧 General Email
             </a>
             ${enquiry.contact_phone ? `
             <a href="tel:${enquiry.contact_phone}" class="btn btn-secondary w-100" style="justify-content:center;">
@@ -332,6 +359,63 @@ function renderEnquiry() {
       </div>
     </div>
   `;
+}
+
+// ============================================================
+// INTERNAL NOTES
+// ============================================================
+
+function toggleEnqNote() {
+  const display = document.getElementById('enqNoteDisplay');
+  const editor  = document.getElementById('enqNoteEditor');
+  const btn     = document.getElementById('enqNoteBtn');
+  const isEditing = editor.style.display !== 'none';
+  display.style.display = isEditing ? '' : 'none';
+  editor.style.display  = isEditing ? 'none' : '';
+  btn.textContent = isEditing ? (enquiry.internal_notes ? 'Edit' : 'Add note') : 'Cancel';
+}
+
+async function saveEnqNote() {
+  const text = document.getElementById('enqNoteText').value.trim();
+  try {
+    await dbUpdate('enquiries', `id=eq.${enquiryId}`, { internal_notes: text || null });
+    enquiry.internal_notes = text || null;
+    showToast('Note saved');
+    renderEnquiry();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// SEND QUOTE EMAIL
+// ============================================================
+
+function buildQuoteEmail() {
+  const surveyLabel = getSurveyLabel(enquiry.survey_type);
+  const deadlineLabel = getDeadlineLabel(enquiry.deadline_tier);
+  const price = '£' + Number(enquiry.quoted_price).toLocaleString() + ' + VAT';
+  const subject = `Your Tree Survey Quote — ${enquiry.job_number || 'THAC'} | ${price}`;
+  const body = [
+    `Dear ${enquiry.contact_name || 'there'},`,
+    '',
+    `Thank you for your enquiry. Please find your quote below.`,
+    '',
+    `Reference:     ${enquiry.job_number || 'Pending'}`,
+    `Survey Type:   ${surveyLabel}`,
+    `Site Postcode: ${enquiry.site_postcode || '—'}`,
+    `Deadline:      ${deadlineLabel}`,
+    `Quote:         ${price}`,
+    '',
+    `To accept this quote, please reply to this email or call us directly. ` +
+    `Once accepted, we will send you a short form to confirm the site details.`,
+    '',
+    `This quote is valid for 30 days from today.`,
+    '',
+    `Kind regards,`,
+    `Trevor Heaps`,
+    `Trevor Heaps Arboricultural Consultancy Ltd.`,
+  ].join('\n');
+
+  return `mailto:${enquiry.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 async function updateStatus() {
