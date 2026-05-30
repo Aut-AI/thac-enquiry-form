@@ -134,7 +134,8 @@ function slaCountdown(dateStr) {
 
 function dispatchBadge(state) {
   const map = {
-    pending_approval: ['⏳ Pending', 'badge-low'],
+    pending_approval:  ['⏳ Pending',          'badge-low'],
+    waiting_for_plans: ['🕐 Waiting for Plans', 'badge-low'],
     red:      ['🔴 Unallocated', 'badge-urgent'],
     orange:   ['🟠 Claimed',     'badge-elevated'],
     yellow:   ['🟡 Attended',    'badge-standard'],

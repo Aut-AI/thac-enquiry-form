@@ -97,7 +97,8 @@ requireAuth();
 const params = new URLSearchParams(window.location.search);
 const jobId = params.get('id');
 let job = null;
-let invoiceTarget = 1; // 1 or 2 — which invoice number the modal is acting on
+let stage2Job = null; // child job if this is a Stage 1 two-stage job
+let invoiceTarget = 1;
 let paidTarget = 1;
 
 if (!jobId) window.location.href = 'jobs.html';
@@ -128,6 +129,13 @@ async function loadJob() {
     }
     job = data[0];
     document.getElementById('pageTitle').textContent = job.reference || 'Job Detail';
+
+    // Load Stage 2 child job if this is a two-stage Stage 1
+    if (job.is_two_stage && !job.parent_job_id) {
+      const children = await dbGet('jobs', { 'parent_job_id': `eq.${jobId}`, 'limit': 1, 'select': 'id,reference,dispatch_state' });
+      stage2Job = (children && children.length) ? children[0] : null;
+    }
+
     renderJob();
   } catch (e) {
     document.getElementById('pageBody').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
@@ -136,7 +144,8 @@ async function loadJob() {
 
 function getDispatchBadge(state) {
   const map = {
-    pending_approval: { label: '⏳ Pending Approval', cls: 'badge-low' },
+    pending_approval:  { label: '⏳ Pending Approval',  cls: 'badge-low' },
+    waiting_for_plans: { label: '🕐 Waiting for Plans', cls: 'badge-low' },
     red:      { label: '🔴 Unallocated', cls: 'badge-urgent' },
     orange:   { label: '🟠 Claimed',     cls: 'badge-elevated' },
     yellow:   { label: '🟡 Attended',    cls: 'badge-standard' },
@@ -538,7 +547,8 @@ function renderJob() {
           <div class="form-group">
             <label>Dispatch State</label>
             <select class="form-control" id="dispatchSelect">
-              <option value="pending_approval" ${job.dispatch_state==='pending_approval'?'selected':''}>⏳ Pending Approval</option>
+              <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>⏳ Pending Approval</option>
+              <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>🕐 Waiting for Plans</option>
               <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>🔴 Unallocated</option>
               <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>🟠 Claimed</option>
               <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>🟡 Attended</option>
@@ -574,8 +584,26 @@ function renderJob() {
               <label>Two-Stage Job</label>
               <div class="field-value">${job.is_two_stage ? 'Yes' : 'No'}</div>
             </div>
+            ${job.parent_job_id ? `
+            <div class="detail-field">
+              <label>Stage</label>
+              <div class="field-value">
+                Stage 2
+                <br><a href="job-detail.html?id=${job.parent_job_id}" style="font-size:12px;color:var(--green-mid);">← View Stage 1 →</a>
+              </div>
+            </div>` : ''}
+            ${(job.is_two_stage && !job.parent_job_id && stage2Job) ? `
+            <div class="detail-field">
+              <label>Stage 2</label>
+              <div class="field-value">
+                <a href="job-detail.html?id=${stage2Job.id}" style="color:var(--green-mid);font-weight:600;">${stage2Job.reference || 'View Stage 2'} →</a>
+                <br><span style="font-size:12px;color:var(--text-muted);">${getDispatchBadge(stage2Job.dispatch_state)}</span>
+              </div>
+            </div>` : ''}
           </div>
         </div>
+
+        ${renderTwoStageActions()}
 
       </div>
     </div>
@@ -800,6 +828,88 @@ async function geocodePostcode() {
     renderJob();
   } catch (e) {
     showToast('Geocoding error: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// TWO-STAGE BS5837
+// ============================================================
+
+function renderTwoStageActions() {
+  // Stage 1: show "Create Stage 2" if no child yet
+  if (job.is_two_stage && !job.parent_job_id && !stage2Job) {
+    return `
+      <div class="card">
+        <div class="card-title">Two-Stage Job</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+          Stage 1 complete. Create the Stage 2 job when the architect sends revised plans.
+          It will sit in <strong>Waiting for Plans</strong> until you activate it.
+        </p>
+        <button class="btn btn-primary w-100" style="justify-content:center;" onclick="createStage2()">
+          ➕ Create Stage 2 Job
+        </button>
+      </div>`;
+  }
+  // Stage 2: show "Activate" button when waiting for plans
+  if (job.parent_job_id && job.dispatch_state === 'waiting_for_plans') {
+    return `
+      <div class="card">
+        <div class="card-title">Stage 2 — Waiting for Plans</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+          Plans received from architect? Activate this job to start the SLA timer
+          and make it live on the map.
+        </p>
+        <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="activateStage2()">
+          ✅ Plans Received — Activate Job
+        </button>
+      </div>`;
+  }
+  return '';
+}
+
+async function createStage2() {
+  if (!confirm('Create a Stage 2 job linked to this one? It will start in "Waiting for Plans" status.')) return;
+  try {
+    const result = await dbInsert('jobs', {
+      parent_job_id:     jobId,
+      survey_type:       job.survey_type,
+      site_postcode:     job.site_postcode,
+      urgency_state:     job.urgency_state,
+      dispatch_state:    'waiting_for_plans',
+      billing_mode:      'staged',
+      quoted_amount:     job.quoted_amount,
+      agreed_amount:     job.agreed_amount,
+      is_two_stage:      true,
+      arranging_client_id: job.arranging_client_id,
+      internal_notes:    'Stage 2 — awaiting revised plans from architect.',
+    });
+    const newJob = Array.isArray(result) ? result[0] : result;
+    stage2Job = { id: newJob.id, reference: newJob.reference, dispatch_state: 'waiting_for_plans' };
+    showToast('Stage 2 job created — ' + (newJob.reference || 'no reference yet'));
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function activateStage2() {
+  if (!confirm('Activate this Stage 2 job? SLA timer will start from today and the job will go live on the map.')) return;
+  try {
+    const slaMap   = { red: 1, orange: 3, yellow: 5, grey: 10 };
+    const days     = slaMap[job.urgency_state] || 5;
+    let count = 0, date = new Date();
+    while (count < days) {
+      date.setDate(date.getDate() + 1);
+      if (date.getDay() !== 0 && date.getDay() !== 6) count++;
+    }
+    const sla_deadline = date.toISOString().slice(0, 10);
+    await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'pending_approval', sla_deadline });
+    job.dispatch_state = 'pending_approval';
+    job.sla_deadline   = sla_deadline;
+    showToast('Stage 2 activated — SLA set to ' + formatDate(sla_deadline));
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
   }
 }
 

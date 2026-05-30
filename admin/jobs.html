@@ -44,6 +44,7 @@ async function init() {
           <div class="filter-bar">
             <button class="filter-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all',this)">All</button>
             <button class="filter-btn ${activeFilter==='pending_approval'?'active':''}" onclick="setFilter('pending_approval',this)">⏳ Pending</button>
+            <button class="filter-btn ${activeFilter==='waiting_for_plans'?'active':''}" onclick="setFilter('waiting_for_plans',this)">🕐 Waiting</button>
             <button class="filter-btn ${activeFilter==='red'?'active':''}" onclick="setFilter('red',this)">🔴 Unallocated</button>
             <button class="filter-btn ${activeFilter==='orange'?'active':''}" onclick="setFilter('orange',this)">🟠 Claimed</button>
             <button class="filter-btn ${activeFilter==='yellow'?'active':''}" onclick="setFilter('yellow',this)">🟡 Attended</button>
@@ -85,7 +86,8 @@ async function loadJobs() {
 
 function getDispatchLabel(state) {
   switch(state) {
-    case 'pending_approval': return { label: '⏳ Pending Approval', class: 'badge-low' };
+    case 'pending_approval':  return { label: '⏳ Pending Approval',  class: 'badge-low' };
+    case 'waiting_for_plans': return { label: '🕐 Waiting for Plans', class: 'badge-low' };
     case 'red':    return { label: '🔴 Unallocated', class: 'badge-urgent' };
     case 'orange': return { label: '🟠 Claimed',     class: 'badge-elevated' };
     case 'yellow': return { label: '🟡 Attended',    class: 'badge-standard' };
