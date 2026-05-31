@@ -1279,7 +1279,10 @@ async function loadUploadedFiles() {
 
     const card = `
       <div class="card">
-        <div class="card-title">Uploaded Files</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="card-title" style="margin:0;">Uploaded Files</div>
+          <button class="btn btn-secondary btn-sm" onclick="downloadAllFiles('${jobId}')">⬇️ Download All</button>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${html}
         </div>
@@ -1303,6 +1306,30 @@ async function downloadFile(filePath) {
     const { data, error } = await supabase.storage.from('THAC-CRM_Bucket').createSignedUrl(filePath, 3600);
     if (error) throw error;
     if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function downloadAllFiles(jobId) {
+  try {
+    const files = await dbGet('job_files', { 'job_id': `eq.${jobId}` });
+    if (!files || files.length === 0) {
+      showToast('No files to download', 'error');
+      return;
+    }
+
+    showToast(`Preparing ${files.length} file(s) for download...`);
+
+    for (const f of files) {
+      const { data, error } = await supabase.storage.from('THAC-CRM_Bucket').createSignedUrl(f.file_path, 3600);
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+        await new Promise(resolve => setTimeout(resolve, 200)); // Stagger opens
+      }
+    }
+
+    showToast(`${files.length} file(s) downloading`);
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
