@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirm Your Quote Details — THAC</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #1a3a2a;
+    --green-mid: #2d5a3d;
+    --green-light: #4a8c5c;
+    --green-pale: #e8f2ec;
+    --amber: #c8773a;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --border: #d0ddd4;
+    --bg: #f7faf8;
+    --white: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+  }
+
+  .form-shell { max-width: 640px; margin: 0 auto; }
+
+  .form-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .form-header .logo-mark {
+    width: 48px;
+    height: 48px;
+    background: var(--green-mid);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+
+  .form-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 8px;
+  }
+
+  .form-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green-dark);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .card-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .field-group input,
+  .field-group textarea,
+  .field-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .field-group textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .field-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .required { color: #dc2626; }
+
+  .btn {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-primary {
+    background: var(--green-dark);
+    color: var(--white);
+  }
+
+  .btn-primary:hover {
+    background: var(--green-mid);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-loading {
+    opacity: 0.7;
+  }
+
+  .success-message {
+    background: #dcfce7;
+    border-left: 4px solid #16a34a;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .success-message p {
+    color: #15803d;
+    font-size: 14px;
+  }
+
+  .error-message {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .error-message p {
+    color: #991b1b;
+    font-size: 14px;
+  }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="form-shell">
+  <div class="form-header">
+    <div class="logo-mark">🌳</div>
+    <h1>Confirm Your Details</h1>
+    <p>Please provide the following information so we can proceed with your survey</p>
+  </div>
+
+  <div id="formContainer"></div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const enquiryId = params.get('id');
+
+let enquiry = null;
+
+async function init() {
+  if (!enquiryId) {
+    document.getElementById('formContainer').innerHTML = `
+      <div class="card">
+        <p style="color: #dc2626;">Invalid or missing quote reference. Please check your email link.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Fetch enquiry details
+  try {
+    const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/enquiries?id=eq.${enquiryId}&select=*`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        }
+      }
+    );
+
+    const data = await response.json();
+    if (!data || data.length === 0) {
+      document.getElementById('formContainer').innerHTML = `
+        <div class="card">
+          <p style="color: #dc2626;">Quote not found. Please check your email link.</p>
+        </div>
+      `;
+      return;
+    }
+
+    enquiry = data[0];
+
+    // If status is not 'quoted', don't allow editing
+    if (enquiry.status !== 'quoted') {
+      document.getElementById('formContainer').innerHTML = `
+        <div class="card">
+          <div class="error-message">
+            <p>This quote has already been processed. If you need to make changes, please contact us.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    renderForm();
+  } catch (e) {
+    document.getElementById('formContainer').innerHTML = `
+      <div class="card">
+        <p style="color: #dc2626;">Error loading quote. Please try again.</p>
+      </div>
+    `;
+    console.error(e);
+  }
+}
+
+function renderForm() {
+  const html = `
+    <div class="card">
+      <div class="card-title">Quote Reference</div>
+      <p style="font-size: 18px; font-weight: 600; color: var(--green-dark); margin-bottom: 8px;">
+        ${enquiry.job_number || '—'}
+      </p>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        ${enquiry.contact_name || '—'} • ${new Date(enquiry.submitted_at).toLocaleDateString('en-GB')}
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">End Client Details</div>
+      <div class="card-subtitle">The person or company that owns/occupies the property</div>
+
+      <div class="field-group">
+        <label>End Client Name <span class="required">*</span></label>
+        <input type="text" id="endClientName" placeholder="e.g. John Smith or Smith Properties Ltd" value="${enquiry.end_client_name || ''}">
+        <div class="field-hint">If the property is owned/occupied by someone other than you</div>
+      </div>
+
+      <div class="field-group">
+        <label>End Client Email</label>
+        <input type="email" id="endClientEmail" placeholder="e.g. john@example.com" value="${enquiry.end_client_email || ''}">
+        <div class="field-hint">We'll send the report to this address if different from yours</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Billing Contact</div>
+      <div class="card-subtitle">Where should we send the invoice?</div>
+
+      <div class="field-group">
+        <label>Billing Contact Name <span class="required">*</span></label>
+        <input type="text" id="billingContactName" placeholder="e.g. Jane Doe" value="${enquiry.billing_contact_name || ''}">
+      </div>
+
+      <div class="field-group">
+        <label>Billing Email <span class="required">*</span></label>
+        <input type="email" id="billingContactEmail" placeholder="e.g. jane@example.com" value="${enquiry.billing_contact_email || ''}">
+      </div>
+
+      <div class="field-group">
+        <label>Billing Address <span class="required">*</span></label>
+        <textarea id="billingAddress" placeholder="e.g. 123 Main Street, London, SW1A 1AA">${enquiry.billing_address || ''}</textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Report Addressee</div>
+      <div class="card-subtitle">Where should we address the survey report?</div>
+
+      <div class="field-group">
+        <label>Report Addressee Name <span class="required">*</span></label>
+        <input type="text" id="reportAddresseeName" placeholder="e.g. The Property Manager" value="${enquiry.report_addressee_name || ''}">
+      </div>
+
+      <div class="field-group">
+        <label>Report Address <span class="required">*</span></label>
+        <textarea id="reportAddresseeAddress" placeholder="e.g. 123 Main Street, London, SW1A 1AA">${enquiry.report_addressee_address || ''}</textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Site Access Information</div>
+      <div class="card-subtitle">Help our surveyor access the property safely</div>
+
+      <div class="field-group">
+        <label>Site Access Notes</label>
+        <textarea id="siteAccessNotes" placeholder="e.g. Main gate has a padlock (code: 1234), contact John on 07700 123456, dogs on site, best access via side gate">${enquiry.client_site_access || ''}</textarea>
+        <div class="field-hint">Include gate codes, contact numbers, access times, hazards, dogs on site, etc</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 40px;">
+      <button class="btn btn-primary w-100" style="width: 100%;" onclick="submitDetails()" id="submitBtn">
+        ✓ Confirm & Accept Quote
+      </button>
+    </div>
+  `;
+
+  document.getElementById('formContainer').innerHTML = html;
+}
+
+async function submitDetails() {
+  const endClientName = document.getElementById('endClientName').value.trim();
+  const billingContactName = document.getElementById('billingContactName').value.trim();
+  const billingContactEmail = document.getElementById('billingContactEmail').value.trim();
+  const billingAddress = document.getElementById('billingAddress').value.trim();
+  const reportAddresseeName = document.getElementById('reportAddresseeName').value.trim();
+  const reportAddresseeAddress = document.getElementById('reportAddresseeAddress').value.trim();
+
+  let valid = true;
+  if (!endClientName) { alert('End Client Name is required'); valid = false; }
+  if (!billingContactName) { alert('Billing Contact Name is required'); valid = false; }
+  if (!billingContactEmail || !billingContactEmail.includes('@')) { alert('Valid Billing Email is required'); valid = false; }
+  if (!billingAddress) { alert('Billing Address is required'); valid = false; }
+  if (!reportAddresseeName) { alert('Report Addressee Name is required'); valid = false; }
+  if (!reportAddresseeAddress) { alert('Report Address is required'); valid = false; }
+
+  if (!valid) return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Confirming...';
+
+  try {
+    const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/enquiries?id=eq.${enquiryId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        end_client_name: endClientName,
+        billing_contact_name: billingContactName,
+        billing_contact_email: billingContactEmail,
+        billing_address: billingAddress,
+        report_addressee_name: reportAddresseeName,
+        report_addressee_address: reportAddresseeAddress,
+        client_site_access: document.getElementById('siteAccessNotes').value.trim() || null,
+        status: 'accepted',
+        accepted_at: new Date().toISOString()
+      })
+    });
+
+    if (response.ok) {
+      document.getElementById('formContainer').innerHTML = `
+        <div class="card">
+          <div class="success-message">
+            <p style="margin: 0; font-size: 16px; font-weight: 600;">✓ Quote Confirmed</p>
+          </div>
+          <p style="margin: 16px 0 0 0; line-height: 1.6;">
+            Thank you for confirming your details. We've received your information and our team will be in touch shortly to arrange the survey.
+          </p>
+          <p style="margin: 12px 0 0 0; font-size: 13px; color: var(--text-muted);">
+            Reference: <strong>${enquiry.job_number}</strong>
+          </p>
+        </div>
+      `;
+    } else {
+      alert('Error saving details. Please try again.');
+      btn.disabled = false;
+      btn.textContent = '✓ Confirm & Accept Quote';
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '✓ Confirm & Accept Quote';
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
