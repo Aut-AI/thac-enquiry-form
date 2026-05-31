@@ -245,10 +245,14 @@ function renderEnquiry() {
               <div class="field-value">${enquiry.tree_count_band ? enquiry.tree_count_band + ' trees' : '—'}</div>
             </div>
             <div class="detail-field">
-              <label>Site Postcode</label>
+              <label>Site Address</label>
               <div class="field-value">
-                <strong>${enquiry.site_postcode || '—'}</strong>
-                ${enquiry.site_postcode ? `<br><a href="https://maps.google.com/?q=${enquiry.site_postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);">View on Google Maps →</a>` : ''}
+                <strong>
+                  ${enquiry.site_street ? enquiry.site_street + '<br>' : ''}
+                  ${enquiry.site_city || ''}${enquiry.site_postcode ? ' ' + enquiry.site_postcode : ''}
+                  ${!enquiry.site_street && !enquiry.site_city && !enquiry.site_postcode ? '—' : ''}
+                </strong>
+                ${enquiry.site_postcode ? `<br><a href="https://maps.google.com/?q=${enquiry.site_postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);margin-top:6px;display:inline-block;">View on Google Maps →</a>` : ''}
               </div>
             </div>
             <div class="detail-field">
