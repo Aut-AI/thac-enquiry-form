@@ -334,14 +334,32 @@ function showStep2(enquiryId, ref, contactName) {
       </div>
 
       <!-- Section 3: Report cover page -->
-      <div style="${SEC_STYLE}">3. Report addressee</div>
-      <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">Name and address that will appear on the front of the arboricultural report. Defaults to the end client details above if left blank.</p>
+      <div style="${SEC_STYLE}">3. Report details</div>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">Name, title, and address that will appear on the front of the arboricultural report. Defaults to the end client details above if left blank.</p>
       ${field('reportName',    'Name on report',    '(optional — defaults to end client)', 'text', 'e.g. Mr & Mrs Smith')}
+      ${field('reportTitle',   'Title on report',   '(e.g. "Managing Director" or "Homeowner")', 'text', 'e.g. Managing Director')}
       ${field('reportAddress', 'Address on report', '(optional)', 'text', '12 High Street, Bournemouth, BH1 1AA', 2)}
 
-      <!-- Section 4: Site access -->
+      <!-- Section 4: Site access & parking -->
       <div style="${SEC_STYLE}">4. Site access</div>
-      ${field('siteAccess', 'Access notes', '(gate codes, parking, contact on site)', 'text', 'e.g. Gate code 1234, park on the drive, call John on arrival', 2)}
+      ${field('accessDetails', 'Access details', '(e.g. gate codes, key locations, security information)', 'text', 'e.g. Gate code 1234, key under mat, call John on arrival', 2)}
+      ${field('parkingDetails', 'Parking details', '(e.g. where to park, restrictions)', 'text', 'e.g. Park on the drive, no parking on street', 2)}
+
+      <!-- Section 5: Site boundary (optional) -->
+      <div style="${SEC_STYLE}">5. Site boundary <span style="font-weight:400;color:#9ca3af;">(optional)</span></div>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">You can optionally draw the survey boundary on a map. This helps the surveyor prepare.</p>
+      <div id="mapContainer" style="width:100%;height:300px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;background:#f9fafb;"></div>
+      <p style="font-size:12px;color:#6b7280;">💡 If you're not sure of the exact boundary, you can skip this and let us know on the day.</p>
+
+      <!-- Section 6: Terms & Conditions -->
+      <div style="${SEC_STYLE}">6. Confirm acceptance</div>
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:14px;margin-bottom:14px;">
+        <input type="checkbox" id="tcAccepted" style="margin-top:2px;cursor:pointer;">
+        <span>I accept the <a href="javascript:void(0)" onclick="showTerms()" style="color:#1a3c2e;text-decoration:underline;font-weight:600;">standard terms and conditions</a> for this survey</span>
+      </label>
+      <div id="acceptedDate" style="padding:10px 14px;background:#f9fafb;border-radius:8px;font-size:13px;color:#6b7280;">
+        <strong>Acceptance date & time:</strong> <span id="acceptTime"></span>
+      </div>
 
     </div>
 
@@ -361,6 +379,13 @@ function toggleEndClient(val) {
 
 async function submitStep2(enquiryId, ref) {
   const btn = document.querySelector('.btn-accept');
+
+  // Validate T&C acceptance
+  if (!document.getElementById('tcAccepted').checked) {
+    alert('Please accept the terms and conditions to continue.');
+    return;
+  }
+
   btn.textContent = 'Saving…';
   btn.disabled = true;
 
@@ -383,7 +408,11 @@ async function submitStep2(enquiryId, ref) {
       end_client_email:         endClientEmail,
       report_addressee_name:    finalReportName,
       report_addressee_address: finalReportAddress,
-      client_site_access:       document.getElementById('siteAccess').value.trim() || null,
+      report_title:             document.getElementById('reportTitle').value.trim() || null,
+      access_details:           document.getElementById('accessDetails').value.trim() || null,
+      parking_details:          document.getElementById('parkingDetails').value.trim() || null,
+      tc_accepted:              true,
+      tc_accepted_at:           new Date().toISOString(),
       client_details_at:        new Date().toISOString(),
     });
     showDone('🎉', 'All Done!',
@@ -456,6 +485,32 @@ function showError(msg) {
     <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
   `;
 }
+
+function showTerms() {
+  alert('Standard Terms & Conditions for Tree Survey Services\n\n' +
+    '• The survey will be carried out in accordance with relevant British Standards\n' +
+    '• Payment is due 30 days from invoice date\n' +
+    '• Site access and safety requirements must be agreed before survey date\n' +
+    '• Any additional work identified during the survey will be quoted separately\n' +
+    '• The report is prepared based on information provided and site conditions on the survey date\n\n' +
+    'For full terms and conditions, please contact Trevor Heaps Arboricultural Consultancy Ltd.');
+}
+
+function updateAcceptanceTime() {
+  const now = new Date();
+  const formatted = now.toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  const elem = document.getElementById('acceptTime');
+  if (elem) elem.textContent = formatted;
+}
+
+// Initialize timestamp and update every second while form is displayed
+document.addEventListener('DOMContentLoaded', () => {
+  updateAcceptanceTime();
+  setInterval(updateAcceptanceTime, 1000);
+});
 
 init();
 </script>
