@@ -452,6 +452,8 @@ async function submitStep2(enquiryId, ref) {
         created_at: new Date().toISOString(),
       };
 
+      console.log('Creating job with data:', jobData);
+
       const jobResp = await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
         method: 'POST',
         headers: {
@@ -463,12 +465,19 @@ async function submitStep2(enquiryId, ref) {
         body: JSON.stringify(jobData)
       });
 
-      if (jobResp.ok) {
-        const createdJob = await jobResp.json();
-        console.log('Job created:', createdJob);
+      const jobRespText = await jobResp.text();
+      console.log('Job response status:', jobResp.status);
+      console.log('Job response:', jobRespText);
+
+      if (!jobResp.ok) {
+        console.error('Job creation failed:', jobRespText);
+        // Still show success to client, but log the error
+      } else {
+        const createdJob = JSON.parse(jobRespText);
+        console.log('✅ Job created successfully:', createdJob[0]?.id);
       }
     } catch (jobErr) {
-      console.error('Error creating job:', jobErr);
+      console.error('Error creating job:', jobErr.message);
       // Don't block the success flow if job creation fails
     }
 
