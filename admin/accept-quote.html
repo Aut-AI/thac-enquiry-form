@@ -233,7 +233,7 @@ function showAcceptConfirm(enq) {
         <span class="detail-value" style="color:#1a3c2e;font-size:16px;">${price}</span>
       </div>
     </div>
-    <button class="btn btn-accept" onclick="acceptQuote('${enq.id}', '${enq.job_number || ''}', '${(enq.contact_name||'').replace(/'/g,"\\'")}', '${(enq.site_postcode||'').replace(/'/g,"\\'")}')">
+    <button class="btn btn-accept" onclick="acceptQuote('${enq.id}', '${enq.job_number || ''}', '${(enq.contact_name||'').replace(/'/g,"\\'")}', '${(enq.site_postcode||'').replace(/'/g,"\\'")}', ${JSON.stringify(enq).replace(/'/g, "&apos;")})">
       ✅ Accept Quote
     </button>
     <button class="btn btn-decline" onclick="window.location.search='?id=${enq.id}&action=decline'">
@@ -277,10 +277,10 @@ function showDeclineConfirm(enq) {
   `;
 }
 
-async function acceptQuote(enquiryId, ref, contactName, postcode) {
+async function acceptQuote(enquiryId, ref, contactName, postcode, enquiry) {
   // Just show Step 2 - don't mark as accepted yet
   // Status will be updated when details are submitted
-  showStep2(enquiryId, ref, contactName, postcode);
+  showStep2(enquiryId, ref, contactName, postcode, enquiry);
 }
 
 const FIELD_STYLE = 'width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;';
@@ -301,8 +301,8 @@ function field(id, label, hint, type='text', placeholder='', rows=0, extraStyle=
 
 let currentEnquiry = null;
 
-function showStep2(enquiryId, ref, contactName, postcode) {
-  currentEnquiry = { id: enquiryId, postcode };
+function showStep2(enquiryId, ref, contactName, postcode, enquiry) {
+  currentEnquiry = enquiry || { id: enquiryId, postcode };
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
     <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
@@ -432,6 +432,7 @@ async function submitStep2(enquiryId, ref) {
     // Auto-create job from accepted quote
     try {
       const jobData = {
+        enquiry_id: enquiryId,
         survey_type: currentEnquiry?.survey_type,
         site_postcode: currentEnquiry?.site_postcode,
         dispatch_state: 'pending_approval',
@@ -441,6 +442,12 @@ async function submitStep2(enquiryId, ref) {
         quoted_amount: currentEnquiry?.quoted_price,
         agreed_amount: currentEnquiry?.quoted_price,
         site_access_notes: document.getElementById('accessDetails').value.trim() || null,
+        billing_contact_name: document.getElementById('billName').value.trim() || null,
+        billing_contact_email: document.getElementById('billEmail').value.trim() || null,
+        billing_address: billAddress,
+        report_addressee_name: finalReportName,
+        report_addressee_address: finalReportAddress,
+        report_title: document.getElementById('reportTitle').value.trim() || null,
       };
 
       console.log('Creating job with data:', jobData);
