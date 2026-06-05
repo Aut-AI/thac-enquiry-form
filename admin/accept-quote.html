@@ -275,19 +275,9 @@ function showDeclineConfirm(enq) {
 }
 
 async function acceptQuote(enquiryId, ref, contactName, postcode) {
-  const btn = document.querySelector('.btn-accept');
-  btn.textContent = 'Confirming…';
-  btn.disabled = true;
-  try {
-    await supabasePatch('enquiries', `id=eq.${enquiryId}`,
-      { status: 'accepted', accepted_at: new Date().toISOString() }
-    );
-    showStep2(enquiryId, ref, contactName, postcode);
-  } catch (e) {
-    btn.textContent = '✅ Accept Quote';
-    btn.disabled = false;
-    alert('Something went wrong — please try again or contact us directly.');
-  }
+  // Just show Step 2 - don't mark as accepted yet
+  // Status will be updated when details are submitted
+  showStep2(enquiryId, ref, contactName, postcode);
 }
 
 const FIELD_STYLE = 'width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;';
@@ -413,6 +403,8 @@ async function submitStep2(enquiryId, ref) {
 
   try {
     const updateData = {
+      status:                   'accepted',
+      accepted_at:              new Date().toISOString(),
       billing_contact_name:     document.getElementById('billName').value.trim()  || null,
       billing_contact_email:    document.getElementById('billEmail').value.trim() || null,
       billing_address:          billAddress,
