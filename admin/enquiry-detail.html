@@ -325,7 +325,7 @@ function renderEnquiry() {
           <div style="display:flex;flex-direction:column;gap:8px;">
             ${!isAmendment && enquiry.quoted_price ? `
             <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="sendQuoteEmail()">
-              📧 Send Quote Email
+              📧 ${enquiry.status === 'quoted' || enquiry.status === 'accepted' ? '✅ Quote Sent, Send Again?' : 'Send Quote Email'}
             </button>` : ''}
             <a href="mailto:${enquiry.contact_email}?subject=Re: Your Arboricultural Survey Enquiry ${enquiry.job_number || ''}" class="btn btn-secondary w-100" style="justify-content:center;">
               📧 General Email
