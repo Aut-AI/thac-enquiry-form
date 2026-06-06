@@ -443,7 +443,7 @@ function toggleAcceptanceDetails() {
 
 function displayBoundaryMap() {
   const container = document.getElementById('boundaryMapContainer');
-  if (!container || !window.L) return;
+  if (!container) return;
 
   const polygonData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
   if (!polygonData) return;
@@ -459,43 +459,54 @@ function displayBoundaryMap() {
 
   if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
 
-  try {
-    container.innerHTML = '';
-    const map = L.map(container, {
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      tap: false,
-      zoomControl: false,
-      attribution: false
-    });
+  // Blueprint-style SVG snapshot
+  const w = 600, h = 280, gridSize = 20;
+  const lats = coordinates.map(c => c[0]);
+  const lngs = coordinates.map(c => c[1]);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const latRange = (maxLat - minLat) * 1.4 || 0.01;
+  const lngRange = (maxLng - minLng) * 1.4 || 0.01;
+  const latC = (maxLat + minLat) / 2;
+  const lngC = (maxLng + minLng) / 2;
 
-    // CartoDB tiles (more reliable)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: false
-    }).addTo(map);
+  const toXY = (lat, lng) => [
+    100 + ((lng - lngC + lngRange / 2.8) / lngRange) * (w - 200),
+    h - (100 + ((lat - latC + latRange / 2.8) / latRange) * (h - 200))
+  ];
 
-    // Draw polygon
-    const latLngs = coordinates.map(c => [c[0], c[1]]);
-    const polygon = L.polygon(latLngs, {
-      color: '#1a3c2e',
-      weight: 2,
-      fillColor: '#c8e6d4',
-      fillOpacity: 0.3
-    }).addTo(map);
+  let svg = '<svg width="' + w + '" height="' + h + '" style="border:1px solid #999;background:#f0f8f0;font-family:Arial,sans-serif">';
 
-    // Fit to bounds
-    map.fitBounds(polygon.getBounds(), { padding: [30, 30] });
-
-    // Force render
-    setTimeout(() => map.invalidateSize(), 100);
-  } catch (e) {
-    //
+  // Grid background
+  for (let x = 0; x < w; x += gridSize) {
+    svg += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + h + '" stroke="#ddd" stroke-width="0.5"/>';
   }
+  for (let y = 0; y < h; y += gridSize) {
+    svg += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y + '" stroke="#ddd" stroke-width="0.5"/>';
+  }
+
+  // Draw polygon
+  let pts = '';
+  for (let i = 0; i < coordinates.length; i++) {
+    const [x, y] = toXY(coordinates[i][0], coordinates[i][1]);
+    pts += x + ',' + y + ' ';
+  }
+  svg += '<polygon points="' + pts + '" fill="#c8e6d4" fill-opacity="0.5" stroke="#1a3c2e" stroke-width="2.5"/>';
+
+  // Corner markers and labels
+  for (let i = 0; i < coordinates.length; i++) {
+    const [x, y] = toXY(coordinates[i][0], coordinates[i][1]);
+    svg += '<circle cx="' + x + '" cy="' + y + '" r="6" fill="#1a3c2e" stroke="#fff" stroke-width="2"/>';
+    svg += '<text x="' + (x - 8) + '" y="' + (y - 12) + '" font-size="11" font-weight="bold" fill="#1a3c2e" text-anchor="end">' + (i + 1) + '</text>';
+    svg += '<text x="' + (x + 10) + '" y="' + (y + 3) + '" font-size="9" fill="#666">' + coordinates[i][0].toFixed(5) + '</text>';
+    svg += '<text x="' + (x + 10) + '" y="' + (y + 12) + '" font-size="9" fill="#666">' + coordinates[i][1].toFixed(5) + '</text>';
+  }
+
+  // Scale/legend
+  svg += '<text x="20" y="' + (h - 10) + '" font-size="10" fill="#666">Site Boundary Plan</text>';
+
+  svg += '</svg>';
+  container.innerHTML = svg;
 }
 
 function renderJob() {
