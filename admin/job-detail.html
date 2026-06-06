@@ -485,6 +485,11 @@ function displayBoundaryMap() {
 }
 
 function renderJob() {
+  const debugBox = document.createElement('div');
+  debugBox.style.cssText = 'position:fixed;top:20px;left:20px;background:green;color:white;padding:10px;border-radius:4px;z-index:9999;';
+  debugBox.textContent = 'renderJob called';
+  document.body.appendChild(debugBox);
+
   document.getElementById('pageBody').innerHTML = `
     <div class="detail-header">
       <div>
