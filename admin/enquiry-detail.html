@@ -150,7 +150,11 @@ async function init() {
 
 async function loadEnquiry() {
   try {
-    const data = await dbGet('enquiries', { 'id': `eq.${enquiryId}`, 'limit': 1 });
+    const data = await dbGet('enquiries', {
+      'id': `eq.${enquiryId}`,
+      'limit': 1,
+      'select': '*,billing_contact_name,billing_contact_email,billing_address,end_client_name,end_client_email,report_addressee_name,report_addressee_address,report_title,access_details,parking_details,site_boundary_polygon,tc_accepted,tc_accepted_at'
+    });
     if (!data || data.length === 0) {
       document.getElementById('pageBody').innerHTML = `<div class="empty-state"><h3>Enquiry not found</h3></div>`;
       return;
