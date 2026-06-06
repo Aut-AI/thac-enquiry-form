@@ -157,7 +157,11 @@ async function init() {
 
 async function loadJob() {
   try {
-    const data = await dbGet('jobs', { 'id': `eq.${jobId}`, 'limit': 1 });
+    const data = await dbGet('jobs', {
+      'id': `eq.${jobId}`,
+      'limit': 1,
+      'select': '*,site_boundary_polygon'
+    });
     if (!data || data.length === 0) {
       document.getElementById('pageBody').innerHTML = `<div class="empty-state"><h3>Job not found</h3></div>`;
       return;
