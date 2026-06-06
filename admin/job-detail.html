@@ -409,23 +409,20 @@ function renderAcceptanceDetails() {
     </div>
   `;
 
-  // Display boundary map if polygon exists
+  // Display boundary map - deferred
   setTimeout(() => {
-    const container = document.getElementById('boundaryMapContainer');
-    if (!container) {
-      console.log('❌ Container not found');
-      return;
-    }
+    try {
+      const container = document.getElementById('boundaryMapContainer');
+      if (!container) return;
 
-    const polyData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
-    if (!polyData) {
-      container.innerHTML = '<div style="padding:10px;font-size:12px;color:#999;">No polygon</div>';
-      return;
+      const polyData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
+      if (polyData) {
+        displayBoundaryMap();
+      }
+    } catch (e) {
+      console.error('Map error:', e);
     }
-
-    console.log('✅ Calling displayBoundaryMap with:', polyData);
-    displayBoundaryMap();
-  }, 200);
+  }, 250);
 }
 
 function toggleAcceptanceDetails() {
