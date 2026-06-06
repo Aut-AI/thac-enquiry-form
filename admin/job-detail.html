@@ -478,6 +478,9 @@ function displayBoundaryMap() {
     maxZoom: 19
   }).addTo(map);
 
+  // Force map to recalculate size
+  setTimeout(() => map.invalidateSize(), 100);
+
   // Draw polygon
   const latLngs = coordinates.map(coord => [coord[0], coord[1]]);
   const polygon = L.polygon(latLngs, {
