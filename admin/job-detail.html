@@ -459,17 +459,25 @@ function displayBoundaryMap() {
 
   if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
 
-  const width = 600, height = 280, pad = 20;
+  const width = 600, height = 280, pad = 50;
   const lats = coordinates.map(c => c[0]);
   const lngs = coordinates.map(c => c[1]);
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const latRange = maxLat - minLat || 0.001;
-  const lngRange = maxLng - minLng || 0.001;
+  let latRange = maxLat - minLat || 0.001;
+  let lngRange = maxLng - minLng || 0.001;
+
+  // Add 20% margin around polygon
+  latRange *= 1.2;
+  lngRange *= 1.2;
+  const latCenter = (maxLat + minLat) / 2;
+  const lngCenter = (maxLng + minLng) / 2;
+  const minLatScaled = latCenter - latRange / 2;
+  const minLngScaled = lngCenter - lngRange / 2;
 
   const toSVG = (lat, lng) => {
-    const x = pad + ((lng - minLng) / lngRange) * (width - 2 * pad);
-    const y = height - pad - ((lat - minLat) / latRange) * (height - 2 * pad);
+    const x = pad + ((lng - minLngScaled) / lngRange) * (width - 2 * pad);
+    const y = height - pad - ((lat - minLatScaled) / latRange) * (height - 2 * pad);
     return [x, y];
   };
 
