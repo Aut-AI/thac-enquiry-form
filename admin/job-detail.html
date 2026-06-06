@@ -443,55 +443,30 @@ function toggleAcceptanceDetails() {
 
 function displayBoundaryMap() {
   const container = document.getElementById('boundaryMapContainer');
-  if (!container) {
-    document.body.innerHTML += '<div style="position:fixed;top:20px;left:20px;background:red;color:white;padding:10px;border-radius:4px;z-index:9999;">Container not found</div>';
-    return;
-  }
+  if (!container) return;
 
   const polygonData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
-  if (!polygonData) {
-    container.innerHTML = '<div style="padding:10px;font-size:12px;color:#999;">No boundary data</div>';
-    return;
-  }
+  if (!polygonData) return;
 
   let coordinates = polygonData;
   if (typeof polygonData === 'string') {
     try {
       coordinates = JSON.parse(polygonData);
     } catch (e) {
-      container.innerHTML = '<div style="padding:10px;font-size:12px;color:#d32f2f;">Error parsing polygon data</div>';
       return;
     }
   }
 
-  if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) {
-    container.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">No boundary polygon data</div>';
-    return;
-  }
+  if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
 
-  // Initialize map centered on first coordinate
-  const map = L.map(container).setView([coordinates[0][0], coordinates[0][1]], 14);
-  window.boundaryMap = map;
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19
-  }).addTo(map);
-
-  // Force map to recalculate size
-  setTimeout(() => map.invalidateSize(), 100);
-
-  // Draw polygon
-  const latLngs = coordinates.map(coord => [coord[0], coord[1]]);
-  const polygon = L.polygon(latLngs, {
-    color: '#1a3c2e',
-    weight: 2,
-    fillColor: '#c8e6d4',
-    fillOpacity: 0.3
-  }).addTo(map);
-
-  // Fit bounds to polygon
-  map.fitBounds(polygon.getBounds(), { padding: [50, 50] });
+  // Display coordinates
+  const html = `
+    <div style="padding:10px;font-size:12px;max-height:250px;overflow-y:auto;">
+      <strong>📍 ${coordinates.length} boundary points:</strong>
+      ${coordinates.map((c, i) => `<div>${i+1}. ${c[0].toFixed(4)}, ${c[1].toFixed(4)}</div>`).join('')}
+    </div>
+  `;
+  container.innerHTML = html;
 }
 
 function renderJob() {
