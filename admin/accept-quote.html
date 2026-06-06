@@ -587,11 +587,11 @@ function initializeMap() {
     console.log('L.Control.Draw available:', typeof L !== 'undefined' && typeof L.Control.Draw !== 'undefined');
 
     try {
-      // Initialize Leaflet map with OpenStreetMap
+      // Initialize Leaflet map with USGS Topo (reliable)
       map = L.map(container).setView([54, -2], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+      L.tileLayer('https://basemap.nationalmap.gov/arcrest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'USGS',
+        maxZoom: 16
       }).addTo(map);
       console.log('Leaflet map created');
 

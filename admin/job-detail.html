@@ -472,10 +472,10 @@ function displayBoundaryMap() {
       // Initialize Leaflet map (EXACT same as accept-quote.html)
       const boundaryMap = L.map(container).setView([centerLat, centerLng], 16);
 
-      // Load OpenStreetMap tiles (EXACT same as accept-quote.html)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+      // Load USGS Topo tiles (reliable, no auth required)
+      L.tileLayer('https://basemap.nationalmap.gov/arcrest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'USGS',
+        maxZoom: 16
       }).addTo(boundaryMap);
 
       // Draw polygon
