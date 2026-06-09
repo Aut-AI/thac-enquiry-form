@@ -97,10 +97,7 @@ h1 { font-size: 24px; font-weight: 700; color: #1a3c2e; margin-bottom: 12px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrqOa3_hCN9n_6_Nfws7MSP5F9b9mhPJc&libraries=drawing,geometry"></script>
 </head>
 <body>
 <div class="card" id="card">
@@ -577,94 +574,67 @@ function updateAcceptanceTime() {
 }
 
 function initializeMap() {
-  setTimeout(() => {
-    const container = document.getElementById('mapContainer');
-    if (!container || map) return;
+  const container = document.getElementById('mapContainer');
+  if (!container || map) return;
 
-    const postcode = currentEnquiry?.postcode || 'UK';
-    console.log('Initializing Leaflet map for postcode:', postcode);
-    console.log('L available:', typeof L !== 'undefined');
-    console.log('L.Control.Draw available:', typeof L !== 'undefined' && typeof L.Control.Draw !== 'undefined');
+  // Use site coordinates if available, otherwise UK default
+  let centerPoint = { lat: 51.5074, lng: -0.1278 }; // London default
+  if (currentEnquiry?.site_lat && currentEnquiry?.site_lng) {
+    centerPoint = { lat: currentEnquiry.site_lat, lng: currentEnquiry.site_lng };
+  }
 
-    try {
-      // Initialize Leaflet map with USGS Topo (reliable)
-      map = L.map(container).setView([54, -2], 6);
-      L.tileLayer('https://basemap.nationalmap.gov/arcrest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'USGS',
-        maxZoom: 16
-      }).addTo(map);
-      console.log('Leaflet map created');
+  map = new google.maps.Map(container, {
+    zoom: currentEnquiry?.site_lat ? 15 : 6,
+    center: centerPoint,
+    mapTypeId: 'satellite',
+  });
 
-      // Geocode postcode to coordinates
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(postcode)}&addressdetails=1&limit=1`)
-        .then(r => r.json())
-        .then(results => {
-          if (results.length > 0) {
-            const loc = results[0];
-            const lat = parseFloat(loc.lat);
-            const lng = parseFloat(loc.lon);
-            console.log('Geocoded to:', lat, lng);
-            map.setView([lat, lng], 16);
-          } else {
-            console.warn('Postcode not found, staying at UK center');
-          }
+  // Add marker at site location
+  if (currentEnquiry?.site_lat && currentEnquiry?.site_lng) {
+    new google.maps.Marker({
+      position: centerPoint,
+      map: map,
+      title: currentEnquiry.site_postcode || 'Survey Site',
+    });
+  }
 
-          // Add drawing tools
-          if (typeof L.Control.Draw === 'undefined') {
-            console.error('Leaflet-Draw not loaded');
-            container.innerHTML += '<div style="padding:10px;margin-top:8px;font-size:12px;color:#dc2626;background:#fee2e2;border-radius:4px;">Drawing tools not available. Please refresh the page.</div>';
-            return;
-          }
+  const drawingManager = new google.maps.drawing.DrawingManager({
+    drawingMode: null,
+    drawingControl: false,
+    polygonOptions: {
+      fillColor: '#1a3c2e',
+      fillOpacity: 0.3,
+      strokeColor: '#1a3c2e',
+      strokeWeight: 2,
+      editable: true,
+    },
+  });
 
-          const drawnItems = new L.FeatureGroup();
-          map.addLayer(drawnItems);
-          console.log('Drawing feature group added');
+  drawingManager.setMap(map);
 
-          const drawControl = new L.Control.Draw({
-            position: 'topleft',
-            draw: {
-              polygon: true,
-              polyline: false,
-              rectangle: false,
-              circle: false,
-              marker: false,
-              circlemarker: false
-            },
-            edit: {
-              featureGroup: drawnItems,
-              remove: true
-            }
-          });
-          map.addControl(drawControl);
-          console.log('Draw control added to map');
+  let polygon = null;
+  google.maps.event.addListener(drawingManager, 'polygoncomplete', function(poly) {
+    if (polygon) polygon.setMap(null);
+    polygon = poly;
+    capturePolygon(poly);
 
-          map.on(L.Draw.Event.CREATED, (e) => {
-            console.log('Draw event triggered');
-            const layer = e.layer;
-            drawnItems.addLayer(layer);
+    google.maps.event.addListener(polygon.getPath(), 'set_at', () => capturePolygon(polygon));
+    google.maps.event.addListener(polygon.getPath(), 'insert_at', () => capturePolygon(polygon));
+  });
+}
 
-            if (layer instanceof L.Polygon) {
-              const latlngs = layer.getLatLngs()[0];
-              polygonCoordinates = latlngs.map(point => [point.lat, point.lng]);
-              console.log('Polygon drawn with', polygonCoordinates.length, 'points:', polygonCoordinates);
-            }
-          });
-
-          console.log('✅ Leaflet map ready with drawing tools');
-        })
-        .catch(err => {
-          console.error('Geocoding error:', err);
-          console.log('Map ready with default view');
-        });
-
-    } catch (err) {
-      console.error('Leaflet initialization error:', err);
-      container.innerHTML += '<div style="padding:10px;margin-top:8px;font-size:12px;color:#dc2626;background:#fee2e2;border-radius:4px;">Error: ' + err.message + '</div>';
-    }
-
-    updateAcceptanceTime();
-    setInterval(updateAcceptanceTime, 60000);
-  }, 100);
+function capturePolygon(poly) {
+  if (!poly) return;
+  const path = poly.getPath();
+  if (path) {
+    polygonCoordinates = [];
+    path.forEach(point => {
+      polygonCoordinates.push({
+        lat: point.lat(),
+        lng: point.lng(),
+      });
+    });
+  }
 }
 
 function updateAcceptanceTime() {

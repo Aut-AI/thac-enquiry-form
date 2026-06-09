@@ -325,6 +325,16 @@ function renderForm() {
     </div>
 
     <div class="card">
+      <div class="card-title">Site Address</div>
+      <p style="font-size: 16px; font-weight: 500; color: var(--green-dark); margin-bottom: 8px;">
+        ${enquiry.site_postcode || '—'}
+      </p>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        From your initial enquiry
+      </p>
+    </div>
+
+    <div class="card">
       <div class="card-title">End Client Details</div>
       <div class="card-subtitle">The person or company that owns/occupies the property</div>
 
@@ -492,13 +502,26 @@ function initMap() {
   const mapContainer = document.getElementById('mapContainer');
   if (!mapContainer) return;
 
-  const centerPoint = { lat: 51.5074, lng: -0.1278 }; // London as default
+  // Use the site coordinates from the enquiry if available, otherwise use London
+  let centerPoint = { lat: 51.5074, lng: -0.1278 }; // London as default
+  if (enquiry && enquiry.site_lat && enquiry.site_lng) {
+    centerPoint = { lat: enquiry.site_lat, lng: enquiry.site_lng };
+  }
 
   map = new google.maps.Map(mapContainer, {
-    zoom: 13,
+    zoom: 15,
     center: centerPoint,
     mapTypeId: 'satellite',
   });
+
+  // Add a marker at the site location
+  if (enquiry && enquiry.site_lat && enquiry.site_lng) {
+    new google.maps.Marker({
+      position: centerPoint,
+      map: map,
+      title: enquiry.site_postcode || 'Survey Site',
+    });
+  }
 
   drawingManager = new google.maps.drawing.DrawingManager({
     drawingMode: null,
