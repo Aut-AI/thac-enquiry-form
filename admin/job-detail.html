@@ -544,9 +544,11 @@ function renderSurveyAndSiteDetails() {
 
   return `
     <div class="card">
-      <div class="card-title">
-        Survey & Site Details
-        ${hasAccessDetails ? `<button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">Edit</button>` : `<button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">Add access details</button>`}
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div>Survey & Site Details</div>
+        <button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">
+          ${hasAccessDetails ? 'Edit' : 'Add access details'}
+        </button>
       </div>
       <div class="detail-grid">
         ${surveyType ? `
