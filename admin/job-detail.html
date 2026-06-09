@@ -620,7 +620,7 @@ function renderSurveyAndSiteDetails() {
             </div>
             <div id="accessEditor" style="display:none;margin-top:8px;">
               <div class="form-group">
-                <label>Location Tag</label>
+                <label>Location Tag ${job?.site_lat && job?.site_lng ? `<a href="https://what3words.com/?coords=${job.site_lat},${job.site_lng}" target="_blank" style="font-size:11px;color:var(--green-mid);font-weight:400;">Get what3words →</a>` : ''}</label>
                 <input type="text" class="form-control" id="locationTag" value="${job?.site_location_tag || ''}" placeholder="what3words or coordinates">
               </div>
               <div class="form-group">
