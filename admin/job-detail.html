@@ -610,24 +610,10 @@ function renderSurveyAndSiteDetails() {
         <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Site Access</div>
           <div id="accessDisplay">
-            ${job?.site_location_tag ? `
-              <div style="margin-bottom:10px;">
-                ${renderLocationTag(job.site_location_tag)}
-              </div>` : `
-              <div style="margin-bottom:10px;">
-                <label style="font-size:11px;color:var(--text-muted);">Location Tag ${job?.site_lat && job?.site_lng ? `<a href="https://what3words.com/?coords=${job.site_lat},${job.site_lng}" target="_blank" style="font-size:11px;color:var(--green-mid);font-weight:400;">Get what3words →</a>` : ''}</label>
-                <input type="text" class="form-control" id="locationTag" value="" placeholder="what3words or coordinates" style="font-size:12px;">
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Click the link above to look up what3words address from coordinates, then paste here. e.g. ///word.word.word</div>
-              </div>
-            `}
             ${job?.site_access_notes ? `
               <div style="font-size:13px;line-height:1.6;background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;">${job.site_access_notes}</div>` : ''}
           </div>
           <div id="accessEditor" style="display:none;margin-top:8px;">
-            <div class="form-group">
-              <label>Location Tag ${job?.site_lat && job?.site_lng ? `<a href="https://what3words.com/?coords=${job.site_lat},${job.site_lng}" target="_blank" style="font-size:11px;color:var(--green-mid);font-weight:400;">Get what3words →</a>` : ''}</label>
-              <input type="text" class="form-control" id="locationTag" value="${job?.site_location_tag || ''}" placeholder="what3words or coordinates">
-            </div>
             <div class="form-group">
               <label>Access Details</label>
               <textarea class="form-control" id="accessText" rows="3" placeholder="Parking, gate codes, instructions...">${job?.site_access_notes || ''}</textarea>
@@ -1544,33 +1530,6 @@ async function handBackJob() {
 // ============================================================
 // SITE ACCESS NOTES
 // ============================================================
-
-function renderLocationTag(tag) {
-  if (!tag) return '';
-  const trimmed = tag.trim();
-  // what3words: starts with /// or three words separated by dots
-  if (trimmed.startsWith('///') || /^[a-z]+\.[a-z]+\.[a-z]+$/i.test(trimmed)) {
-    const words = trimmed.replace(/^\/\/\//, '');
-    return `<a href="https://what3words.com/${words}" target="_blank"
-      style="display:inline-flex;align-items:center;gap:6px;background:#e8f4fd;color:#0066cc;
-             padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
-      📍 ///${words} <span style="font-size:11px;opacity:0.7;">what3words →</span>
-    </a>`;
-  }
-  // Google Maps or any URL
-  if (trimmed.startsWith('http')) {
-    return `<a href="${trimmed}" target="_blank"
-      style="display:inline-flex;align-items:center;gap:6px;background:#e8f4fd;color:#0066cc;
-             padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
-      🗺️ View on Map →
-    </a>`;
-  }
-  // Plain coordinates or other text
-  return `<span style="display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;
-    padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;">
-    📍 ${trimmed}
-  </span>`;
-}
 
 function toggleAccessEditor() {
   const display = document.getElementById('accessDisplay');
