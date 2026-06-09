@@ -538,12 +538,16 @@ function renderSurveyAndSiteDetails() {
   const postcode = job?.site_postcode;
   const coordinates = job?.site_lat && job?.site_lng ? `${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}` : null;
   const hasBoundary = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
+  const hasAccessDetails = job?.site_access_notes || job?.site_location_tag;
 
-  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasBoundary) return '';
+  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasBoundary && !hasAccessDetails) return '';
 
   return `
     <div class="card">
-      <div class="card-title">Survey & Site Details</div>
+      <div class="card-title">
+        Survey & Site Details
+        ${hasAccessDetails ? `<button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">Edit</button>` : `<button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">Add access details</button>`}
+      </div>
       <div class="detail-grid">
         ${surveyType ? `
           <div class="detail-field">
@@ -599,6 +603,33 @@ function renderSurveyAndSiteDetails() {
           <div class="detail-field">
             <label>SLA Deadline</label>
             <div class="field-value">${formatDate(slaDeadline)}</div>
+          </div>
+        ` : ''}
+        ${hasAccessDetails ? `
+          <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Site Access</div>
+            <div id="accessDisplay">
+              ${job?.site_location_tag ? `
+                <div style="margin-bottom:10px;">
+                  ${renderLocationTag(job.site_location_tag)}
+                </div>` : ''}
+              ${job?.site_access_notes ? `
+                <div style="font-size:13px;line-height:1.6;background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;">${job.site_access_notes}</div>` : ''}
+            </div>
+            <div id="accessEditor" style="display:none;margin-top:8px;">
+              <div class="form-group">
+                <label>Location Tag</label>
+                <input type="text" class="form-control" id="locationTag" value="${job?.site_location_tag || ''}" placeholder="what3words or coordinates">
+              </div>
+              <div class="form-group">
+                <label>Access Details</label>
+                <textarea class="form-control" id="accessText" rows="3" placeholder="Parking, gate codes, instructions...">${job?.site_access_notes || ''}</textarea>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="toggleAccessEditor()">Cancel</button>
+                <button class="btn btn-primary btn-sm" onclick="saveAccessNotes()">Save</button>
+              </div>
+            </div>
           </div>
         ` : ''}
       </div>
@@ -733,46 +764,6 @@ function renderJob() {
                 ${at ? `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${formatDate(at)}</span>` : ''}
               </div>`;
             }).join('')}
-          </div>
-        </div>
-
-        <!-- Site Access -->
-        <div class="card">
-          <div class="card-title">
-            Site Access
-            <button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">
-              ${(job.site_access_notes || job.site_location_tag) ? 'Edit' : 'Add details'}
-            </button>
-          </div>
-          <div id="accessDisplay">
-            ${(job.site_access_notes || job.site_location_tag) ? `
-              ${job.site_location_tag ? `
-                <div style="margin-bottom:10px;">
-                  ${renderLocationTag(job.site_location_tag)}
-                </div>` : ''}
-              ${job.site_access_notes ? `
-                <div style="font-size:13px;line-height:1.6;background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;">${job.site_access_notes}</div>` : ''}
-            ` : `<div style="font-size:13px;color:var(--text-muted);">No access details yet — parking, gate codes, location pin, appointment requirements.</div>`}
-          </div>
-          <div id="accessEditor" style="display:none;margin-top:8px;">
-            <div class="form-group">
-              <label>Location Tag</label>
-              <input type="text" class="form-control" id="locationTag"
-                value="${job.site_location_tag || ''}"
-                placeholder="what3words (///word.word.word), Google Maps link, or coordinates">
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-                Paste any of: what3words address · Google Maps URL · lat,lng coordinates
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Access Details</label>
-              <textarea class="form-control" id="accessText" rows="4"
-                placeholder="Where to park, gate codes, padlock combinations, appointment requirements, how to find the trees from the parking spot...">${job.site_access_notes || ''}</textarea>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-secondary" onclick="toggleAccessEditor()">Cancel</button>
-              <button class="btn btn-primary" onclick="saveAccessNotes()">Save</button>
-            </div>
           </div>
         </div>
 
