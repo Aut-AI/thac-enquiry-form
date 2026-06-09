@@ -507,18 +507,20 @@ function renderSurveyAndSiteDetails() {
             <div class="field-value">${getSurveyLabel(surveyType)}</div>
           </div>
         ` : ''}
-        ${treeCount ? `
-          <div class="detail-field">
-            <label>Tree Count Band</label>
-            <div class="field-value">${treeCount} trees</div>
-          </div>
-        ` : ''}
-        ${deadlineTier ? `
-          <div class="detail-field">
-            <label>Required Deadline</label>
-            <div class="field-value">${deadlineTier}</div>
-          </div>
-        ` : ''}
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${treeCount ? `
+            <div class="detail-field" style="margin:0;">
+              <label>Tree Count Band</label>
+              <div class="field-value">${treeCount} trees</div>
+            </div>
+          ` : ''}
+          ${deadlineTier ? `
+            <div class="detail-field" style="margin:0;">
+              <label>Required Deadline</label>
+              <div class="field-value">${deadlineTier}</div>
+            </div>
+          ` : ''}
+        </div>
         ${address ? `
           <div class="detail-field" style="grid-column:1/-1">
             <label>Site Address</label>
