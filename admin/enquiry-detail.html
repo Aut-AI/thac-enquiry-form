@@ -332,13 +332,6 @@ function renderEnquiry() {
             <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="sendQuoteEmail()">
               📧 ${enquiry.status === 'quoted' || enquiry.status === 'accepted' ? '✅ Quote Sent, Send Again?' : 'Send Quote Email'}
             </button>` : ''}
-            <a href="mailto:${enquiry.contact_email}?subject=Re: Your Arboricultural Survey Enquiry ${enquiry.job_number || ''}" class="btn btn-secondary w-100" style="justify-content:center;">
-              📧 General Email
-            </a>
-            ${enquiry.contact_phone ? `
-            <a href="tel:${enquiry.contact_phone}" class="btn btn-secondary w-100" style="justify-content:center;">
-              📞 Call Client
-            </a>` : ''}
             ${!isAccepted ? `
             <button class="btn btn-primary w-100" onclick="openConvertModal()" style="justify-content:center;background:var(--green-dark);">
               ✅ Approve & Convert to Job
