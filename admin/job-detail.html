@@ -513,16 +513,16 @@ function renderSurveyAndSiteDetails() {
             <div class="field-value">${treeCount} trees</div>
           </div>
         ` : ''}
-        ${address ? `
-          <div class="detail-field">
-            <label>Site Address</label>
-            <div class="field-value">${address}<br><a href="https://maps.google.com/?q=${postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);">View on Google Maps →</a></div>
-          </div>
-        ` : ''}
         ${deadlineTier ? `
           <div class="detail-field">
             <label>Required Deadline</label>
             <div class="field-value">${deadlineTier}</div>
+          </div>
+        ` : ''}
+        ${address ? `
+          <div class="detail-field" style="grid-column:1/-1">
+            <label>Site Address</label>
+            <div class="field-value">${address}<br><a href="https://maps.google.com/?q=${postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);">View on Google Maps →</a></div>
           </div>
         ` : ''}
         ${coordinates ? `
