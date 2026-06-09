@@ -485,6 +485,7 @@ function renderContactDetails() {
 function renderSurveyAndSiteDetails() {
   const surveyType = enquiry?.survey_type || job?.survey_type || job?.job_type;
   const treeCount = enquiry?.tree_count_band;
+  const requiredDeadline = enquiry?.required_deadline;
   const addressParts = [enquiry?.site_street, enquiry?.site_city, enquiry?.site_postcode].filter(Boolean);
   const address = addressParts.join('<br>');
   const surveyDate = job?.survey_date;
@@ -510,6 +511,12 @@ function renderSurveyAndSiteDetails() {
           <div class="detail-field">
             <label>Tree Count Band</label>
             <div class="field-value">${treeCount} trees</div>
+          </div>
+        ` : ''}
+        ${requiredDeadline ? `
+          <div class="detail-field">
+            <label>Required Deadline</label>
+            <div class="field-value">${formatDate(requiredDeadline)}</div>
           </div>
         ` : ''}
         ${address ? `
