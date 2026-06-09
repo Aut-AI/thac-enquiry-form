@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, Linking, TextInput, Clipboard,
+  Alert, ActivityIndicator, Linking, TextInput, Clipboard, Dimensions,
 } from 'react-native';
+import MapView, { Polygon } from 'react-native-maps';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from '../lib/supabase';
 import { Job, RootStackParamList } from '../types';
 
@@ -15,6 +15,84 @@ const SURVEY_LABELS: Record<string, string> = {
   bc: 'BS5837 Stage 2 (AIA/AMS/TPP)', subs: 'Subsidence / Building Damage',
   mortgage: 'Mortgage / Insurer Report', amendment: 'Amendment', other: 'Other',
 };
+
+function SiteBoundaryMap({ polygon, centerLat: jobLat, centerLng: jobLng }: { polygon: string; centerLat: number; centerLng: number }) {
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard');
+
+  if (!polygon) return null;
+
+  try {
+    const parsed = JSON.parse(polygon);
+    let coordinates = [];
+
+    if (Array.isArray(parsed)) {
+      coordinates = parsed;
+    } else if (parsed?.coordinates?.[0]) {
+      coordinates = parsed.coordinates[0];
+    } else if (parsed?.coordinates) {
+      coordinates = parsed.coordinates;
+    }
+
+    const validCoords = coordinates.filter((c: any) =>
+      Array.isArray(c) && typeof c[0] === 'number' && typeof c[1] === 'number'
+    );
+
+    if (validCoords.length < 3) return null;
+
+    const mapCoords = validCoords.map((c: any) => ({
+      latitude: c[0],
+      longitude: c[1],
+    }));
+
+    return (
+      <View>
+        <View style={{ flexDirection: 'row', gap: 6, paddingVertical: 8, paddingHorizontal: 4 }}>
+          {['standard', 'satellite', 'terrain'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              onPress={() => setMapType(type as any)}
+              style={{
+                flex: 1,
+                paddingVertical: 6,
+                paddingHorizontal: 8,
+                borderRadius: 4,
+                backgroundColor: mapType === type ? '#1a3c2e' : '#e5e7eb',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '600', color: mapType === type ? '#fff' : '#374151', textTransform: 'capitalize' }}>
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <MapView
+          style={{ height: 320, borderRadius: 8, overflow: 'hidden' }}
+          initialRegion={{
+            latitude: jobLat,
+            longitude: jobLng,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          mapType={mapType}
+          zoomEnabled={true}
+          scrollEnabled={true}
+          showsUserLocation={true}
+        >
+          <Polygon
+            coordinates={mapCoords}
+            strokeColor="#1a3c2e"
+            strokeWidth={2}
+            fillColor="rgba(26, 60, 46, 0.15)"
+          />
+        </MapView>
+      </View>
+    );
+  } catch (e) {
+    return null;
+  }
+}
 
 export default function JobDetailScreen() {
   const { params: { jobId } } = useRoute<RouteProps>();
@@ -71,7 +149,7 @@ export default function JobDetailScreen() {
     if (jobData?.enquiry_id) {
       const { data: enqData } = await supabase
         .from('enquiries')
-        .select('contact_name,contact_phone,access_details,parking_details,report_title,site_boundary_polygon')
+        .select('contact_name,contact_phone,access_details,parking_details,report_title,site_boundary_polygon,tree_count_band')
         .eq('id', jobData.enquiry_id)
         .single();
       setEnquiry(enqData);
@@ -95,40 +173,7 @@ export default function JobDetailScreen() {
   }
 
   async function uploadFile() {
-    try {
-      setUploading(true);
-      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: false });
-      if (result.canceled) return;
-
-      const file = result.assets[0];
-      const fileName = file.name;
-      const ext = fileName.split('.').pop() || 'bin';
-      const storagePath = `${jobId}/${Date.now()}.${ext}`;
-
-      const { error: uploadErr } = await supabase.storage.from('THAC-CRM_Bucket').upload(storagePath, {
-        uri: file.uri,
-        type: file.mimeType || 'application/octet-stream',
-        name: fileName,
-      } as any);
-
-      if (uploadErr) throw uploadErr;
-
-      const { error: dbErr } = await supabase.from('job_files').insert({
-        job_id: jobId,
-        file_name: fileName,
-        file_path: storagePath,
-        file_type: file.mimeType?.split('/')[0] || 'document',
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id,
-      });
-
-      if (dbErr) throw dbErr;
-      Alert.alert('Success', `${fileName} uploaded.`);
-      loadData();
-    } catch (e: any) {
-      Alert.alert('Error', e.message);
-    } finally {
-      setUploading(false);
-    }
+    Alert.alert('File Upload', 'Document picker will be enabled in the next release');
   }
 
   async function deleteFile(filePath: string) {
@@ -159,11 +204,29 @@ export default function JobDetailScreen() {
   }
 
   async function handBack() {
-    Alert.prompt('Hand Back Job', 'Reason (optional):', async (reason) => {
-      const { error } = await supabase.rpc('hand_back_job', { p_job_id: jobId, p_note: reason || null });
-      if (error) Alert.alert('Error', error.message);
-      else { Alert.alert('Done', 'Job returned to the map.'); nav.goBack(); }
-    });
+    Alert.alert('Hand Back Job', 'Are you sure? This will return the job to the map.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Hand Back', style: 'destructive', onPress: async () => {
+        try {
+          Alert.alert('Processing', 'Updating job...');
+          const { data, error } = await supabase
+            .from('jobs')
+            .update({ surveyor_id: null, dispatch_state: 'red' })
+            .eq('id', jobId)
+            .select();
+
+          if (error) {
+            Alert.alert('Update Error', error.message);
+            return;
+          }
+
+          Alert.alert('Success', 'Job handed back. Returning to map.');
+          setTimeout(() => nav.goBack(), 500);
+        } catch (e: any) {
+          Alert.alert('Error', e.message || 'Unknown error');
+        }
+      }},
+    ]);
   }
 
   async function markFieldDataUploaded() {
@@ -250,7 +313,7 @@ export default function JobDetailScreen() {
         <Text style={s.type}>{SURVEY_LABELS[job.survey_type] || job.survey_type}</Text>
         <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
 
-        {job.site_lat && job.site_lng ? (
+        {isMine && job.site_lat && job.site_lng ? (
           <View style={{marginVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8}}>
             <Text style={s.body}>📍 {Number(job.site_lat).toFixed(5)}, {Number(job.site_lng).toFixed(5)}</Text>
             <TouchableOpacity
@@ -266,9 +329,9 @@ export default function JobDetailScreen() {
           </View>
         ) : null}
 
-        {job.tree_count_band && (
+        {(job.tree_count_band || enquiry?.tree_count_band) && (
           <View style={s.treeCountBadge}>
-            <Text style={s.treeCountText}>🌳 {job.tree_count_band} trees</Text>
+            <Text style={s.treeCountText}>🌳 {job.tree_count_band || enquiry?.tree_count_band} trees</Text>
           </View>
         )}
 
@@ -292,7 +355,7 @@ export default function JobDetailScreen() {
       </View>
 
       {/* Site Access */}
-      {job.site_access_notes ? (
+      {isMine && job.site_access_notes ? (
         <View style={s.card}>
           <Text style={s.sectionTitle}>Site Access</Text>
           <Text style={s.body}>{job.site_access_notes}</Text>
@@ -300,7 +363,7 @@ export default function JobDetailScreen() {
       ) : null}
 
       {/* Client & Site Details */}
-      {enquiry && (enquiry.access_details || enquiry.parking_details || enquiry.contact_name || enquiry.report_title) ? (
+      {isMine && enquiry && (enquiry.access_details || enquiry.parking_details || enquiry.contact_name || enquiry.report_title) ? (
         <View style={s.card}>
           <Text style={s.sectionTitle}>Client & Site Details</Text>
           {enquiry.contact_name && (
@@ -328,13 +391,16 @@ export default function JobDetailScreen() {
               <Text style={s.body}>{enquiry.parking_details}</Text>
             </View>
           )}
-          {enquiry.site_boundary_polygon && (
-            <Text style={[s.body, {fontSize: 12, color: '#999'}]}>
-              📍 Site boundary polygon defined
-            </Text>
-          )}
         </View>
       ) : null}
+
+      {/* Site Boundary Map */}
+      {isMine && enquiry?.site_boundary_polygon && job.site_lat && job.site_lng && (
+        <View style={s.card}>
+          <Text style={s.sectionTitle}>Site Boundary</Text>
+          <SiteBoundaryMap polygon={enquiry.site_boundary_polygon} centerLat={job.site_lat} centerLng={job.site_lng} />
+        </View>
+      )}
 
       {/* Survey Date */}
       {job.survey_date ? (
@@ -417,11 +483,13 @@ export default function JobDetailScreen() {
             <Text style={s.btnPrimaryText}>✅ Claim This Job</Text>
           </TouchableOpacity>
         )}
-        {isMine && job.dispatch_state === 'orange' && (
+        {isMine && (
           <>
-            <TouchableOpacity style={s.btnPrimary} onPress={markFieldDataUploaded}>
-              <Text style={s.btnPrimaryText}>📤 Mark Field Data Uploaded</Text>
-            </TouchableOpacity>
+            {job.dispatch_state === 'orange' && (
+              <TouchableOpacity style={s.btnPrimary} onPress={markFieldDataUploaded}>
+                <Text style={s.btnPrimaryText}>📤 Mark Field Data Uploaded</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={s.btnSecondary} onPress={handBack}>
               <Text style={s.btnSecondaryText}>↩ Hand Back Job</Text>
             </TouchableOpacity>
