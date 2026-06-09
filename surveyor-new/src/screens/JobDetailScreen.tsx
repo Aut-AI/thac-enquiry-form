@@ -251,7 +251,7 @@ export default function JobDetailScreen() {
         <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
 
         {job.site_lat && job.site_lng ? (
-          <View style={{marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+          <View style={{marginVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8}}>
             <Text style={s.body}>📍 {Number(job.site_lat).toFixed(5)}, {Number(job.site_lng).toFixed(5)}</Text>
             <TouchableOpacity
               onPress={() => {
@@ -259,9 +259,9 @@ export default function JobDetailScreen() {
                 Clipboard.setString(coords);
                 Alert.alert('Copied', 'Coordinates copied to clipboard');
               }}
-              style={{paddingVertical: 4, paddingHorizontal: 8}}
+              style={{paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#dcfce7', borderRadius: 4}}
             >
-              <Text style={{color: '#22c55e', fontSize: 12}}>Copy</Text>
+              <Text style={{color: '#166534', fontSize: 12, fontWeight: '500'}}>Copy</Text>
             </TouchableOpacity>
           </View>
         ) : null}
