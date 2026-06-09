@@ -174,7 +174,7 @@ async function loadJob() {
       const enqData = await dbGet('enquiries', {
         'id': `eq.${job.enquiry_id}`,
         'limit': 1,
-        'select': 'id,billing_contact_name,billing_contact_email,billing_address,end_client_name,end_client_email,report_addressee_name,report_addressee_address,report_title,access_details,parking_details,site_boundary_polygon'
+        'select': 'id,billing_contact_name,billing_contact_email,billing_address,end_client_name,end_client_email,report_addressee_name,report_addressee_address,report_title,access_details,parking_details,site_boundary_polygon,tree_count_band,contact_phone,site_full_address,company_name'
       });
       enquiry = (enqData && enqData.length) ? enqData[0] : null;
     }
@@ -508,6 +508,97 @@ function displayBoundaryMap() {
   }, 200);
 }
 
+function renderContactDetails() {
+  const name = enquiry?.billing_contact_name || job?.billing_contact_name;
+  const company = enquiry?.company_name;
+  const email = enquiry?.billing_contact_email || job?.billing_contact_email;
+  const phone = enquiry?.contact_phone;
+
+  if (!name && !email && !phone) return '';
+
+  return `
+    <div class="card">
+      <div class="card-title">Contact Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        ${name ? `
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Full Name</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${name}</div>
+          </div>
+        ` : ''}
+        ${company ? `
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Company</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${company}</div>
+          </div>
+        ` : ''}
+        ${email ? `
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
+            <div style="font-size:13px;"><a href="mailto:${email}">${email}</a></div>
+          </div>
+        ` : ''}
+        ${phone ? `
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Phone</div>
+            <div style="font-size:13px;"><a href="tel:${phone}">${phone}</a></div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderSurveyDetails() {
+  const surveyType = enquiry?.survey_type || job?.survey_type || job?.job_type;
+  const treeCount = enquiry?.tree_count_band;
+  const address = enquiry?.site_full_address;
+  const surveyDate = job?.survey_date;
+  const agreedAmount = job?.agreed_amount;
+
+  if (!surveyType && !treeCount && !address && !surveyDate && !agreedAmount) return '';
+
+  return `
+    <div class="card">
+      <div class="card-title">Survey Details</div>
+      <div class="detail-grid">
+        ${surveyType ? `
+          <div class="detail-field">
+            <label>Survey Type</label>
+            <div class="field-value">${getSurveyLabel(surveyType)}</div>
+          </div>
+        ` : ''}
+        ${treeCount ? `
+          <div class="detail-field">
+            <label>Tree Count Band</label>
+            <div class="field-value">${treeCount} trees</div>
+          </div>
+        ` : ''}
+        ${address ? `
+          <div class="detail-field" style="grid-column:1/-1">
+            <label>Site Address</label>
+            <div class="field-value">${address}</div>
+          </div>
+        ` : ''}
+        ${surveyDate ? `
+          <div class="detail-field" style="grid-column:1/-1">
+            <label>Survey Date</label>
+            <div class="field-value" style="font-weight:600;color:${job?.survey_date_confirmed ? 'var(--green-mid)' : '#f97316'};">
+              ${job?.survey_date_confirmed ? '🟢 Confirmed' : '🟠 Proposed'}: ${formatDate(surveyDate)}
+            </div>
+          </div>
+        ` : ''}
+        ${agreedAmount ? `
+          <div class="detail-field" style="grid-column:1/-1">
+            <label>Agreed Amount</label>
+            <div class="field-value" style="font-size:20px;font-weight:700;color:var(--green-mid);">£${Number(agreedAmount).toLocaleString()}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
 function renderJob() {
   document.getElementById('pageBody').innerHTML = `
     <div class="detail-header">
@@ -523,6 +614,12 @@ function renderJob() {
 
     <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
       <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Contact Details -->
+        ${renderContactDetails()}
+
+        <!-- Survey Details -->
+        ${renderSurveyDetails()}
 
         <!-- Site Details -->
         <div class="card">
