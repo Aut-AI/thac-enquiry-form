@@ -572,7 +572,10 @@ function renderSurveyAndSiteDetails() {
         ${coordinates ? `
           <div class="detail-field" style="grid-column:1/-1">
             <label>Coordinates</label>
-            <div class="field-value" style="font-size:12px;color:var(--text-muted);">📍 ${coordinates}</div>
+            <div class="field-value" style="font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span>📍 ${coordinates}</span>
+              <button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text);cursor:pointer;border-radius:4px;" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='✓ Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
+            </div>
           </div>
         ` : job?.site_postcode && !coordinates ? `
           <div class="detail-field" style="grid-column:1/-1">

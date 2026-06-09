@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, Linking, TextInput,
+  Alert, ActivityIndicator, Linking, TextInput, Clipboard,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -250,6 +250,22 @@ export default function JobDetailScreen() {
         <Text style={s.type}>{SURVEY_LABELS[job.survey_type] || job.survey_type}</Text>
         <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
 
+        {job.site_lat && job.site_lng ? (
+          <View style={{marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+            <Text style={s.body}>📍 {Number(job.site_lat).toFixed(5)}, {Number(job.site_lng).toFixed(5)}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                const coords = `${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}`;
+                Clipboard.setString(coords);
+                Alert.alert('Copied', 'Coordinates copied to clipboard');
+              }}
+              style={{paddingVertical: 4, paddingHorizontal: 8}}
+            >
+              <Text style={{color: '#22c55e', fontSize: 12}}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {job.tree_count_band && (
           <View style={s.treeCountBadge}>
             <Text style={s.treeCountText}>🌳 {job.tree_count_band} trees</Text>
@@ -280,9 +296,6 @@ export default function JobDetailScreen() {
         <View style={s.card}>
           <Text style={s.sectionTitle}>Site Access</Text>
           <Text style={s.body}>{job.site_access_notes}</Text>
-          {job.site_location_tag
-            ? <Text style={s.tag}>{job.site_location_tag}</Text>
-            : null}
         </View>
       ) : null}
 
