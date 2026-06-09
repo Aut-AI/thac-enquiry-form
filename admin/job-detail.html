@@ -6,7 +6,8 @@
 <title>THAC CRM — Job Detail</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/thac.css">
-<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBf06LywaBHDNOCzj4Z8Cm0W6XAwk7iETc"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Rebuild: 2026-06-08 -->
 <style>
 .modal-overlay {
@@ -353,49 +354,41 @@ function displayBoundaryMap() {
     }
 
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
-    if (typeof google === 'undefined' || !google.maps) {
-      console.error('Google Maps not loaded');
-      return;
-    }
 
     window.boundaryMapInitialized = true;
 
     try {
-      // Calculate center and bounds
+      // Calculate center
       const lats = coordinates.map(c => c[0]);
       const lngs = coordinates.map(c => c[1]);
       const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
       const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
 
-      // Create map
-      const map = new google.maps.Map(container, {
-        center: { lat: centerLat, lng: centerLng },
-        zoom: 17,
-        mapTypeId: 'roadmap',
-        disableDefaultUI: false,
-        zoomControl: false,
-        fullscreenControl: false
-      });
+      // Create Leaflet map
+      const map = L.map(container).setView([centerLat, centerLng], 17);
+
+      // Add Esri World Imagery
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri',
+        maxZoom: 18
+      }).addTo(map);
 
       // Draw polygon
-      const polygonCoords = coordinates.map(c => ({ lat: c[0], lng: c[1] }));
-      const polygon = new google.maps.Polygon({
-        paths: polygonCoords,
-        geodesic: false,
-        strokeColor: '#1a3c2e',
-        strokeOpacity: 1,
-        strokeWeight: 2,
+      const polygonLatLngs = coordinates.map(c => [c[0], c[1]]);
+      const polygon = L.polygon(polygonLatLngs, {
+        color: '#1a3c2e',
+        weight: 2,
+        opacity: 1,
+        fill: true,
         fillColor: '#c8e6d4',
-        fillOpacity: 0.4,
-        map: map
-      });
+        fillOpacity: 0.4
+      }).addTo(map);
 
       // Fit bounds
-      const bounds = new google.maps.LatLngBounds();
-      polygonCoords.forEach(coord => bounds.extend(coord));
-      map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      const bounds = L.latLngBounds(polygonLatLngs);
+      map.fitBounds(bounds, { padding: [50, 50] });
 
-      console.log('✅ Google Map displayed with polygon:', coordinates.length, 'points');
+      console.log('✅ Map displayed with polygon:', coordinates.length, 'points');
     } catch (err) {
       console.error('Error displaying boundary map:', err);
     }
