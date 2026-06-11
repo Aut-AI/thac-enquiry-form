@@ -14,6 +14,7 @@ import JobMapScreen    from './src/screens/JobMapScreen';
 import JobListScreen   from './src/screens/JobListScreen';
 import JobDetailScreen from './src/screens/JobDetailScreen';
 import ProfileScreen   from './src/screens/ProfileScreen';
+import TimeOffScreen   from './src/screens/TimeOffScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator<BottomTabParamList>();
@@ -32,6 +33,7 @@ function MainTabs() {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             Map:     'map',
             Jobs:    'list',
+            TimeOff: 'calendar',
             Profile: 'person',
           };
           return <Ionicons name={icons[route.name]} size={size} color={color} />;
@@ -40,6 +42,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Map"     component={JobMapScreen}  options={{ title: 'Job Map' }} />
       <Tab.Screen name="Jobs"    component={JobListScreen} options={{ title: 'Jobs' }} />
+      <Tab.Screen name="TimeOff" component={TimeOffScreen} options={{ title: 'Time Off' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
