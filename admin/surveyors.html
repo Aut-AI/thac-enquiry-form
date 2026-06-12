@@ -57,7 +57,7 @@ async function init() {
 async function loadSurveyors() {
   try {
     const surveyors = await dbGet('surveyors', {
-      'select': 'id,full_name,email,phone,hourly_rate,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,created_at',
+      'select': 'id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,created_at',
       'order': 'full_name.asc'
     });
 
@@ -159,6 +159,7 @@ function renderTable() {
         <div style="font-weight:600;font-size:14px;">${s.full_name || '—'}</div>
         <div class="muted">${s.email || ''}</div>
       </td>
+      <td>${s.home_postcode || '—'}</td>
       <td>${s.hourly_rate ? '£' + Number(s.hourly_rate).toFixed(2) + '/hr' : '—'}</td>
       <td>${s.radius_miles ? s.radius_miles + ' miles' : '—'}</td>
       <td><span class="badge ${pi.cls}">${pi.label}</span></td>
@@ -175,6 +176,7 @@ function renderTable() {
       <thead>
         <tr>
           <th>Name</th>
+          <th>Postcode</th>
           <th>Rate</th>
           <th>Radius</th>
           <th>PI Insurance</th>
