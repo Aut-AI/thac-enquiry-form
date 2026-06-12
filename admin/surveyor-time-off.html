@@ -223,10 +223,11 @@
       }
 
       // Add surveyor rows
-      (surveyors || []).forEach(surveyor => {
+      console.log('Surveyors data:', surveyors);
+      (surveyors || []).forEach((surveyor, idx) => {
         const nameCell = document.createElement('div');
         nameCell.className = 'surveyor-name';
-        nameCell.textContent = surveyor.full_name;
+        nameCell.textContent = surveyor?.full_name || `Surveyor ${idx + 1}`;
         calendar.appendChild(nameCell);
 
         for (let d = 1; d <= daysInMonth; d++) {
