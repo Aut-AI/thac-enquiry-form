@@ -184,14 +184,12 @@
     document.getElementById('error').style.display = 'none';
 
     try {
-      // Load surveyors
-      const { data: surveyors, error: survError } = await supabase
-        .from('surveyors')
-        .select('id, full_name')
-        .eq('is_active', true)
-        .order('full_name');
+      if (!window.supabase) {
+        throw new Error('Supabase not initialized');
+      }
 
-      if (survError) throw survError;
+      // Load surveyors
+      const surveyors = await dbGet('surveyors', { 'is_active': 'eq.true', 'select': 'id,full_name', 'order': 'full_name.asc' });
 
       // Load time off for this month
       const start = new Date(year, month, 1);
@@ -199,13 +197,11 @@
       const startStr = start.toISOString().split('T')[0];
       const endStr = end.toISOString().split('T')[0];
 
-      const { data: timeOff, error: timeOffError } = await supabase
-        .from('surveyor_time_off')
-        .select('surveyor_id, start_date, end_date')
-        .gte('start_date', startStr)
-        .lt('end_date', endStr);
+      const timeOff = await dbGet('surveyor_time_off', { 'start_date': 'gte.' + startStr, 'end_date': 'lt.' + endStr, 'select': 'surveyor_id,start_date,end_date' });
 
-      if (timeOffError) throw timeOffError;
+      if (!surveyors || !Array.isArray(surveyors)) {
+        throw new Error('Failed to load surveyors');
+      }
 
       // Build calendar
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -226,7 +222,7 @@
       }
 
       // Add surveyor rows
-      surveyors.forEach(surveyor => {
+      (surveyors || []).forEach(surveyor => {
         const nameCell = document.createElement('div');
         nameCell.className = 'surveyor-name';
         nameCell.textContent = surveyor.full_name;
@@ -237,7 +233,7 @@
           const cell = document.createElement('div');
           cell.className = 'day-cell';
 
-          const hasTimeOff = timeOff.some(to => {
+          const hasTimeOff = (timeOff || []).some(to => {
             const start = new Date(to.start_date);
             const end = new Date(to.end_date);
             const current = new Date(year, month, d);
@@ -255,9 +251,10 @@
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
     } catch (err) {
+      console.error(err);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('error').style.display = 'block';
-      document.getElementById('error').textContent = err.message;
+      document.getElementById('error').textContent = err.message || 'Error loading calendar';
     }
   }
 
