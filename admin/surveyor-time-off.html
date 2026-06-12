@@ -184,10 +184,6 @@
     document.getElementById('error').style.display = 'none';
 
     try {
-      if (!window.supabase) {
-        throw new Error('Supabase not initialized');
-      }
-
       // Load surveyors
       const surveyors = await dbGet('surveyors', { 'is_active': 'eq.true', 'select': 'id,full_name', 'order': 'full_name.asc' });
 
