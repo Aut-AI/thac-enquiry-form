@@ -266,7 +266,7 @@
       // Add surveyor rows (filter active only)
       const activeSurveyors = (surveyors || []).filter(s => s.is_active);
 
-      activeSurveyors.forEach((surveyor, idx) => {
+      activeSurveyors.forEach(surveyor => {
         // Add name to names column
         const nameCell = document.createElement('div');
         nameCell.className = 'surveyor-name';
