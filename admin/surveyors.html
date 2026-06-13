@@ -39,6 +39,7 @@ async function init() {
           </div>
           <div class="filter-bar">
             <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+            <button class="filter-btn" onclick="setFilter('pending', this)">⏳ Pending Approval</button>
             <button class="filter-btn" onclick="setFilter('active', this)">✅ Active</button>
             <button class="filter-btn" onclick="setFilter('paused', this)">⏸ Paused</button>
             <button class="filter-btn" onclick="setFilter('expiring', this)">🟠 Insurance Expiring</button>
@@ -57,7 +58,7 @@ async function init() {
 async function loadSurveyors() {
   try {
     const surveyors = await dbGet('surveyors', {
-      'select': 'id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,created_at',
+      'select': 'id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,status,created_at',
       'order': 'full_name.asc'
     });
 
@@ -112,11 +113,38 @@ function worstInsuranceStatus(s) {
   return rank(pi) <= rank(pl) ? pi : pl;
 }
 
-function getAreaFromPostcode(postcode) {
+async function getAreaFromPostcode(postcode) {
+  if (!postcode) return null;
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(postcode)}&components=country:UK&key=${GOOGLE_MAPS_KEY}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.results.length) return null;
+
+    const result = data.results[0];
+    for (const component of result.address_components) {
+      if (component.types.includes('administrative_area_level_2')) {
+        return component.long_name;
+      }
+      if (component.types.includes('administrative_area_level_1')) {
+        return component.long_name;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+}
+
+function getAreaFromPostcodeSync(postcode) {
   if (!postcode) return null;
   const code = postcode.trim().toUpperCase().split(' ')[0];
 
   const areaMap = {
+    // London
     'E1': 'East London', 'E2': 'East London', 'E3': 'East London', 'E4': 'East London',
     'E5': 'East London', 'E6': 'East London', 'E7': 'East London', 'E8': 'East London',
     'E9': 'East London', 'E10': 'East London', 'E11': 'East London', 'E12': 'East London',
@@ -149,16 +177,62 @@ function getAreaFromPostcode(postcode) {
     'SE25': 'South East London', 'SE26': 'South East London', 'SE27': 'South East London', 'SE28': 'South East London',
     'EC1': 'City of London', 'EC2': 'City of London', 'EC3': 'City of London', 'EC4': 'City of London',
     'WC1': 'West Central London', 'WC2': 'West Central London',
+    'CR': 'Croydon', 'DA': 'Dartford', 'EN': 'Enfield', 'HA': 'Harrow', 'IG': 'Ilford',
+    'KT': 'Kingston upon Thames', 'RM': 'Romford', 'SM': 'Sutton', 'TW': 'Twickenham', 'UB': 'Uxbridge',
+    'WD': 'Watford',
+
+    // South & South East
+    'BH': 'Bournemouth', 'BN': 'Brighton', 'BR': 'Bromley', 'CT': 'Canterbury', 'DA': 'Dartford',
+    'GU': 'Guildford', 'ME': 'Medway', 'PO': 'Portsmouth', 'RG': 'Reading',
+    'RH': 'Redhill', 'SL': 'Slough', 'SO': 'Southampton', 'SS': 'Southend-on-Sea',
+    'TN': 'Tunbridge Wells',
+
+    // South West
+    'BA': 'Bath', 'BS': 'Bristol', 'DT': 'Dorchester', 'EX': 'Exeter', 'GL': 'Gloucester',
+    'OX': 'Oxford', 'PL': 'Plymouth', 'SN': 'Swindon', 'SP': 'Salisbury', 'TA': 'Taunton',
+    'TR': 'Truro',
+
+    // Midlands & East
+    'B': 'Birmingham', 'CB': 'Cambridge', 'CM': 'Chelmsford', 'CO': 'Colchester',
+    'CV': 'Coventry', 'DE': 'Derby', 'DN': 'Doncaster', 'DY': 'Dudley', 'HR': 'Hereford',
+    'IP': 'Ipswich', 'LE': 'Leicester', 'LN': 'Lincoln', 'NG': 'Nottingham', 'NR': 'Norwich',
+    'PE': 'Peterborough', 'S': 'Sheffield', 'SG': 'Stevenage', 'ST': 'Stoke-on-Trent',
+    'SY': 'Shrewsbury', 'TF': 'Telford', 'WR': 'Worcester', 'WS': 'Walsall', 'WV': 'Wolverhampton',
+
+    // North West & North
+    'BB': 'Blackburn', 'BD': 'Bradford', 'BL': 'Bolton', 'CA': 'Carlisle', 'CH': 'Chester',
+    'CW': 'Crewe', 'DH': 'Durham', 'DL': 'Darlington', 'FY': 'Fylde', 'HD': 'Huddersfield',
+    'HG': 'Harrogate', 'HP': 'Hemel Hempstead', 'HU': 'Hull', 'HX': 'Halifax', 'L': 'Liverpool',
+    'LA': 'Lancaster', 'LS': 'Leeds', 'LU': 'Luton', 'M': 'Manchester', 'MK': 'Milton Keynes',
+    'NE': 'Newcastle', 'NN': 'Northampton', 'OL': 'Oldham', 'PR': 'Preston', 'SK': 'Stockport',
+    'SR': 'Sunderland', 'TS': 'Teesside', 'WA': 'Warrington', 'WF': 'Wakefield', 'WN': 'Wigan',
+    'YO': 'York',
+
+    // Wales
+    'CF': 'Cardiff', 'LD': 'Llandrindod Wells', 'LL': 'Llanfairpwllgwyngyll', 'NP': 'Newport',
+    'SA': 'Swansea', 'SY': 'Shrewsbury',
+
+    // Scotland
+    'AB': 'Aberdeen', 'DD': 'Dundee', 'DG': 'Dumfries', 'EH': 'Edinburgh', 'FK': 'Falkirk',
+    'G': 'Glasgow', 'HS': 'Hebrides', 'IV': 'Inverness', 'KA': 'Kilmarnock', 'KY': 'Kirkcaldy',
+    'ML': 'Motherwell', 'PA': 'Paisley', 'PH': 'Perth', 'TD': 'Kelso', 'ZE': 'Shetland',
+
+    // Northern Ireland
+    'BT': 'Belfast',
+
+    // Channel Islands & Isle of Man
+    'GY': 'Guernsey', 'JE': 'Jersey', 'MH': 'Isle of Man',
   };
 
-  return areaMap[code] || 'Greater London';
+  return areaMap[code] || null;
 }
 
-function renderTable() {
+async function renderTable() {
   let filtered = [...allSurveyors];
 
-  if (activeFilter === 'active')   filtered = filtered.filter(s => s.is_active);
-  if (activeFilter === 'paused')   filtered = filtered.filter(s => !s.is_active);
+  if (activeFilter === 'pending')  filtered = filtered.filter(s => s.status === 'pending');
+  if (activeFilter === 'active')   filtered = filtered.filter(s => s.status === 'active');
+  if (activeFilter === 'paused')   filtered = filtered.filter(s => s.status === 'paused');
   if (activeFilter === 'expiring') filtered = filtered.filter(s =>
     expiryStatus(s.pi_expiry_date).cls === 'badge-elevated' ||
     expiryStatus(s.pl_expiry_date).cls === 'badge-elevated'
@@ -188,15 +262,20 @@ function renderTable() {
     return;
   }
 
-  const rows = filtered.map(s => {
+  const rows = await Promise.all(filtered.map(async s => {
     const pi  = expiryStatus(s.pi_expiry_date);
     const pl  = expiryStatus(s.pl_expiry_date);
     const dbs = expiryStatus(s.dbs_expiry_date);
-    const active = s.is_active
-      ? `<span class="badge badge-accepted">✅ Active</span>`
-      : `<span class="badge badge-low">⏸ Paused</span>`;
-    const area = getAreaFromPostcode(s.home_postcode);
-    const postcodeDisplay = s.home_postcode ? `${s.home_postcode}<br><span style="font-size:12px;color:#666;">${area}</span>` : '—';
+    let statusBadge;
+    if (s.status === 'pending') {
+      statusBadge = `<span class="badge badge-elevated">⏳ Pending</span>`;
+    } else if (s.status === 'active') {
+      statusBadge = `<span class="badge badge-accepted">✅ Active</span>`;
+    } else {
+      statusBadge = `<span class="badge badge-low">⏸ Paused</span>`;
+    }
+    const area = await getAreaFromPostcode(s.home_postcode);
+    const postcodeDisplay = s.home_postcode ? `${s.home_postcode}<br><span style="font-size:12px;color:#666;">${area || '—'}</span>` : '—';
     return `
     <tr onclick="window.location.href='surveyor-detail.html?id=${s.id}'" style="cursor:pointer">
       <td>
@@ -211,9 +290,9 @@ function renderTable() {
       <td><span class="badge ${dbs.cls}">${dbs.label}</span></td>
       <td style="font-weight:600;color:var(--green-mid);">${s.earnings.jobs} jobs</td>
       <td style="font-weight:600;font-size:15px;color:var(--green-dark);">£${Number(s.earnings.total).toLocaleString()}</td>
-      <td>${active}</td>
+      <td>${statusBadge}</td>
     </tr>`;
-  }).join('');
+  }));
 
   document.getElementById('surveyorsTable').innerHTML = `
     <table class="data-table">
@@ -231,20 +310,20 @@ function renderTable() {
           <th>Status</th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows.join('')}</tbody>
     </table>`;
 }
 
-function setFilter(filter, btn) {
+async function setFilter(filter, btn) {
   activeFilter = filter;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderTable();
+  await renderTable();
 }
 
-function handleSearch(q) {
+async function handleSearch(q) {
   searchQuery = q;
-  renderTable();
+  await renderTable();
 }
 
 init();
