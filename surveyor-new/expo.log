@@ -1,0 +1,7 @@
+Networking has been disabled
+Starting project at C:\Users\c2590\thac-enquiry-form\surveyor-new
+› Port 8081 is being used by another process
+Input is required, but 'npx expo' is in non-interactive mode.
+Required input:
+> Use port 8082 instead?
+› Skipping dev server

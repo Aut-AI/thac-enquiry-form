@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }: any) {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -52,7 +52,11 @@ export default function LoginScreen() {
             : <Text style={s.btnText}>Sign In</Text>}
         </TouchableOpacity>
 
-        <Text style={s.hint}>Contact Trevor if you need access.</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={s.registerLink}>Create an account</Text>
+        </TouchableOpacity>
+
+        <Text style={s.hint}>Already have an account? Use your login details above.</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -69,5 +73,6 @@ const s = StyleSheet.create({
   input:     { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 14, color: '#111' },
   btn:       { backgroundColor: GREEN, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 4 },
   btnText:   { color: '#fff', fontSize: 16, fontWeight: '700' },
+  registerLink: { marginTop: 16, textAlign: 'center', fontSize: 14, color: GREEN, fontWeight: '600', textDecorationLine: 'underline' },
   hint:      { marginTop: 16, textAlign: 'center', fontSize: 12, color: '#9ca3af' },
 });

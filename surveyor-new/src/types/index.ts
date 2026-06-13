@@ -33,6 +33,7 @@ export interface Job {
   sla_deadline: string | null;
   surveyor_id: string | null;
   surveyor_pay_amount: number | null;
+  tree_count_band: string | null;
   survey_date: string | null;
   survey_date_confirmed: boolean;
   site_access_notes: string | null;
