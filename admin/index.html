@@ -29,6 +29,11 @@
       <input type="password" class="form-control" id="password" placeholder="••••••••" autocomplete="current-password">
     </div>
 
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+      <input type="checkbox" id="rememberMe" style="cursor:pointer;">
+      <label for="rememberMe" style="margin:0; cursor:pointer; font-size:14px;">Remember me on this device</label>
+    </div>
+
     <button class="btn btn-primary w-100" id="loginBtn" onclick="handleLogin()" style="justify-content:center; padding:12px;">
       Sign In
     </button>
@@ -44,6 +49,13 @@
   // Redirect if already logged in
   if (isLoggedIn()) window.location.href = 'dashboard.html';
 
+  // Load remembered email on page load
+  const remembered = localStorage.getItem('thac_remembered_email');
+  if (remembered) {
+    document.getElementById('email').value = remembered;
+    document.getElementById('rememberMe').checked = true;
+  }
+
   // Allow Enter key to submit
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter') handleLogin();
@@ -52,6 +64,7 @@
   async function handleLogin() {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
     const btn = document.getElementById('loginBtn');
     const errorEl = document.getElementById('loginError');
 
@@ -68,6 +81,12 @@
 
     try {
       await login(email, password);
+      // Save email if Remember Me is checked
+      if (rememberMe) {
+        localStorage.setItem('thac_remembered_email', email);
+      } else {
+        localStorage.removeItem('thac_remembered_email');
+      }
       window.location.href = 'dashboard.html';
     } catch (err) {
       errorEl.textContent = 'Incorrect email or password. Please try again.';
