@@ -112,6 +112,48 @@ function worstInsuranceStatus(s) {
   return rank(pi) <= rank(pl) ? pi : pl;
 }
 
+function getAreaFromPostcode(postcode) {
+  if (!postcode) return null;
+  const code = postcode.trim().toUpperCase().split(' ')[0];
+
+  const areaMap = {
+    'E1': 'East London', 'E2': 'East London', 'E3': 'East London', 'E4': 'East London',
+    'E5': 'East London', 'E6': 'East London', 'E7': 'East London', 'E8': 'East London',
+    'E9': 'East London', 'E10': 'East London', 'E11': 'East London', 'E12': 'East London',
+    'E13': 'East London', 'E14': 'East London', 'E15': 'East London', 'E16': 'East London',
+    'E17': 'East London', 'E18': 'East London',
+    'N1': 'North London', 'N2': 'North London', 'N3': 'North London', 'N4': 'North London',
+    'N5': 'North London', 'N6': 'North London', 'N7': 'North London', 'N8': 'North London',
+    'N9': 'North London', 'N10': 'North London', 'N11': 'North London', 'N12': 'North London',
+    'N13': 'North London', 'N14': 'North London', 'N15': 'North London', 'N16': 'North London',
+    'N17': 'North London', 'N18': 'North London', 'N19': 'North London', 'N20': 'North London',
+    'N21': 'North London', 'N22': 'North London',
+    'NW1': 'North West London', 'NW2': 'North West London', 'NW3': 'North West London', 'NW4': 'North West London',
+    'NW5': 'North West London', 'NW6': 'North West London', 'NW7': 'North West London', 'NW8': 'North West London',
+    'NW9': 'North West London', 'NW10': 'North West London', 'NW11': 'North West London',
+    'W1': 'West London', 'W2': 'West London', 'W3': 'West London', 'W4': 'West London',
+    'W5': 'West London', 'W6': 'West London', 'W7': 'West London', 'W8': 'West London',
+    'W9': 'West London', 'W10': 'West London', 'W11': 'West London', 'W12': 'West London',
+    'W13': 'West London', 'W14': 'West London',
+    'SW1': 'South West London', 'SW2': 'South West London', 'SW3': 'South West London', 'SW4': 'South West London',
+    'SW5': 'South West London', 'SW6': 'South West London', 'SW7': 'South West London', 'SW8': 'South West London',
+    'SW9': 'South West London', 'SW10': 'South West London', 'SW11': 'South West London', 'SW12': 'South West London',
+    'SW13': 'South West London', 'SW14': 'South West London', 'SW15': 'South West London', 'SW16': 'South West London',
+    'SW17': 'South West London', 'SW18': 'South West London', 'SW19': 'South West London', 'SW20': 'South West London',
+    'SE1': 'South East London', 'SE2': 'South East London', 'SE3': 'South East London', 'SE4': 'South East London',
+    'SE5': 'South East London', 'SE6': 'South East London', 'SE7': 'South East London', 'SE8': 'South East London',
+    'SE9': 'South East London', 'SE10': 'South East London', 'SE11': 'South East London', 'SE12': 'South East London',
+    'SE13': 'South East London', 'SE14': 'South East London', 'SE15': 'South East London', 'SE16': 'South East London',
+    'SE17': 'South East London', 'SE18': 'South East London', 'SE19': 'South East London', 'SE20': 'South East London',
+    'SE21': 'South East London', 'SE22': 'South East London', 'SE23': 'South East London', 'SE24': 'South East London',
+    'SE25': 'South East London', 'SE26': 'South East London', 'SE27': 'South East London', 'SE28': 'South East London',
+    'EC1': 'City of London', 'EC2': 'City of London', 'EC3': 'City of London', 'EC4': 'City of London',
+    'WC1': 'West Central London', 'WC2': 'West Central London',
+  };
+
+  return areaMap[code] || 'Greater London';
+}
+
 function renderTable() {
   let filtered = [...allSurveyors];
 
@@ -153,13 +195,15 @@ function renderTable() {
     const active = s.is_active
       ? `<span class="badge badge-accepted">✅ Active</span>`
       : `<span class="badge badge-low">⏸ Paused</span>`;
+    const area = getAreaFromPostcode(s.home_postcode);
+    const postcodeDisplay = s.home_postcode ? `${s.home_postcode}<br><span style="font-size:12px;color:#666;">${area}</span>` : '—';
     return `
     <tr onclick="window.location.href='surveyor-detail.html?id=${s.id}'" style="cursor:pointer">
       <td>
         <div style="font-weight:600;font-size:14px;">${s.full_name || '—'}</div>
         <div class="muted">${s.email || ''}</div>
       </td>
-      <td>${s.home_postcode || '—'}</td>
+      <td>${postcodeDisplay}</td>
       <td>${s.hourly_rate ? '£' + Number(s.hourly_rate).toFixed(2) + '/hr' : '—'}</td>
       <td>${s.radius_miles ? s.radius_miles + ' miles' : '—'}</td>
       <td><span class="badge ${pi.cls}">${pi.label}</span></td>
