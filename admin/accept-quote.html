@@ -384,9 +384,6 @@ function showStep2(enquiryId, ref, contactName, postcode, enquiry) {
     <button class="btn btn-accept" onclick="submitStep2('${enquiryId}', '${ref}')">
       Submit Details →
     </button>
-    <button class="btn btn-decline" onclick="skipStep2('${enquiryId}', '${ref}')">
-      Skip — I'll provide these later
-    </button>
     <div class="footer">This information is stored securely and only used to arrange your survey.</div>
   `;
 
@@ -507,13 +504,6 @@ async function submitStep2(enquiryId, ref) {
     btn.disabled = false;
     alert('Something went wrong — please try again or contact us directly.');
   }
-}
-
-function skipStep2(enquiryId, ref) {
-  showDone('✅', 'Quote Accepted!',
-    `Thank you! Trevor will be in touch shortly to arrange the survey and confirm the details.`,
-    { job_number: ref }
-  );
 }
 
 async function declineQuote(enquiryId) {
