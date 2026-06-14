@@ -39,9 +39,11 @@
     .page-container {
       position: relative;
       min-height: 100vh;
-      background-image: url('old-tree-established.jpg');
+      background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2)), url('old-tree-established.jpg');
+      background-image: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2)), url('old-tree-established.jpg');
       background-size: cover;
       background-position: center;
+      background-attachment: fixed;
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -56,7 +58,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
+      background: transparent;
       z-index: 1;
     }
 
