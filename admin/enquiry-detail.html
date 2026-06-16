@@ -718,7 +718,7 @@ async function confirmConvert() {
       agreed_amount: amount ? parseFloat(amount) : null,
       urgency_surcharge: urgency_surcharge || 0,
       sla_deadline,
-      is_two_stage: true,
+      is_two_stage: document.getElementById('cvtTwoStage').checked,
       arranging_client_id: clientId,
       end_client_name:          enquiry.end_client_name          || null,
       end_client_email:         enquiry.end_client_email         || null,
