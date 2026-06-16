@@ -857,15 +857,13 @@ function renderJob() {
               <span style="font-size:11px;color:var(--text-muted);">Determines if 2nd invoice is issued</span>
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-secondary w-100" onclick="changeInvoicingMethod('split')"
-                ${job.invoicing_method === 'split' ? 'disabled style="opacity:0.5;"' : ''}
-                style="justify-content:center;">
-                50/50 Split
+              <button class="btn w-100" onclick="changeInvoicingMethod('split')"
+                style="justify-content:center;${job.invoicing_method === 'split' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
+                ${job.invoicing_method === 'split' ? '✅ ' : ''}50/50 Split
               </button>
-              <button class="btn btn-secondary w-100" onclick="changeInvoicingMethod('single')"
-                ${job.invoicing_method === 'single' ? 'disabled style="opacity:0.5;"' : ''}
-                style="justify-content:center;">
-                Single Invoice
+              <button class="btn w-100" onclick="changeInvoicingMethod('single')"
+                style="justify-content:center;${job.invoicing_method === 'single' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
+                ${job.invoicing_method === 'single' ? '✅ ' : ''}Single Invoice
               </button>
             </div>
           </div>
