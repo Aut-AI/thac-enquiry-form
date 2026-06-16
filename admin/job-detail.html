@@ -124,6 +124,56 @@
   </div>
 </div>
 
+<!-- Create Linked Job Modal -->
+<div class="modal-overlay" id="linkedJobModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Create Linked Job</div>
+    <div class="modal-sub">Link this job as a parent. A child job will be created with automatic naming.</div>
+
+    <div style="background:#f3f4f6;padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;">
+      <strong>Parent Job:</strong> <span id="linkedParentRef" style="color:var(--green-dark);font-weight:700;">—</span>
+      <br><span style="color:var(--text-muted);">Child will be named: <strong id="linkedChildRef">—</strong></span>
+    </div>
+
+    <div class="form-group">
+      <label>Survey Type <span class="req">*</span></label>
+      <select class="form-control" id="linkedSurveyType">
+        <option value="">— Choose survey type —</option>
+        <option value="bs5837">BS5837 Tree Survey (Planning)</option>
+        <option value="vta">Visual Tree Assessment (VTA)</option>
+        <option value="bc">BS5837 Stage 2 (AIA/AMS/TPP)</option>
+        <option value="subs">Subsidence / Building Damage</option>
+        <option value="ams">Arboricultural Method Statement</option>
+        <option value="tpp">Tree Protection Plan</option>
+        <option value="tpo">TPO Application</option>
+        <option value="lscp">Landscaping Plans</option>
+        <option value="mortgage">Mortgage / Insurer Report</option>
+        <option value="supervision">Site Supervision</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Dispatch State <span class="req">*</span></label>
+      <select class="form-control" id="linkedDispatchState">
+        <option value="waiting_for_plans">🕐 Waiting for Plans</option>
+        <option value="red">🔴 Unallocated</option>
+        <option value="pending_approval">⏳ Pending Approval</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Internal Notes</label>
+      <textarea class="form-control" id="linkedNotes" rows="2" placeholder="e.g. Awaiting revised plans from architect..."></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeLinkedJobModal()" style="flex:1;justify-content:center;">Cancel</button>
+      <button class="btn btn-primary" onclick="submitLinkedJob()" style="flex:2;justify-content:center;">✅ Create Linked Job</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/thac.js"></script>
 <script>
@@ -180,11 +230,18 @@ async function loadJob() {
       enquiry = (enqData && enqData.length) ? enqData[0] : null;
     }
 
-    // Load Stage 2 child job if this is a two-stage Stage 1
-    if (job.is_two_stage && !job.parent_job_id) {
-      const children = await dbGet('jobs', { 'parent_job_id': `eq.${jobId}`, 'limit': 1, 'select': 'id,reference,dispatch_state' });
-      stage2Job = (children && children.length) ? children[0] : null;
+    // Load linked child jobs if this is a parent job
+    let linkedJobs = [];
+    if (!job.parent_job_id) {
+      const children = await dbGet('jobs', {
+        'parent_job_id': `eq.${jobId}`,
+        'select': 'id,reference,dispatch_state',
+        'order': 'created_at.asc'
+      });
+      linkedJobs = children || [];
+      stage2Job = linkedJobs.length > 0 ? linkedJobs[0] : null;
     }
+    job.linkedJobs = linkedJobs;
 
     // Load NDA acceptance if job is claimed
     if (job.surveyor_id) {
@@ -832,6 +889,7 @@ function renderJob() {
           <div style="display:flex;flex-direction:column;gap:8px;">
             ${renderAllocationStatus()}
             ${renderNDAStatus()}
+            ${renderLinkedJobButton()}
             ${renderDispatchButton()}
             ${renderStage2Button()}
             ${renderInvoiceActions()}
@@ -893,18 +951,23 @@ function renderJob() {
             </div>
             ${job.parent_job_id ? `
             <div class="detail-field">
-              <label>Stage</label>
-              <div class="field-value">
-                Stage 2
-                <br><a href="job-detail.html?id=${job.parent_job_id}" style="font-size:12px;color:var(--green-mid);">← View Stage 1 →</a>
+              <label>Job Linking</label>
+              <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:12px;color:var(--text-muted);font-weight:500;">📎 Linked to parent job:</div>
+                <a href="job-detail.html?id=${job.parent_job_id}" style="font-size:14px;color:var(--green-dark);font-weight:600;">← ${job.parent_job_ref || 'Parent Job'}</a>
               </div>
             </div>` : ''}
-            ${(job.is_two_stage && !job.parent_job_id && stage2Job) ? `
+            ${(job.linkedJobs && job.linkedJobs.length > 0) ? `
             <div class="detail-field">
-              <label>Stage 2</label>
-              <div class="field-value">
-                <a href="job-detail.html?id=${stage2Job.id}" style="color:var(--green-mid);font-weight:600;">${stage2Job.reference || 'View Stage 2'} →</a>
-                <br><span style="font-size:12px;color:var(--text-muted);">${getDispatchBadge(stage2Job.dispatch_state)}</span>
+              <label>Job Linking</label>
+              <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:12px;color:var(--text-muted);font-weight:500;">📎 Linked child jobs (${job.linkedJobs.length}):</div>
+                ${job.linkedJobs.map(child => `
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f3f4f6;border-radius:6px;">
+                    <a href="job-detail.html?id=${child.id}" style="flex:1;color:var(--green-dark);font-weight:600;text-decoration:none;">${child.reference} →</a>
+                    <span style="font-size:11px;">${getDispatchBadge(child.dispatch_state)}</span>
+                  </div>
+                `).join('')}
               </div>
             </div>` : ''}
           </div>
@@ -1066,6 +1129,15 @@ function renderNDAStatus() {
     </div>`;
 }
 
+function renderLinkedJobButton() {
+  // Only show for parent jobs (jobs without a parent_job_id)
+  if (job.parent_job_id) return '';
+
+  return `<button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openLinkedJobModal()">
+    🔗 Create Linked Job
+  </button>`;
+}
+
 async function openAllocateModal() {
   // Load surveyors for dropdown
   try {
@@ -1137,6 +1209,113 @@ async function submitAllocate() {
     closeAllocateModal();
     showToast('✅ Job allocated to surveyor');
     renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// CREATE LINKED JOB MODAL
+// ============================================================
+
+async function openLinkedJobModal() {
+  if (!job.reference) {
+    showToast('Parent job must have a reference', 'error');
+    return;
+  }
+
+  // Calculate next child reference
+  try {
+    const children = await dbGet('jobs', {
+      'parent_job_id': `eq.${jobId}`,
+      'select': 'reference',
+      'order': 'created_at.desc'
+    });
+
+    let nextNumber = 1;
+    if (children && children.length > 0) {
+      const lastRef = children[0].reference;
+      const match = lastRef.match(/-(\d+)$/);
+      if (match) {
+        nextNumber = parseInt(match[1]) + 1;
+      }
+    }
+
+    const childRef = `${job.reference}-${nextNumber}`;
+    document.getElementById('linkedParentRef').textContent = job.reference;
+    document.getElementById('linkedChildRef').textContent = childRef;
+    document.getElementById('linkedJobModal').style.display = 'flex';
+  } catch (e) {
+    showToast('Error calculating child reference: ' + e.message, 'error');
+  }
+}
+
+function closeLinkedJobModal() {
+  document.getElementById('linkedJobModal').style.display = 'none';
+  document.getElementById('linkedSurveyType').value = '';
+  document.getElementById('linkedNotes').value = '';
+}
+
+async function submitLinkedJob() {
+  const surveyType = document.getElementById('linkedSurveyType').value;
+  const dispatchState = document.getElementById('linkedDispatchState').value;
+  const notes = document.getElementById('linkedNotes').value.trim();
+
+  if (!surveyType) {
+    showToast('Please select a survey type', 'error');
+    return;
+  }
+
+  try {
+    // Calculate child reference
+    const children = await dbGet('jobs', {
+      'parent_job_id': `eq.${jobId}`,
+      'select': 'reference'
+    });
+
+    let nextNumber = 1;
+    if (children && children.length > 0) {
+      const lastRef = children[children.length - 1].reference;
+      const match = lastRef.match(/-(\d+)$/);
+      if (match) {
+        nextNumber = parseInt(match[1]) + 1;
+      }
+    }
+
+    const childRef = `${job.reference}-${nextNumber}`;
+
+    // Create linked job
+    const slaMap = { '1day': 1, '3days': 3, '5days': 5, '10days': 10 };
+    const days = slaMap[job.urgency_state] || 5;
+    let count = 0, slaDate = new Date();
+    while (count < days) {
+      slaDate.setDate(slaDate.getDate() + 1);
+      if (slaDate.getDay() !== 0 && slaDate.getDay() !== 6) count++;
+    }
+
+    const linkedJobData = await dbInsert('jobs', {
+      reference: childRef,
+      parent_job_id: jobId,
+      survey_type: surveyType,
+      site_postcode: job.site_postcode,
+      urgency_state: job.urgency_state,
+      dispatch_state: dispatchState,
+      billing_mode: job.billing_mode,
+      quoted_amount: job.quoted_amount,
+      agreed_amount: job.agreed_amount,
+      is_two_stage: false,
+      arranging_client_id: job.arranging_client_id,
+      sla_deadline: slaDate.toISOString().slice(0, 10),
+      internal_notes: notes || `Linked to parent job ${job.reference}`
+    });
+
+    const linkedJobId = linkedJobData[0].id;
+    closeLinkedJobModal();
+    showToast(`✅ Linked job created: ${childRef}`);
+
+    setTimeout(() => {
+      window.location.href = `job-detail.html?id=${linkedJobId}`;
+    }, 1500);
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
