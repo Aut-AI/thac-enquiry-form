@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, Linking, TextInput, Clipboard, Dimensions,
+  Alert, ActivityIndicator, Linking, TextInput, Clipboard, Dimensions, Platform,
 } from 'react-native';
-import MapView, { Polygon } from 'react-native-maps';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { Job, RootStackParamList } from '../types';
@@ -18,9 +17,19 @@ const SURVEY_LABELS: Record<string, string> = {
 };
 
 function SiteBoundaryMap({ polygon, centerLat: jobLat, centerLng: jobLng }: { polygon: string; centerLat: number; centerLng: number }) {
-  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard');
-
   if (!polygon) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height: 320, borderRadius: 8, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#666', fontSize: 14 }}>Site boundary map (mobile only)</Text>
+      </View>
+    );
+  }
+
+  const MapView = require('react-native-maps').default;
+  const Polygon = require('react-native-maps').Polygon;
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard');
 
   try {
     const parsed = JSON.parse(polygon);
@@ -330,6 +339,11 @@ export default function JobDetailScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16, gap: 12 }}>
+
+      {/* Back Button */}
+      <TouchableOpacity onPress={() => nav.goBack()} style={{ marginBottom: 8 }}>
+        <Text style={{ fontSize: 18, color: '#1a3c2e', fontWeight: '700' }}>← Back</Text>
+      </TouchableOpacity>
 
       {/* Allocated Job Alert */}
       {job.allocated_surveyor_id && !job.allocation_rejected_at && job.dispatch_state !== 'orange' && (
