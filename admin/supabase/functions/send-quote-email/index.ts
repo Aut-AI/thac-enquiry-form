@@ -35,8 +35,8 @@ serve(async (req) => {
     })
   }
 
-  const acceptLink = `https://ciaran-aut-ai.github.io/thac-enquiry-form/accept-quote.html?id=${enquiry_id}`
-  const declineLink = `https://ciaran-aut-ai.github.io/thac-enquiry-form/accept-quote.html?id=${enquiry_id}&action=decline`
+  const acceptLink = `https://aut-ai.github.io/thac-enquiry-form/accept-quote.html?id=${enquiry_id}`
+  const declineLink = `https://aut-ai.github.io/thac-enquiry-form/accept-quote.html?id=${enquiry_id}&action=decline`
   const price = '£' + Number(quoted_price).toLocaleString() + ' + VAT'
 
   const emailHtml = `
