@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 
 const styles = StyleSheet.create({
   container: {
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
   signInLink: {
     alignItems: 'center',
     marginTop: 16,
+    marginBottom: 40,
   },
   signInText: {
     color: '#666',
@@ -116,7 +117,6 @@ export function RegisterScreen({ navigation }: any) {
   const [dbsNumber, setDbsNumber] = useState('');
   const [dbsExpiryDate, setDbsExpiryDate] = useState('');
   const [qualifications, setQualifications] = useState('');
-  const [memberships, setMemberships] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -142,28 +142,32 @@ export function RegisterScreen({ navigation }: any) {
       if (!userId) throw new Error('Failed to create user');
 
       // Create surveyor record with pending status
-      const { error: dbError } = await supabase.from('surveyors').insert([
-        {
-          user_id: userId,
-          full_name: fullName,
-          email,
-          phone: phone || null,
-          home_postcode: postcode,
-          radius_miles: parseInt(radiusMiles) || 25,
-          pi_policy_number: piPolicyNumber || null,
-          pi_expiry_date: piExpiryDate || null,
-          pl_policy_number: plPolicyNumber || null,
-          pl_expiry_date: plExpiryDate || null,
-          dbs_number: dbsNumber || null,
-          dbs_expiry_date: dbsExpiryDate || null,
-          qualifications: qualifications || null,
-          professional_memberships: memberships || null,
-          status: 'pending',
-          is_active: false,
-        },
-      ]);
+      const payload = {
+        user_id: userId,
+        full_name: fullName,
+        email,
+        phone: phone || null,
+        home_postcode: postcode,
+        radius_miles: parseInt(radiusMiles) || 25,
+        pi_policy_number: piPolicyNumber || null,
+        pi_expiry_date: piExpiryDate || null,
+        pl_policy_number: plPolicyNumber || null,
+        pl_expiry_date: plExpiryDate || null,
+        dbs_number: dbsNumber || null,
+        dbs_expiry_date: dbsExpiryDate || null,
+        qualifications: qualifications || null,
+        status: 'pending',
+        is_active: false,
+      };
 
-      if (dbError) throw dbError;
+      console.log('Inserting surveyor:', JSON.stringify(payload, null, 2));
+
+      const { error: dbError } = await supabase.from('surveyors').insert([payload]);
+
+      if (dbError) {
+        console.error('DB Error details:', dbError);
+        throw new Error(`Registration failed: ${dbError.message}`);
+      }
 
       Alert.alert(
         'Registration Successful',
@@ -310,15 +314,6 @@ export function RegisterScreen({ navigation }: any) {
               placeholder="Qualifications"
               value={qualifications}
               onChangeText={setQualifications}
-              multiline
-              numberOfLines={2}
-              editable={!loading}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Professional Memberships"
-              value={memberships}
-              onChangeText={setMemberships}
               multiline
               numberOfLines={2}
               editable={!loading}
