@@ -35,6 +35,7 @@ function MainTabs() {
         tabBarIcon: ({ color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             Jobs:    'list',
+            Map:     'map',
             TimeOff: 'calendar',
             Profile: 'person',
           };
