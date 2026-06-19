@@ -1649,9 +1649,13 @@ function renderDispatchButton() {
     </button>`;
   }
   if (d === 'red') {
-    return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-      🔴 Live on Map
-    </button>`;
+    return `
+      <button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
+        🔴 Live on Map
+      </button>
+      <button class="btn btn-secondary w-100" style="justify-content:center;color:#dc2626;margin-top:6px;" onclick="removeFromMap()">
+        ✕ Remove from Map
+      </button>`;
   }
   if (d === 'archived') return '';
   if (d === 'orange') {
@@ -1692,6 +1696,20 @@ async function approveToMap() {
     job.dispatch_state = 'red';
     if (surveyor_pay_amount) job.surveyor_pay_amount = surveyor_pay_amount;
     showToast('Job approved — live on map 🔴');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function removeFromMap() {
+  if (!confirm('Remove this job from the surveyor map? It will no longer be visible to surveyors.')) return;
+  try {
+    await dbUpdate('jobs', `id=eq.${jobId}`, {
+      dispatch_state: 'yellow'
+    });
+    job.dispatch_state = 'yellow';
+    showToast('Job removed from map');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
