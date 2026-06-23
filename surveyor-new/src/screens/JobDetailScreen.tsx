@@ -401,12 +401,14 @@ export default function JobDetailScreen() {
       ) : null}
 
       {/* Parking Location Map */}
-      {isMine && (job.parking_lat || enquiry?.parking_lat) && (
+      {isMine && (job.parking_lat || enquiry?.parking_lat) ? (
         <View style={s.card}>
           <Text style={s.sectionTitle}>Parking Location</Text>
           <ParkingLocationMap parkingLat={job.parking_lat || enquiry?.parking_lat} parkingLng={job.parking_lng || enquiry?.parking_lng} />
         </View>
-      )}
+      ) : isMine ? (
+        <Text style={{padding: 16, color: '#999', fontSize: 12}}>📍 No parking location set</Text>
+      ) : null}
 
       {/* Survey Date */}
       {job.survey_date ? (
