@@ -398,36 +398,20 @@ function renderInvoiceActions() {
   return buttons.join('');
 }
 
-function displayBoundaryMap() {
+function displayParkingMap() {
   setTimeout(() => {
-    const container = document.getElementById('boundaryMapContainer');
-    if (!container || window.boundaryMapInitialized) return;
+    const container = document.getElementById('parkingMapContainer');
+    if (!container || window.parkingMapInitialized) return;
 
-    const polygonData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
-    if (!polygonData) return;
+    const parkingLat = enquiry?.parking_lat || job?.parking_lat;
+    const parkingLng = enquiry?.parking_lng || job?.parking_lng;
+    if (!parkingLat || !parkingLng) return;
 
-    let coordinates = polygonData;
-    if (typeof polygonData === 'string') {
-      try {
-        coordinates = JSON.parse(polygonData);
-      } catch (e) {
-        return;
-      }
-    }
-
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
-
-    window.boundaryMapInitialized = true;
+    window.parkingMapInitialized = true;
 
     try {
-      // Calculate center
-      const lats = coordinates.map(c => c[0]);
-      const lngs = coordinates.map(c => c[1]);
-      const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
-      const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
-
-      // Create Leaflet map
-      const map = L.map(container).setView([centerLat, centerLng], 17);
+      // Create Leaflet map centered on pin
+      const map = L.map(container).setView([parkingLat, parkingLng], 17);
 
       // Add Esri World Imagery
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -435,24 +419,14 @@ function displayBoundaryMap() {
         maxZoom: 18
       }).addTo(map);
 
-      // Draw polygon
-      const polygonLatLngs = coordinates.map(c => [c[0], c[1]]);
-      const polygon = L.polygon(polygonLatLngs, {
-        color: '#1a3c2e',
-        weight: 2,
-        opacity: 1,
-        fill: true,
-        fillColor: '#c8e6d4',
-        fillOpacity: 0.4
+      // Drop marker at parking location
+      L.marker([parkingLat, parkingLng], {
+        title: 'Parking Location'
       }).addTo(map);
 
-      // Fit bounds
-      const bounds = L.latLngBounds(polygonLatLngs);
-      map.fitBounds(bounds, { padding: [50, 50] });
-
-      console.log('✅ Map displayed with polygon:', coordinates.length, 'points');
+      console.log('✅ Parking map displayed with pin at', parkingLat, parkingLng);
     } catch (err) {
-      console.error('Error displaying boundary map:', err);
+      console.error('Error displaying parking map:', err);
     }
   }, 200);
 }
@@ -547,10 +521,10 @@ function renderSurveyAndSiteDetails() {
   const slaDeadline = job?.sla_deadline;
   const postcode = job?.site_postcode;
   const coordinates = job?.site_lat && job?.site_lng ? `${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}` : null;
-  const hasBoundary = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
+  const hasParkingPin = enquiry?.parking_lat || job?.parking_lat;
   const hasAccessDetails = job?.site_access_notes || job?.site_location_tag;
 
-  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasBoundary && !hasAccessDetails) return '';
+  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasParkingPin && !hasAccessDetails) return '';
 
   return `
     <div class="card">
@@ -665,23 +639,24 @@ function renderSurveyAndSiteDetails() {
           </div>
         </div>
       </div>
-      ${hasBoundary ? `
+      ${hasParkingPin ? `
         <div style="margin-top:16px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Site Boundary</div>
-          <div id="boundaryMapContainer" style="width:100%;height:280px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Parking Location</div>
+          <div id="parkingMapContainer" style="width:100%;height:280px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
         </div>
       ` : ''}
     </div>
   `;
 
-  // Display boundary map - deferred
+  // Display parking map - deferred
   setTimeout(() => {
     try {
-      const container = document.getElementById('boundaryMapContainer');
+      const container = document.getElementById('parkingMapContainer');
       if (!container) return;
-      const polyData = enquiry?.site_boundary_polygon || job?.site_boundary_polygon;
-      if (polyData) {
-        displayBoundaryMap();
+      const parkingLat = enquiry?.parking_lat || job?.parking_lat;
+      const parkingLng = enquiry?.parking_lng || job?.parking_lng;
+      if (parkingLat && parkingLng) {
+        displayParkingMap();
       }
     } catch (e) {
       console.error('Map error:', e);

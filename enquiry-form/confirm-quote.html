@@ -6,9 +6,7 @@
 <title>Confirm Your Quote Details — THAC</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <style>
   :root {
     --green-dark: #1a3a2a;
@@ -254,6 +252,8 @@ let map = null;
 let drawingManager = null;
 let polygon = null;
 let polygonCoordinates = [];
+let parkingLat = null;
+let parkingLng = null;
 
 async function init() {
   if (!enquiryId) {
@@ -401,13 +401,13 @@ function renderForm() {
     </div>
 
     <div class="card">
-      <div class="card-title">Survey Area Boundary</div>
-      <div class="card-subtitle">Draw a polygon around the area to be surveyed (optional but helpful)</div>
+      <div class="card-title">Parking Location</div>
+      <div class="card-subtitle">Drop a pin to show where the surveyor should park (optional)</div>
 
       <input type="text" id="addressSearch" placeholder="Search for address or postcode..." style="width:100%;padding:10px;margin-bottom:14px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;" />
 
       <div id="mapContainer"></div>
-      <div class="map-hint">💡 Type an address or postcode, click the map to draw corners (tools in top-left), then finalize in the drawing menu</div>
+      <div class="map-hint">💡 Optional — tap the map to drop a pin where the surveyor should park. Feel free to skip this.</div>
     </div>
 
     <div class="card" style="margin-bottom: 40px;">
@@ -462,7 +462,8 @@ async function submitDetails() {
         report_addressee_name: reportAddresseeName,
         report_addressee_address: reportAddresseeAddress,
         client_site_access: document.getElementById('siteAccessNotes').value.trim() || null,
-        site_boundary_polygon: polygonCoordinates.length > 0 ? JSON.stringify(polygonCoordinates) : null,
+        parking_lat: parkingLat,
+        parking_lng: parkingLng,
         status: 'accepted',
         accepted_at: new Date().toISOString()
       })
@@ -526,36 +527,20 @@ function initMap() {
     }).addTo(map);
   }
 
-  // Add drawing tools
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-
-  const drawControl = new L.Control.Draw({
-    position: 'topleft',
-    draw: {
-      polygon: true,
-      polyline: false,
-      rectangle: false,
-      circle: false,
-      marker: false,
-      circlemarker: false
-    },
-    edit: {
-      featureGroup: drawnItems,
-      remove: true
-    }
-  });
-  map.addControl(drawControl);
-
-  // Capture polygon when drawn
-  map.on(L.Draw.Event.CREATED, (e) => {
-    const layer = e.layer;
-    drawnItems.addLayer(layer);
-
-    if (layer instanceof L.Polygon) {
-      const latlngs = layer.getLatLngs()[0];
-      polygon = layer;
-      polygonCoordinates = latlngs.map(point => [point.lat, point.lng]);
+  // Parking pin drop handler
+  let parkingMarker = null;
+  map.on('click', (e) => {
+    parkingLat = e.latlng.lat;
+    parkingLng = e.latlng.lng;
+    if (parkingMarker) {
+      parkingMarker.setLatLng(e.latlng);
+    } else {
+      parkingMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
+      parkingMarker.on('dragend', () => {
+        const pos = parkingMarker.getLatLng();
+        parkingLat = pos.lat;
+        parkingLng = pos.lng;
+      });
     }
   });
 

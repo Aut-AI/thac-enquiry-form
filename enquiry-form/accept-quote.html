@@ -102,9 +102,7 @@ h1 { font-size: 24px; font-weight: 700; color: #1a3c2e; margin-bottom: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <style>
   #mapContainer { width: 100%; height: 400px; border: 1px solid #d1d5db; border-radius: 8px; z-index: 1; }
   .drawing-controls { margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -151,6 +149,8 @@ const action = params.get('action') || 'accept'; // 'accept' or 'decline'
 let map = null;
 let drawingManager = null;
 let polygonCoordinates = null;
+let parkingLat = null;
+let parkingLng = null;
 let loadedEnquiry = null;
 
 async function supabaseGet(table, query) {
@@ -360,14 +360,14 @@ function showStep2(enquiryId, ref, contactName, postcode, enquiry) {
       ${field('accessDetails', 'Access details', '(e.g. gate codes, key locations, security information)', 'text', 'e.g. Gate code 1234, key under mat, call John on arrival', 2)}
       ${field('parkingDetails', 'Parking details', '(e.g. where to park, restrictions)', 'text', 'e.g. Park on the drive, no parking on street', 2)}
 
-      <!-- Section 5: Site boundary (optional) -->
-      <div style="${SEC_STYLE}">5. Site boundary <span style="font-weight:400;color:#9ca3af;">(optional)</span></div>
-      <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">You can optionally draw the survey boundary on a map. This helps the surveyor prepare.</p>
+      <!-- Section 5: Parking location (optional) -->
+      <div style="${SEC_STYLE}">5. Parking location <span style="font-weight:400;color:#9ca3af;">(optional)</span></div>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">You can optionally drop a pin on a map showing where the surveyor should park.</p>
       <div style="margin-bottom:14px;">
         <input type="text" id="addressSearch" placeholder="Search for address or postcode..." style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;background-color: rgba(245, 242, 235, 0.7);" />
       </div>
       <div id="mapContainer" style="width:100%;height:300px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;background:#f9fafb;"></div>
-      <p style="font-size:12px;color:#6b7280;">💡 Type an address or postcode, click the map to draw corners (tools in top-left), then click the polygon icon to save.</p>
+      <p style="font-size:12px;color:#6b7280;">💡 Optional — tap the map to drop a pin where the surveyor should park. Feel free to skip this if the notes above are enough.</p>
 
       <!-- Section 6: Terms & Conditions -->
       <div style="${SEC_STYLE}">6. Confirm acceptance</div>
@@ -435,8 +435,9 @@ async function submitStep2(enquiryId, ref) {
       client_details_at:        new Date().toISOString(),
     };
 
-    if (polygonCoordinates) {
-      updateData.site_boundary_polygon = JSON.stringify(polygonCoordinates);
+    if (parkingLat !== null && parkingLng !== null) {
+      updateData.parking_lat = parkingLat;
+      updateData.parking_lng = parkingLng;
     }
 
     await supabasePatch('enquiries', `id=eq.${enquiryId}`, updateData);
@@ -460,7 +461,8 @@ async function submitStep2(enquiryId, ref) {
         report_addressee_name: finalReportName,
         report_addressee_address: finalReportAddress,
         report_title: document.getElementById('reportTitle').value.trim() || null,
-        site_boundary_polygon: polygonCoordinates ? JSON.stringify(polygonCoordinates) : null,
+        parking_lat: parkingLat,
+        parking_lng: parkingLng,
       };
 
       console.log('polygonCoordinates before job creation:', polygonCoordinates);
@@ -611,35 +613,20 @@ function initializeMap() {
     }).addTo(map);
   }
 
-  // Add drawing tools
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-
-  const drawControl = new L.Control.Draw({
-    position: 'topleft',
-    draw: {
-      polygon: true,
-      polyline: false,
-      rectangle: false,
-      circle: false,
-      marker: false,
-      circlemarker: false
-    },
-    edit: {
-      featureGroup: drawnItems,
-      remove: true
-    }
-  });
-  map.addControl(drawControl);
-
-  // Capture polygon when drawn
-  map.on(L.Draw.Event.CREATED, (e) => {
-    const layer = e.layer;
-    drawnItems.addLayer(layer);
-
-    if (layer instanceof L.Polygon) {
-      const latlngs = layer.getLatLngs()[0];
-      polygonCoordinates = latlngs.map(point => [point.lat, point.lng]);
+  // Parking pin drop handler
+  let parkingMarker = null;
+  map.on('click', (e) => {
+    parkingLat = e.latlng.lat;
+    parkingLng = e.latlng.lng;
+    if (parkingMarker) {
+      parkingMarker.setLatLng(e.latlng);
+    } else {
+      parkingMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
+      parkingMarker.on('dragend', () => {
+        const pos = parkingMarker.getLatLng();
+        parkingLat = pos.lat;
+        parkingLng = pos.lng;
+      });
     }
   });
 

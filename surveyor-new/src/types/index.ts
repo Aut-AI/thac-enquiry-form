@@ -28,6 +28,8 @@ export interface Job {
   site_postcode: string | null;
   site_lat: number | null;
   site_lng: number | null;
+  parking_lat: number | null;
+  parking_lng: number | null;
   urgency_state: UrgencyState;
   dispatch_state: DispatchState;
   sla_deadline: string | null;

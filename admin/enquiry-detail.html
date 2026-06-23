@@ -154,7 +154,7 @@ async function loadEnquiry() {
     const data = await dbGet('enquiries', {
       'id': `eq.${enquiryId}`,
       'limit': 1,
-      'select': '*,billing_contact_name,billing_contact_email,billing_address,end_client_name,end_client_email,report_addressee_name,report_addressee_address,report_title,access_details,parking_details,site_boundary_polygon,tc_accepted,tc_accepted_at'
+      'select': '*,billing_contact_name,billing_contact_email,billing_address,end_client_name,end_client_email,report_addressee_name,report_addressee_address,report_title,access_details,parking_details,tc_accepted,tc_accepted_at'
     });
     if (!data || data.length === 0) {
       document.getElementById('pageBody').innerHTML = `<div class="empty-state"><h3>Enquiry not found</h3></div>`;
@@ -424,8 +424,8 @@ function renderEnquiry() {
     </div>
   `;
 
-  // Display boundary map if present
-  setTimeout(() => displayBoundaryMap(), 250);
+  // Display parking map if present
+  setTimeout(() => displayParkingMap(), 250);
 }
 
 // ============================================================
@@ -478,10 +478,10 @@ function renderEnquiryAcceptanceDetails() {
             <div style="font-size:13px;background:var(--bg);padding:10px;border-radius:8px;white-space:pre-wrap;color:var(--text);">${enquiry.parking_details}</div>
           </div>
         ` : ''}
-        ${enquiry.site_boundary_polygon ? `
+        ${enquiry.parking_lat && enquiry.parking_lng ? `
           <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Site Boundary</div>
-            <div id="boundaryMapContainer" style="width:100%;height:280px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Parking Location</div>
+            <div id="parkingMapContainer" style="width:100%;height:280px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
           </div>
         ` : ''}
       </div>
@@ -754,41 +754,26 @@ async function confirmConvert() {
 // BOUNDARY MAP DISPLAY
 // ============================================================
 
-function displayBoundaryMap() {
+function displayParkingMap() {
   setTimeout(() => {
-    const container = document.getElementById('boundaryMapContainer');
-    if (!container || window.boundaryMapInitialized) return;
+    const container = document.getElementById('parkingMapContainer');
+    if (!container || window.parkingMapInitialized) return;
 
-    const polygonData = enquiry?.site_boundary_polygon;
-    if (!polygonData) return;
+    const parkingLat = enquiry?.parking_lat;
+    const parkingLng = enquiry?.parking_lng;
+    if (!parkingLat || !parkingLng) return;
 
-    let coordinates = polygonData;
-    if (typeof polygonData === 'string') {
-      try {
-        coordinates = JSON.parse(polygonData);
-      } catch (e) {
-        return;
-      }
-    }
-
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) return;
     if (typeof google === 'undefined' || !google.maps) {
       console.error('Google Maps not loaded');
       return;
     }
 
-    window.boundaryMapInitialized = true;
+    window.parkingMapInitialized = true;
 
     try {
-      // Calculate center and bounds
-      const lats = coordinates.map(c => c[0]);
-      const lngs = coordinates.map(c => c[1]);
-      const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
-      const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
-
-      // Create map
+      // Create map centered on pin
       const map = new google.maps.Map(container, {
-        center: { lat: centerLat, lng: centerLng },
+        center: { lat: parkingLat, lng: parkingLng },
         zoom: 17,
         mapTypeId: 'roadmap',
         disableDefaultUI: false,
@@ -796,27 +781,16 @@ function displayBoundaryMap() {
         fullscreenControl: false
       });
 
-      // Draw polygon
-      const polygonCoords = coordinates.map(c => ({ lat: c[0], lng: c[1] }));
-      const polygon = new google.maps.Polygon({
-        paths: polygonCoords,
-        geodesic: false,
-        strokeColor: '#1a3c2e',
-        strokeOpacity: 1,
-        strokeWeight: 2,
-        fillColor: '#c8e6d4',
-        fillOpacity: 0.4,
-        map: map
+      // Drop marker at parking location
+      const marker = new google.maps.Marker({
+        position: { lat: parkingLat, lng: parkingLng },
+        map: map,
+        title: 'Parking Location'
       });
 
-      // Fit bounds
-      const bounds = new google.maps.LatLngBounds();
-      polygonCoords.forEach(coord => bounds.extend(coord));
-      map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-
-      console.log('✅ Enquiry boundary map displayed with polygon:', coordinates.length, 'points');
+      console.log('✅ Enquiry parking map displayed with pin at', parkingLat, parkingLng);
     } catch (err) {
-      console.error('Error displaying boundary map:', err);
+      console.error('Error displaying parking map:', err);
     }
   }, 200);
 }
