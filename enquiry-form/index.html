@@ -586,8 +586,30 @@
     Not sure? Call Trevor on <a href="tel:+447957763533" class="phone-link">07957 763 533</a></p>
   </div>
 
+  <!-- STEP GATE: Postcode area check (shown before progress bar) -->
+  <div class="form-card" id="step-gate">
+    <div class="card-title">Where's the property located?</div>
+    <div class="card-subtitle">Enter the postcode and we'll confirm we cover your area.</div>
+
+    <div class="field-group">
+      <label>Postcode <span class="required">*</span></label>
+      <input type="text" id="gatePostcode" placeholder="e.g. SW1A 1AA" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <div class="field-hint">We'll check this against our service area.</div>
+      <div class="field-error" id="gatePostcodeError">Please enter a valid postcode.</div>
+    </div>
+
+    <div class="field-error" id="gateOutOfAreaError" style="display:none;">
+      Sorry, we don't currently operate in this area.<br>
+      Please call Trevor on <a href="tel:+447957763533" class="phone-link">07957 763 533</a> to discuss your options.
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-primary" onclick="checkPostcodeArea()" id="gateCheckBtn">Check Postcode →</button>
+    </div>
+  </div>
+
   <!-- Progress -->
-  <div class="progress-bar" id="progressBar">
+  <div class="progress-bar" id="progressBar" style="display:none;">
     <div class="progress-step active" data-step="1">
       <div class="step-dot">1</div>
       <span class="step-label">Type</span>
@@ -607,7 +629,7 @@
   </div>
 
   <!-- Form Card -->
-  <div class="form-card">
+  <div class="form-card" id="mainFormCard" style="display:none;">
 
     <!-- STEP 0: New or Existing -->
     <div class="step-panel active" id="step-0">
@@ -944,6 +966,28 @@ let branch = null; // 'new' | 'amendment'
 let selectedSurveyType = null;
 let currentStep = 'step-0';
 
+// Postcode gate
+let operatingOutcodes = [];
+let validatedPostcode = null;
+
+const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
+
+// Load operating outcodes once on page load
+(async function() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/operating_outcodes?select=outcode`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      operatingOutcodes = rows.map(r => r.outcode);
+    }
+  } catch (e) {
+    console.error('Failed to load operating outcodes:', e);
+  }
+})();
+
 // Pricing data (base prices excl VAT)
 const BASE_PRICES = {
   '1-25':   100,
@@ -977,6 +1021,63 @@ const DEADLINE_LABELS = {
   '5days':  'Within 5 working days',
   '10days': 'Within 10 working days / No urgency'
 };
+
+// ============================================================
+// POSTCODE AREA GATE
+// ============================================================
+function extractOutcode(postcode) {
+  const cleaned = postcode.replace(/\s+/g, '').toUpperCase();
+  const match = cleaned.match(/^[A-Z]{1,2}/);
+  return match ? match[0] : null;
+}
+
+function checkPostcodeArea() {
+  const raw = document.getElementById('gatePostcode').value.trim();
+  hideError('gatePostcodeError', 'gatePostcode');
+  document.getElementById('gateOutOfAreaError').style.display = 'none';
+
+  if (!raw || raw.length < 5) {
+    showError('gatePostcodeError', 'gatePostcode');
+    return;
+  }
+
+  // Fail-open: if outcodes list failed to load, let them through
+  if (operatingOutcodes.length === 0) {
+    console.warn('Operating outcodes list is empty; fail-open allowing postcode through');
+    validatedPostcode = raw;
+    document.getElementById('step-gate').style.display = 'none';
+    document.getElementById('progressBar').style.display = '';
+    document.getElementById('mainFormCard').style.display = '';
+    const siteField = document.getElementById('sitePostcode');
+    if (siteField) {
+      siteField.value = validatedPostcode;
+      siteField.readOnly = true;
+    }
+    goTo('step-0');
+    return;
+  }
+
+  const outcode = extractOutcode(raw);
+
+  if (!outcode || !operatingOutcodes.includes(outcode)) {
+    document.getElementById('gateOutOfAreaError').style.display = 'block';
+    return;
+  }
+
+  validatedPostcode = raw;
+  document.getElementById('step-gate').style.display = 'none';
+  document.getElementById('progressBar').style.display = '';
+  document.getElementById('mainFormCard').style.display = '';
+
+  // Pre-fill + lock the postcode field for later (New Survey branch)
+  const siteField = document.getElementById('sitePostcode');
+  if (siteField) {
+    siteField.value = validatedPostcode;
+    siteField.readOnly = true;
+  }
+
+  goTo('step-0');
+}
 
 // ============================================================
 // NAVIGATION
@@ -1265,12 +1366,6 @@ async function geocodePostcode(postcode) {
 }
 
 async function submitToSupabase(payload, email) {
-  // ============================================================
-  // SUPABASE CONFIG — replace these before deploying
-  const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
-  // ============================================================
-
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/enquiries`, {
       method: 'POST',

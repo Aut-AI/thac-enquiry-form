@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — Operating Outcodes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+</head>
+<body>
+<div class="app-layout" id="app"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+let allOutcodes = [];
+
+async function init() {
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('outcodes')}
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Operating Outcodes</div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-title">Add Outcode</div>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px;">
+            <div class="form-group" style="margin-bottom:0;min-width:120px;">
+              <label>Outcode</label>
+              <input type="text" class="form-control" id="newOutcode" placeholder="e.g. SW" maxlength="2" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="form-group" style="margin-bottom:0;min-width:200px;">
+              <label>Region / Area</label>
+              <input type="text" class="form-control" id="newRegion" placeholder="e.g. London">
+            </div>
+            <button class="btn btn-primary" onclick="addOutcode()">+ Add</button>
+          </div>
+          <div id="outcodesTable"><div class="loading"><div class="spinner"></div><br>Loading outcodes...</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  await loadOutcodes();
+}
+
+async function loadOutcodes() {
+  try {
+    allOutcodes = await dbGet('operating_outcodes', {
+      'select': 'id,outcode,region,source,created_at',
+      'order': 'region.asc,outcode.asc'
+    });
+    renderTable();
+  } catch (e) {
+    document.getElementById('outcodesTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+function renderTable() {
+  if (!allOutcodes.length) {
+    document.getElementById('outcodesTable').innerHTML = `<div class="empty-state"><p>No outcodes yet.</p></div>`;
+    return;
+  }
+
+  // Group by region
+  const groups = {};
+  allOutcodes.forEach(o => {
+    const key = o.region || '(No region set)';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(o);
+  });
+
+  const sections = Object.keys(groups).sort().map(region => `
+    <tr><td colspan="3" style="background:var(--bg);font-weight:600;font-size:13px;color:var(--text-muted);">${region}</td></tr>
+    ${groups[region].map(o => `
+      <tr>
+        <td style="font-weight:600;color:var(--text);">${o.outcode}</td>
+        <td><span class="badge ${o.source === 'surveyor_signup' ? 'badge-standard' : 'badge-low'}">${o.source === 'surveyor_signup' ? '🤖 Auto (Surveyor)' : '✏️ Manual'}</span></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeOutcode(${o.id}, '${o.outcode}')">Remove</button></td>
+      </tr>
+    `).join('')}
+  `).join('');
+
+  document.getElementById('outcodesTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Outcode</th><th>Source</th><th></th></tr></thead>
+      <tbody>${sections}</tbody>
+    </table>`;
+}
+
+async function addOutcode() {
+  const outcode = document.getElementById('newOutcode').value.trim().toUpperCase();
+  const region = document.getElementById('newRegion').value.trim();
+
+  if (!outcode || !/^[A-Z]{1,2}$/.test(outcode)) {
+    showToast('Enter a valid 1-2 letter outcode (e.g. SW)', 'error');
+    return;
+  }
+
+  try {
+    await dbInsert('operating_outcodes', { outcode, region: region || null, source: 'manual' });
+    document.getElementById('newOutcode').value = '';
+    document.getElementById('newRegion').value = '';
+    showToast('Outcode added');
+    await loadOutcodes();
+  } catch (e) {
+    showToast(e.message.includes('duplicate') ? 'That outcode already exists' : 'Error: ' + e.message, 'error');
+  }
+}
+
+async function removeOutcode(id, outcode) {
+  if (!confirm(`Remove outcode "${outcode}"? This area will no longer be accepted on the enquiry form.`)) return;
+  try {
+    await dbDelete('operating_outcodes', `id=eq.${id}`);
+    showToast('Outcode removed');
+    await loadOutcodes();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
