@@ -1,8 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Dimensions, FlatList } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { Surveyor } from '../types';
+
+interface Outcode {
+  outcode: string;
+  region: string | null;
+}
+
+interface ServiceOutcodeGroup {
+  region: string;
+  outcodes: Outcode[];
+}
 
 function trafficLight(dateStr: string | null): string {
   if (!dateStr) return '⚪';
@@ -23,6 +33,10 @@ export default function ProfileScreen() {
   const [loading,  setLoading]  = useState(true);
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
   const [savingAvail, setSavingAvail] = useState(false);
+  const [allOutcodes, setAllOutcodes] = useState<ServiceOutcodeGroup[]>([]);
+  const [serviceOutcodes, setServiceOutcodes] = useState<string[]>([]);
+  const [savingOutcode, setSavingOutcode] = useState(false);
+  const [showOutcodeDropdown, setShowOutcodeDropdown] = useState(false);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, []));
 
@@ -49,6 +63,34 @@ export default function ProfileScreen() {
       const availMap: Record<string, boolean> = {};
       availData?.forEach(a => { availMap[a.date] = a.is_available; });
       setAvailability(availMap);
+
+      // Load operating outcodes
+      const { data: outcodesData } = await supabase
+        .from('operating_outcodes')
+        .select('outcode, region')
+        .order('region, outcode');
+
+      // Group by region
+      const grouped: Record<string, Outcode[]> = {};
+      outcodesData?.forEach(o => {
+        const region = o.region || 'Other';
+        if (!grouped[region]) grouped[region] = [];
+        grouped[region].push(o);
+      });
+
+      const groupedArray = Object.entries(grouped)
+        .map(([region, outcodes]) => ({ region, outcodes }))
+        .sort((a, b) => a.region.localeCompare(b.region));
+
+      setAllOutcodes(groupedArray);
+
+      // Load surveyor's service outcodes
+      const { data: serviceData } = await supabase
+        .from('surveyor_service_outcodes')
+        .select('outcode')
+        .eq('surveyor_id', surveyorData.id);
+
+      setServiceOutcodes(serviceData?.map(s => s.outcode) || []);
     }
 
     setLoading(false);
@@ -74,6 +116,45 @@ export default function ProfileScreen() {
       setAvailability(prev => ({ ...prev, [date]: !newAvail }));
     } finally {
       setSavingAvail(false);
+    }
+  }
+
+  async function addServiceOutcode(outcode: string) {
+    if (!surveyor || serviceOutcodes.includes(outcode)) return;
+    setSavingOutcode(true);
+
+    try {
+      const { error } = await supabase
+        .from('surveyor_service_outcodes')
+        .insert({ surveyor_id: surveyor.id, outcode });
+
+      if (error) throw error;
+      setServiceOutcodes(prev => [...prev, outcode]);
+      setShowOutcodeDropdown(false);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSavingOutcode(false);
+    }
+  }
+
+  async function removeServiceOutcode(outcode: string) {
+    if (!surveyor) return;
+    setSavingOutcode(true);
+
+    try {
+      const { error } = await supabase
+        .from('surveyor_service_outcodes')
+        .delete()
+        .eq('surveyor_id', surveyor.id)
+        .eq('outcode', outcode);
+
+      if (error) throw error;
+      setServiceOutcodes(prev => prev.filter(o => o !== outcode));
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSavingOutcode(false);
     }
   }
 
@@ -104,6 +185,60 @@ export default function ProfileScreen() {
         {surveyor.phone ? <Text style={s.detail}>{surveyor.phone}</Text> : null}
         {surveyor.home_postcode ? <Text style={s.detail}>📍 {surveyor.home_postcode} · {surveyor.radius_miles} mile radius</Text> : null}
         {surveyor.hourly_rate ? <Text style={s.detail}>£{surveyor.hourly_rate}/hr <Text style={{fontSize: 12, color: '#999'}}>(set by admin)</Text></Text> : null}
+      </View>
+
+      {/* Service Areas */}
+      <View style={s.card}>
+        <Text style={s.sectionTitle}>Service Areas</Text>
+        <Text style={s.hint}>Select the postcode areas (outcodes) where you're willing to work. You'll only see jobs in these areas on the map.</Text>
+
+        {serviceOutcodes.length > 0 ? (
+          <View style={s.outcodeList}>
+            {serviceOutcodes.map(outcode => (
+              <View key={outcode} style={s.outcodeTag}>
+                <Text style={s.outcodeText}>{outcode}</Text>
+                <TouchableOpacity onPress={() => removeServiceOutcode(outcode)} disabled={savingOutcode}>
+                  <Text style={s.outcodeRemove}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={s.noOutcodes}>No service areas selected yet. Add some below.</Text>
+        )}
+
+        <TouchableOpacity
+          style={s.addOutcodeBtn}
+          onPress={() => setShowOutcodeDropdown(!showOutcodeDropdown)}
+          disabled={savingOutcode}
+        >
+          <Text style={s.addOutcodeBtnText}>+ Add Service Area</Text>
+        </TouchableOpacity>
+
+        {showOutcodeDropdown && (
+          <View style={s.dropdown}>
+            {allOutcodes.map(group => (
+              <View key={group.region}>
+                <Text style={s.dropdownRegion}>{group.region}</Text>
+                {group.outcodes.map(outcode => {
+                  const isSelected = serviceOutcodes.includes(outcode.outcode);
+                  return (
+                    <TouchableOpacity
+                      key={outcode.outcode}
+                      style={[s.dropdownItem, isSelected && s.dropdownItemSelected]}
+                      onPress={() => !isSelected && addServiceOutcode(outcode.outcode)}
+                      disabled={isSelected || savingOutcode}
+                    >
+                      <Text style={[s.dropdownItemText, isSelected && s.dropdownItemTextSelected]}>
+                        {isSelected ? '✓ ' : ''}{outcode.outcode}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={s.card}>
@@ -211,4 +346,17 @@ const s = StyleSheet.create({
   dayUnavailable:{ backgroundColor: '#f3f4f6' },
   dayEmpty:      { width: '14.28%', aspectRatio: 1 },
   dayText:       { fontSize: 12, fontWeight: '600', color: '#1a1a1a' },
+  outcodeList:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  outcodeTag:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#dbeafe', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  outcodeText:   { fontSize: 14, fontWeight: '600', color: GREEN },
+  outcodeRemove: { fontSize: 16, color: GREEN, fontWeight: '700' },
+  noOutcodes:    { fontSize: 14, color: '#9ca3af', marginBottom: 12, fontStyle: 'italic' },
+  addOutcodeBtn: { backgroundColor: GREEN, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 8 },
+  addOutcodeBtnText:{ color: '#fff', fontWeight: '700', fontSize: 14 },
+  dropdown:      { backgroundColor: '#f9fafb', borderRadius: 8, marginTop: 12, maxHeight: 300 },
+  dropdownRegion:{ fontSize: 12, fontWeight: '700', color: GREEN, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  dropdownItem:  { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  dropdownItemSelected:{ backgroundColor: '#dcfce7' },
+  dropdownItemText:{ fontSize: 14, color: '#374151' },
+  dropdownItemTextSelected:{ color: GREEN, fontWeight: '600' },
 });
