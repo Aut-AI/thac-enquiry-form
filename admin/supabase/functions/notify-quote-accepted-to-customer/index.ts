@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const ADMIN_EMAIL = 'notifications@thac.example.com'
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')
+const ADMIN_EMAIL = 'ciaran@aut-ai.com'
 
 serve(async (req) => {
   const { record } = await req.json()
@@ -36,23 +36,23 @@ serve(async (req) => {
   `
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'THAC <onboarding@resend.dev>',
-        to: record.contact_email,
+        personalizations: [{ to: [{ email: record.contact_email }] }],
+        from: { email: 'ciaran@aut-ai.com' },
         subject: `Confirm Your Quote Details — Reference ${record.job_number}`,
-        html: emailHtml,
+        content: [{ type: 'text/html', value: emailHtml }],
       }),
     })
 
     if (!response.ok) {
       const error = await response.text()
-      throw new Error(`Resend API error: ${error}`)
+      throw new Error(`SendGrid API error: ${error}`)
     }
 
     return new Response('Email sent', { status: 200 })

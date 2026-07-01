@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+interface PostcodesIOResponse {
+  status: number;
+  result?: {
+    postcode: string;
+    latitude: number;
+    longitude: number;
+    admin_district: string;
+  };
+}
 
 serve(async (req) => {
   try {
-    const { postcode } = await req.json();
+    const { postcode, surveyor_id } = await req.json();
 
     if (!postcode) {
       return new Response(JSON.stringify({ error: "Postcode required" }), {
@@ -12,39 +23,63 @@ serve(async (req) => {
       });
     }
 
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-      postcode
-    )}&components=country:UK&key=${GOOGLE_MAPS_KEY}`;
+    if (!surveyor_id) {
+      return new Response(JSON.stringify({ error: "Surveyor ID required" }), {
+        status: 400,
+      });
+    }
 
-    const response = await fetch(url);
-    const data = await response.json();
+    const normalized = postcode.toUpperCase().trim().replace(/\s+/g, " ");
 
-    if (data.status !== "OK" || !data.results.length) {
+    const apiUrl = `https://api.postcodes.io/postcodes/${encodeURIComponent(normalized)}`;
+    const response = await fetch(apiUrl);
+    const data: PostcodesIOResponse = await response.json();
+
+    if (data.status !== 200 || !data.result) {
+      console.error(`Postcode not found: ${normalized}`);
       return new Response(
-        JSON.stringify({ error: "Postcode not found", area: null }),
+        JSON.stringify({ error: "Postcode not found" }),
         { status: 404 }
       );
     }
 
-    const result = data.results[0];
-    let area = null;
+    const { latitude, longitude, admin_district } = data.result;
 
-    // Extract the administrative area (district/region)
-    for (const component of result.address_components) {
-      // Look for administrative_area_level_2 (district) first
-      if (component.types.includes("administrative_area_level_2")) {
-        area = component.long_name;
-        break;
+    const updateResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/surveyors?id=eq.${surveyor_id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          home_lat: latitude,
+          home_lng: longitude,
+          area_name: admin_district,
+        }),
       }
-      // Fallback to administrative_area_level_1 (county/region)
-      if (component.types.includes("administrative_area_level_1")) {
-        area = component.long_name;
-      }
+    );
+
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      console.error(`Failed to update surveyor: ${errorText}`);
+      return new Response(
+        JSON.stringify({ error: "Failed to save geocoding result" }),
+        { status: 500 }
+      );
     }
 
-    return new Response(JSON.stringify({ area, formatted: result.formatted_address }), {
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        latitude,
+        longitude,
+        area_name: admin_district,
+      }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {

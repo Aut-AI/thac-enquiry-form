@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')
 
-console.log('Function initialized. RESEND_API_KEY set:', !!RESEND_API_KEY)
+console.log('Function initialized. SENDGRID_API_KEY set:', !!SENDGRID_API_KEY)
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -77,25 +77,25 @@ serve(async (req) => {
 
   try {
     console.log('Sending email to:', contact_email)
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'THAC <onboarding@resend.dev>',
-        to: contact_email,
+        personalizations: [{ to: [{ email: contact_email }] }],
+        from: { email: 'ciaran@aut-ai.com' },
         subject: `Your Tree Survey Quote — ${job_number || 'THAC'} | ${price}`,
-        html: emailHtml,
+        content: [{ type: 'text/html', value: emailHtml }],
       }),
     })
 
-    console.log('Resend response status:', response.status)
+    console.log('SendGrid response status:', response.status)
     if (!response.ok) {
       const error = await response.text()
-      console.log('Resend error:', error)
-      throw new Error(`Resend API error: ${error}`)
+      console.log('SendGrid error:', error)
+      throw new Error(`SendGrid API error: ${error}`)
     }
     console.log('Email sent successfully')
 

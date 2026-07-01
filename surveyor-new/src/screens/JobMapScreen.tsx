@@ -4,6 +4,7 @@ import MapView, { Marker, Callout, Region } from 'react-native-maps';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
+import { fetchServiceOutcodes, extractOutcode } from '../lib/outcode';
 import { Job, RootStackParamList } from '../types';
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -25,19 +26,42 @@ export default function JobMapScreen() {
 
   async function loadJobs() {
     setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Get surveyor ID and their service coverage
+    const { data: surveyorData } = await supabase
+      .from('surveyors')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    const surveyorId = surveyorData?.id;
+    const serviceOutcodes = surveyorId ? await fetchServiceOutcodes(surveyorId) : new Set<string>();
+
+    // Fetch all available jobs
     const { data, error } = await supabase
       .from('jobs')
       .select('id,reference,survey_type,site_postcode,site_lat,site_lng,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,enquiry_id,enquiries(tree_count_band)')
-      .eq('dispatch_state', 'red')        // available only
+      .eq('dispatch_state', 'red')
       .not('site_lat', 'is', null)
       .not('site_lng', 'is', null);
 
     if (error) Alert.alert('Error', error.message);
     else {
-      const jobsWithTreeCount = data?.map((job: any) => ({
+      // Filter jobs: only show those within surveyor's service area
+      const filtered = (data || []).filter(job => {
+        const jobOutcode = extractOutcode(job.site_postcode);
+        return serviceOutcodes.has(jobOutcode);
+      });
+
+      const jobsWithTreeCount = filtered.map((job: any) => ({
         ...job,
         tree_count_band: job.enquiries?.tree_count_band || null,
-      })) || [];
+      }));
       setJobs(jobsWithTreeCount);
     }
     setLoading(false);

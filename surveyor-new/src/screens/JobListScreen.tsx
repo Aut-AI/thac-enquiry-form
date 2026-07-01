@@ -6,6 +6,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
+import { fetchServiceOutcodes, extractOutcode } from '../lib/outcode';
 import { Job, RootStackParamList } from '../types';
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -56,8 +57,23 @@ export default function JobListScreen() {
     }
 
     const { data, error } = await query;
-    if (error) Alert.alert('Error', error.message);
-    else setJobs(data || []);
+    if (error) {
+      Alert.alert('Error', error.message);
+      setJobs([]);
+    } else {
+      let filtered = data || [];
+
+      // For available tab, filter by surveyor's coverage area
+      if (filter === 'available' && sid) {
+        const serviceOutcodes = await fetchServiceOutcodes(sid);
+        filtered = filtered.filter(job => {
+          const jobOutcode = extractOutcode(job.site_postcode);
+          return serviceOutcodes.has(jobOutcode);
+        });
+      }
+
+      setJobs(filtered);
+    }
     setLoading(false);
   }
 

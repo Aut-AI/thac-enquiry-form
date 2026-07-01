@@ -3,9 +3,9 @@
 // Shared across all notification edge functions
 // ============================================================
 
-export const ADMIN_EMAIL = 'ciaran@aut-ai.com'; // ← testing — swap to Trevor's when ready
-export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-export const FROM_ADDRESS = 'THAC Notifications <onboarding@resend.dev>'; // ← Resend shared domain for testing
+export const ADMIN_EMAIL = 'ciaran@aut-ai.com'; // ← will swap to Trevor's when ready
+export const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')!;
+export const FROM_ADDRESS = 'THAC <ciaran@aut-ai.com>'; // ← verified sender
 
 // ── Base wrapper ────────────────────────────────────────────
 export function emailWrapper(content: string): string {
@@ -54,20 +54,27 @@ export function emailWrapper(content: string): string {
 </html>`;
 }
 
-// ── Send via Resend ─────────────────────────────────────────
+// ── Send via SendGrid ───────────────────────────────────────
 export async function sendEmail(to: string, subject: string, html: string) {
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html }),
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: FROM_ADDRESS },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    }),
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Resend error: ${JSON.stringify(data)}`);
-  return data;
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`SendGrid error: ${error}`);
+  }
+  return { success: true };
 }
 
 // ── Survey type labels ──────────────────────────────────────
