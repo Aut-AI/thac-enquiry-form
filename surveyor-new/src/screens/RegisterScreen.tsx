@@ -204,6 +204,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Full Name *"
+              placeholderTextColor="#9ca3af"
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
@@ -211,6 +212,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Email *"
+              placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -219,6 +221,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Password *"
+              placeholderTextColor="#9ca3af"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -227,6 +230,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Phone"
+              placeholderTextColor="#9ca3af"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
@@ -240,6 +244,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Home Postcode *"
+              placeholderTextColor="#9ca3af"
               value={postcode}
               onChangeText={setPostcode}
               editable={!loading}
@@ -247,6 +252,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Coverage Radius (miles)"
+              placeholderTextColor="#9ca3af"
               value={radiusMiles}
               onChangeText={setRadiusMiles}
               keyboardType="number-pad"
@@ -260,6 +266,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="PI Policy Number"
+              placeholderTextColor="#9ca3af"
               value={piPolicyNumber}
               onChangeText={setPiPolicyNumber}
               editable={!loading}
@@ -267,6 +274,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="PI Expiry Date (YYYY-MM-DD)"
+              placeholderTextColor="#9ca3af"
               value={piExpiryDate}
               onChangeText={setPiExpiryDate}
               editable={!loading}
@@ -274,6 +282,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="PL Policy Number"
+              placeholderTextColor="#9ca3af"
               value={plPolicyNumber}
               onChangeText={setPlPolicyNumber}
               editable={!loading}
@@ -281,6 +290,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="PL Expiry Date (YYYY-MM-DD)"
+              placeholderTextColor="#9ca3af"
               value={plExpiryDate}
               onChangeText={setPlExpiryDate}
               editable={!loading}
@@ -293,6 +303,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="DBS Number"
+              placeholderTextColor="#9ca3af"
               value={dbsNumber}
               onChangeText={setDbsNumber}
               editable={!loading}
@@ -300,6 +311,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="DBS Expiry Date (YYYY-MM-DD)"
+              placeholderTextColor="#9ca3af"
               value={dbsExpiryDate}
               onChangeText={setDbsExpiryDate}
               editable={!loading}
@@ -312,6 +324,7 @@ export function RegisterScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Qualifications"
+              placeholderTextColor="#9ca3af"
               value={qualifications}
               onChangeText={setQualifications}
               multiline
