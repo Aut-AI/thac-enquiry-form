@@ -47,7 +47,7 @@ export async function uploadCertificate(
   if (!token) throw new Error('Not authenticated');
 
   const uploadResponse = await fetch(
-    `http://localhost:8084/storage/v1/object/surveyor-documents/${path}`,
+    `http://192.168.1.91:8084/storage/v1/object/surveyor-documents/${path}`,
     {
       method: 'POST',
       headers: {
