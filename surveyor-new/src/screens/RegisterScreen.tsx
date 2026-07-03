@@ -70,8 +70,10 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 18,
     color: '#1a3c2e',
-    lineHeight: 2,
+    lineHeight: 2.6,
     fontWeight: '600',
+    textAlign: 'left',
+    flexWrap: 'wrap',
   },
   input: {
     backgroundColor: '#fff',
