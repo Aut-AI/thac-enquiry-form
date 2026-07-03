@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   section: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 13,
@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 13,
     color: '#666',
-    marginBottom: 12,
-    lineHeight: 1.4,
+    marginBottom: 16,
+    lineHeight: 1.5,
   },
   input: {
     backgroundColor: '#fff',
