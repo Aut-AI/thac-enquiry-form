@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+</head>
+<body>
+<div class="app-layout" id="app"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+async function init() {
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('settings')}
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Settings</div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-title">Pricing & Rates</div>
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #666; text-transform: uppercase; font-size: 12px;">
+              THAC Hourly Rate (Customer-facing)
+            </label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="font-size: 18px; font-weight: 600; color: #1a1a1a;">£</span>
+              <input type="number" id="thacRate" step="0.01" min="0" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
+              <span style="font-size: 14px; color: #666;">/hour</span>
+            </div>
+            <div style="font-size: 12px; color: #999; margin-top: 6px;">Price shown to customers in the public enquiry form. Used in quote calculation.</div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #666; text-transform: uppercase; font-size: 12px;">
+              Default Surveyor Hourly Rate
+            </label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="font-size: 18px; font-weight: 600; color: #1a1a1a;">£</span>
+              <input type="number" id="surveyorRate" step="0.01" min="0" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
+              <span style="font-size: 14px; color: #666;">/hour</span>
+            </div>
+            <div style="font-size: 12px; color: #999; margin-top: 6px;">Suggested default when creating a new surveyor. Each surveyor's individual rate can be set separately.</div>
+          </div>
+
+          <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 12px;">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await loadSettings();
+}
+
+async function loadSettings() {
+  try {
+    const data = await dbGet('pricing_settings', { limit: 1 });
+    if (data?.[0]) {
+      document.getElementById('thacRate').value = data[0].thac_hourly_rate || 100;
+      document.getElementById('surveyorRate').value = data[0].default_surveyor_hourly_rate || 40;
+    }
+  } catch (e) {
+    showToast('Error loading settings: ' + e.message, 'error');
+  }
+}
+
+async function saveSettings() {
+  const thacRate = parseFloat(document.getElementById('thacRate').value);
+  const surveyorRate = parseFloat(document.getElementById('surveyorRate').value);
+
+  if (!thacRate || thacRate <= 0 || !surveyorRate || surveyorRate <= 0) {
+    showToast('Please enter valid positive rates', 'error');
+    return;
+  }
+
+  try {
+    await dbUpdate('pricing_settings', 'id=eq.1', {
+      thac_hourly_rate: thacRate,
+      default_surveyor_hourly_rate: surveyorRate
+    });
+    showToast('Settings saved ✓');
+  } catch (e) {
+    showToast('Error saving settings: ' + e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

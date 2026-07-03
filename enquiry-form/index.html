@@ -674,6 +674,13 @@
             <div class="service-option-desc">Full BS5837 suite: AIA, AMS & TPP. Required if you already have proposals drawn up.</div>
           </div>
         </label>
+        <label class="service-option" onclick="selectService(this, 'bs_survey')">
+          <input type="radio" name="surveyType" value="bs_survey">
+          <div>
+            <div class="service-option-label">BS Survey</div>
+            <div class="service-option-desc">BS5837 tree survey with constraints plan and report.</div>
+          </div>
+        </label>
         <label class="service-option" onclick="selectService(this, 'health_safety')">
           <input type="radio" name="surveyType" value="health_safety">
           <div>
@@ -707,13 +714,6 @@
           <div>
             <div class="service-option-label">Site Visit & Advice</div>
             <div class="service-option-desc">Site visit with a brief email summary of advice provided afterwards.</div>
-          </div>
-        </label>
-        <label class="service-option" onclick="selectService(this, 'resistograph')">
-          <input type="radio" name="surveyType" value="resistograph">
-          <div>
-            <div class="service-option-label">Resistograph Testing</div>
-            <div class="service-option-desc">Internal decay detection testing for specific trees.</div>
           </div>
         </label>
       </div>
@@ -773,10 +773,11 @@
         <label>Approximate Number of Trees <span class="required">*</span></label>
         <select id="treeCount" onchange="updateQuotePreview()">
           <option value="">Select tree count band...</option>
-          <option value="1-25">1 – 25 trees</option>
-          <option value="26-50">26 – 50 trees</option>
-          <option value="51-75">51 – 75 trees</option>
-          <option value="76-100">76 – 100 trees</option>
+          <option value="1-20">1 – 20 trees</option>
+          <option value="21-40">21 – 40 trees</option>
+          <option value="41-60">41 – 60 trees</option>
+          <option value="61-80">61 – 80 trees</option>
+          <option value="81-100">81 – 100 trees</option>
           <option value="100+">100+ trees (custom quote)</option>
         </select>
         <div class="field-hint">Estimate is fine — this determines the pricing band.</div>
@@ -973,7 +974,7 @@ let validatedPostcode = null;
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
-// Load surveyor service outcodes once on page load
+// Load surveyor service outcodes, pricing settings, and survey hours on page load
 (async function() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode`, {
@@ -987,16 +988,44 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   } catch (e) {
     console.error('Failed to load surveyor service outcodes:', e);
   }
+
+  // Fetch pricing settings (thac hourly rate)
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/pricing_settings?select=thac_hourly_rate`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows?.length > 0) {
+        thacHourlyRate = rows[0].thac_hourly_rate;
+        console.log('Loaded THAC hourly rate:', thacHourlyRate);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load pricing settings, using default £100/hr:', e);
+  }
+
+  // Fetch survey types with hours_per_band
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_types?select=survey_type,hours_per_band`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      rows.forEach(row => {
+        hoursPerBand[row.survey_type] = row.hours_per_band;
+      });
+      console.log('Loaded survey hours per band:', hoursPerBand);
+    }
+  } catch (e) {
+    console.warn('Failed to load survey types, pricing may not calculate correctly:', e);
+  }
 })();
 
-// Pricing data (base prices excl VAT)
-const BASE_PRICES = {
-  '1-25':   100,
-  '26-50':  200,
-  '51-75':  300,
-  '76-100': 400,
-  '100+':   null // custom
-};
+// Pricing data
+// Hours per band (from treatment matrix) — fetched from pricing_settings and survey_types on page load
+let thacHourlyRate = 100; // Fetched from pricing_settings
+const hoursPerBand = {}; // Fetched from survey_types: { survey_type -> hours_per_band }
 
 const SURCHARGES = {
   '1day':  150,
@@ -1005,15 +1034,21 @@ const SURCHARGES = {
   '10days': 0
 };
 
+// Band index: maps tree_count_band to multiplier (1-5)
+function bandIndex(band) {
+  const bandMap = { '1-20': 1, '21-40': 2, '41-60': 3, '61-80': 4, '81-100': 5 };
+  return bandMap[band] || null;
+}
+
 const SURVEY_TYPE_LABELS = {
+  bs_survey:        'BS Survey',
   planning_stage1:  'Planning — Stage 1',
   planning_stage2:  'Planning — Stage 2',
   health_safety:    'Tree Condition / Risk Survey',
   insurer_mortgage: 'Insurer / Mortgage Lender',
   subsidence:       'Building Damage / Subsidence',
   nhbc:             'Foundation Depths (NHBC)',
-  site_visit:       'Site Visit & Advice',
-  resistograph:     'Resistograph Testing'
+  site_visit:       'Site Visit & Advice'
 };
 
 const DEADLINE_LABELS = {
@@ -1174,7 +1209,10 @@ function goToQuote() {
     document.getElementById('standardQuote').style.display = 'block';
     document.getElementById('customQuote').style.display = 'none';
 
-    const base = BASE_PRICES[treeCount];
+    // Calculate base price: hours_per_band × band_index × thac_hourly_rate
+    const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
+    const base = Math.round(hours * thacHourlyRate);
+
     document.getElementById('qSurveyType').textContent = SURVEY_TYPE_LABELS[selectedSurveyType] || '—';
     document.getElementById('qTreeCount').textContent = treeCount + ' trees';
     document.getElementById('qDeadline').textContent = '—';
@@ -1191,7 +1229,9 @@ function updateDeadlineSurcharge() {
 
   if (treeCount !== '100+') {
     if (deadline) {
-      const base = BASE_PRICES[treeCount];
+      // Calculate base price: hours_per_band × band_index × thac_hourly_rate
+      const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
+      const base = Math.round(hours * thacHourlyRate);
       const surcharge = SURCHARGES[deadline] || 0;
       const total = base + surcharge;
 
@@ -1208,7 +1248,9 @@ function updateDeadlineSurcharge() {
     } else {
       document.getElementById('qDeadline').textContent = '—';
       document.getElementById('qSurchargeRow').style.display = 'none';
-      document.getElementById('qTotal').textContent = '£' + BASE_PRICES[treeCount];
+      const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
+      const base = Math.round(hours * thacHourlyRate);
+      document.getElementById('qTotal').textContent = '£' + base;
     }
   }
 }

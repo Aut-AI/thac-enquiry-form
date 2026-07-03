@@ -117,13 +117,24 @@ export default function JobDetailScreen() {
       setEnquiry(enqData);
     }
 
-    if (jobData?.survey_type) {
+    if (jobData?.survey_type && jobData?.tree_count_band) {
       const { data: surveyTypeData } = await supabase
         .from('survey_types')
-        .select('hours_on_site')
+        .select('hours_per_band')
         .eq('survey_type', jobData.survey_type)
         .single();
-      setSurveyHours(surveyTypeData?.hours_on_site || 1);
+
+      if (surveyTypeData?.hours_per_band) {
+        const bandMap = { '1-20': 1, '21-40': 2, '41-60': 3, '61-80': 4, '81-100': 5 };
+        const band = bandMap[jobData.tree_count_band as keyof typeof bandMap];
+        if (band) {
+          setSurveyHours(surveyTypeData.hours_per_band * band);
+        } else {
+          setSurveyHours(1); // fallback
+        }
+      } else {
+        setSurveyHours(1);
+      }
     }
 
     setJob(jobData);
@@ -347,11 +358,6 @@ export default function JobDetailScreen() {
             <Text style={s.payDetails}>
               ({1} travel + {surveyHours} survey) × £{surveyor.hourly_rate}/hr = £{((1 + surveyHours) * surveyor.hourly_rate).toFixed(2)}
             </Text>
-            {job.urgency_state === 'red' && (
-              <Text style={s.payBonus}>
-                🎯 Urgent next-day: +20% = £{((1 + surveyHours) * surveyor.hourly_rate * 1.2).toFixed(2)}
-              </Text>
-            )}
           </View>
         )}
 
