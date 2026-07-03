@@ -30,54 +30,23 @@ export async function pickCertificate(): Promise<PickedCertificate | null> {
   return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null };
 }
 
-// Uploads a previously-picked file to the surveyor-documents bucket under the given
-// surveyor's folder, and returns the storage path to persist on the surveyors row.
+// Uploads a file to Supabase storage - accepts any file type, stores as-is
 export async function uploadCertificate(
   surveyorId: string,
   type: CertificateType,
   file: PickedCertificate
 ): Promise<string> {
-  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
-  const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
+  const path = `${surveyorId}/${type}_certificate_${Date.now()}_${file.name}`;
 
-  try {
-    console.log('Starting upload - File URI:', file.uri);
-    console.log('File name:', file.name);
-    console.log('File mimeType:', file.mimeType);
+  const response = await fetch(file.uri);
+  const blob = await response.blob();
 
-    // Fetch the file and convert to blob
-    const response = await fetch(file.uri);
-    console.log('Fetch response status:', response.status);
+  const { error } = await supabase.storage
+    .from('surveyor-documents')
+    .upload(path, blob);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch file: ${response.statusText}`);
-    }
-
-    const blob = await response.blob();
-    console.log('Blob created, size:', blob.size);
-
-    if (blob.size === 0) {
-      throw new Error('File is empty');
-    }
-
-    // Upload to Supabase
-    const { data, error } = await supabase.storage
-      .from('surveyor-documents')
-      .upload(path, blob, {
-        contentType: file.mimeType || 'application/octet-stream',
-      });
-
-    if (error) {
-      console.error('Supabase upload error:', error);
-      throw new Error(`Upload failed: ${error.message}`);
-    }
-
-    console.log('Upload successful, returned data:', data);
-    return path;
-  } catch (e: any) {
-    console.error('Certificate upload failed:', e.message || String(e));
-    throw e;
-  }
+  if (error) throw error;
+  return path;
 }
 
 // Opens a 1hr signed URL for viewing/downloading an existing certificate.
