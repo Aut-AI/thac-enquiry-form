@@ -49,10 +49,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sectionSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
     marginBottom: 16,
-    lineHeight: 1.5,
+    marginTop: 8,
+    lineHeight: 1.6,
+    paddingHorizontal: 4,
   },
   input: {
     backgroundColor: '#fff',
