@@ -66,11 +66,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#1a3c2e',
-    lineHeight: 2.0,
     fontWeight: '600',
-    textAlign: 'left',
   },
   input: {
     backgroundColor: '#fff',
