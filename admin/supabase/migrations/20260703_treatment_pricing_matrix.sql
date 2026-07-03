@@ -38,16 +38,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. Pricing settings table: editable £/hour rates for THAC (customer-facing) and default surveyor rate
+-- 5. Pricing settings table: editable £/hour rate for THAC customer pricing
 CREATE TABLE pricing_settings (
   id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   thac_hourly_rate NUMERIC(8, 2) NOT NULL DEFAULT 100,
-  default_surveyor_hourly_rate NUMERIC(8, 2) NOT NULL DEFAULT 40,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-INSERT INTO pricing_settings (id, thac_hourly_rate, default_surveyor_hourly_rate)
-VALUES (1, 100, 40);
+INSERT INTO pricing_settings (id, thac_hourly_rate)
+VALUES (1, 100);
 
 -- Enable RLS on pricing_settings
 ALTER TABLE pricing_settings ENABLE ROW LEVEL SECURITY;
