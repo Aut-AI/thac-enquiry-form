@@ -13,17 +13,16 @@ serve(async (req) => {
     const payload = await req.json();
     const record = payload.record;
 
-    const subject = `🆕 Job Created — ${record.reference || 'New Job'} | Awaiting Trevor Approval`;
+    const subject = `🆕 Job Created — ${record.reference || 'New Job'} | Ready for Preparation`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
       : 'Not yet set';
 
     const html = emailWrapper(`
-      <h2>New Job Created — Action Required</h2>
-      <p>A client has accepted their quote and a job has been created. 
-         Please prepare the Axiscape database and draft the initial report template, 
-         then submit to Trevor for approval.</p>
+      <h2>New Job Created — Ready for Preparation</h2>
+      <p>A client has accepted their quote and a job has been automatically created and approved.
+         Please proceed with preparing the Axiscape database and drafting the initial report template.</p>
 
       <div class="detail-block">
         <div class="detail-row">
@@ -72,7 +71,7 @@ serve(async (req) => {
         <strong>Next steps:</strong><br>
         1. Prepare Axiscape survey database<br>
         2. Draft initial report template<br>
-        3. Submit to Trevor for approval — job will go live on the map once approved
+        3. Job is now live on the surveyor map and ready for allocation
       </p>
 
       <a href="https://ciaran-aut-ai.github.io/thac-admin/job-detail.html?id=${record.id}" class="cta-button">
