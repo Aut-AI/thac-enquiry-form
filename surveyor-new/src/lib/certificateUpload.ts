@@ -1,5 +1,4 @@
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 
 export type CertificateType = 'pi' | 'pl' | 'dbs';
@@ -42,29 +41,30 @@ export async function uploadCertificate(
   const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
   try {
-    console.log('File URI:', file.uri);
+    console.log('Starting upload - File URI:', file.uri);
     console.log('File name:', file.name);
     console.log('File mimeType:', file.mimeType);
 
-    // Read file as base64
-    const fileData = await FileSystem.readAsStringAsync(file.uri, {
-      encoding: FileSystem.EncodingType.Base64
-    });
+    // Fetch the file and convert to blob
+    const response = await fetch(file.uri);
+    console.log('Fetch response status:', response.status);
 
-    if (!fileData) {
-      throw new Error('Failed to read file data');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
     }
 
-    console.log('File read, base64 length:', fileData.length);
+    const blob = await response.blob();
+    console.log('Blob created, size:', blob.size);
 
-    // Convert base64 to bytes
-    const byteArray = new Uint8Array(atob(fileData).split('').map(c => c.charCodeAt(0)));
+    if (blob.size === 0) {
+      throw new Error('File is empty');
+    }
 
-    const { error } = await supabase.storage
+    // Upload to Supabase
+    const { data, error } = await supabase.storage
       .from('surveyor-documents')
-      .upload(path, byteArray, {
+      .upload(path, blob, {
         contentType: file.mimeType || 'application/octet-stream',
-        upsert: false,
       });
 
     if (error) {
@@ -72,10 +72,10 @@ export async function uploadCertificate(
       throw new Error(`Upload failed: ${error.message}`);
     }
 
-    console.log('Upload successful to path:', path);
+    console.log('Upload successful, returned data:', data);
     return path;
   } catch (e: any) {
-    console.error('Certificate upload error details:', e.message || e);
+    console.error('Certificate upload failed:', e.message || String(e));
     throw e;
   }
 }
