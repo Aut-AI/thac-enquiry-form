@@ -976,12 +976,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Load surveyor service outcodes once on page load
 (async function() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode&distinct=on(outcode)`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode`, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
     if (res.ok) {
       const rows = await res.json();
-      operatingOutcodes = rows.map(r => r.outcode);
+      operatingOutcodes = [...new Set(rows.map(r => r.outcode))];
+      console.log('Loaded service outcodes:', operatingOutcodes);
     }
   } catch (e) {
     console.error('Failed to load surveyor service outcodes:', e);
