@@ -1399,6 +1399,12 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
     let jobData = {};
 
     if (enquiry.enquiry_type === 'new') {
+      const now = new Date();
+      const daysToAdd = enquiry.deadline_tier === '1day' ? 1 :
+                        enquiry.deadline_tier === '3days' ? 3 :
+                        enquiry.deadline_tier === '5days' ? 5 : 0;
+      const slaDeadline = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
+
       jobData = {
         enquiry_id: enquiry.id,
         job_type: 'new',
@@ -1408,6 +1414,7 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
         urgency_state: enquiry.deadline_tier === '1day' ? 'red' :
                        enquiry.deadline_tier === '3days' ? 'orange' :
                        enquiry.deadline_tier === '5days' ? 'yellow' : 'grey',
+        sla_deadline: slaDeadline,
         quoted_amount: enquiry.quoted_price,
         agreed_amount: enquiry.quoted_price,
         billing_contact_name: enquiry.contact_name,
