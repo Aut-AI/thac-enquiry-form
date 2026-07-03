@@ -72,7 +72,7 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,extended_info_received',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id',
       'order': 'created_at.desc',
       'limit': 100
     });
