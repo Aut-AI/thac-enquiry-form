@@ -1051,6 +1051,9 @@ function checkPostcodeArea() {
   }
 
   const outcode = extractOutcode(raw);
+  console.log('Extracted outcode:', outcode);
+  console.log('Is in list?', operatingOutcodes.includes(outcode));
+  console.log('Operating outcodes sample:', operatingOutcodes.slice(0, 10));
 
   if (!outcode || !operatingOutcodes.includes(outcode)) {
     document.getElementById('gateOutOfAreaError').style.display = 'block';
