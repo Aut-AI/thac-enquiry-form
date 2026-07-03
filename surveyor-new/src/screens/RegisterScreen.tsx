@@ -247,9 +247,6 @@ export function RegisterScreen({ navigation }: any) {
           {/* Location & Coverage */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Coverage Area</Text>
-            <Text style={styles.sectionSubtitle}>
-              A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
-            </Text>
             <TextInput
               style={styles.input}
               placeholder="Home Postcode *"
@@ -258,6 +255,9 @@ export function RegisterScreen({ navigation }: any) {
               onChangeText={setPostcode}
               editable={!loading}
             />
+            <Text style={styles.sectionSubtitle}>
+              A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Coverage Radius (miles)"
