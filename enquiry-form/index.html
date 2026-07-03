@@ -973,10 +973,10 @@ let validatedPostcode = null;
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
-// Load operating outcodes once on page load
+// Load surveyor service outcodes once on page load
 (async function() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/operating_outcodes?select=outcode`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode&distinct=on(outcode)`, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
     if (res.ok) {
@@ -984,7 +984,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       operatingOutcodes = rows.map(r => r.outcode);
     }
   } catch (e) {
-    console.error('Failed to load operating outcodes:', e);
+    console.error('Failed to load surveyor service outcodes:', e);
   }
 })();
 
