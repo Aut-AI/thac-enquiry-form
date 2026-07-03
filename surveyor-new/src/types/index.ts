@@ -16,9 +16,16 @@ export interface Surveyor {
   radius_miles: number;
   hourly_rate: number | null;
   is_active: boolean;
-  pi_expiry: string | null;
-  pl_expiry: string | null;
-  dbs_expiry: string | null;
+  status: string;
+  pi_policy_number: string | null;
+  pi_expiry_date: string | null;
+  pi_certificate_path: string | null;
+  pl_policy_number: string | null;
+  pl_expiry_date: string | null;
+  pl_certificate_path: string | null;
+  dbs_number: string | null;
+  dbs_expiry_date: string | null;
+  dbs_certificate_path: string | null;
 }
 
 export interface Job {

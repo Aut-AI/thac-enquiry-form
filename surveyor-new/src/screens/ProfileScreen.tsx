@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { Surveyor } from '../types';
+import { pickCertificate, uploadCertificate, openCertificate, CertificateType, certificateLabel } from '../lib/certificateUpload';
 
 interface ComputedOutcode {
   outcode: string;
@@ -33,6 +34,7 @@ export default function ProfileScreen() {
   const [editRadius, setEditRadius] = useState('');
   const [savingLocation, setSavingLocation] = useState(false);
   const [showOutcodes, setShowOutcodes] = useState(false);
+  const [uploadingCert, setUploadingCert] = useState<CertificateType | null>(null);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, []));
 
@@ -120,6 +122,26 @@ export default function ProfileScreen() {
       Alert.alert('Error', e.message);
     } finally {
       setSavingLocation(false);
+    }
+  }
+
+  async function replaceCertificate(type: CertificateType) {
+    if (!surveyor) return;
+    const file = await pickCertificate();
+    if (!file) return;
+
+    setUploadingCert(type);
+    try {
+      const path = await uploadCertificate(surveyor.id, type, file);
+      const column = `${type}_certificate_path`;
+      const { error } = await supabase.from('surveyors').update({ [column]: path }).eq('id', surveyor.id);
+      if (error) throw error;
+      Alert.alert('Uploaded', `${certificateLabel(type)} has been updated.`);
+      await loadProfile();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setUploadingCert(null);
     }
   }
 
@@ -228,19 +250,49 @@ export default function ProfileScreen() {
         <Text style={s.sectionTitle}>Insurance & Compliance</Text>
         <View style={s.insuranceRow}>
           <View style={s.insuranceItem}>
-            <Text style={s.insuranceLight}>{trafficLight(surveyor.pi_expiry)}</Text>
+            <Text style={s.insuranceLight}>{trafficLight(surveyor.pi_expiry_date)}</Text>
             <Text style={s.insuranceLabel}>PI Insurance</Text>
-            <Text style={s.insuranceDate}>{formatDate(surveyor.pi_expiry)}</Text>
+            <Text style={s.insuranceDate}>{formatDate(surveyor.pi_expiry_date)}</Text>
+            <TouchableOpacity onPress={() => surveyor.pi_certificate_path ? openCertificate(surveyor.pi_certificate_path) : replaceCertificate('pi')}>
+              <Text style={s.certLink}>
+                {uploadingCert === 'pi' ? 'Uploading...' : surveyor.pi_certificate_path ? 'View file' : 'Upload file'}
+              </Text>
+            </TouchableOpacity>
+            {surveyor.pi_certificate_path ? (
+              <TouchableOpacity onPress={() => replaceCertificate('pi')}>
+                <Text style={s.certLinkSecondary}>Replace</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           <View style={s.insuranceItem}>
-            <Text style={s.insuranceLight}>{trafficLight(surveyor.pl_expiry)}</Text>
+            <Text style={s.insuranceLight}>{trafficLight(surveyor.pl_expiry_date)}</Text>
             <Text style={s.insuranceLabel}>PL Insurance</Text>
-            <Text style={s.insuranceDate}>{formatDate(surveyor.pl_expiry)}</Text>
+            <Text style={s.insuranceDate}>{formatDate(surveyor.pl_expiry_date)}</Text>
+            <TouchableOpacity onPress={() => surveyor.pl_certificate_path ? openCertificate(surveyor.pl_certificate_path) : replaceCertificate('pl')}>
+              <Text style={s.certLink}>
+                {uploadingCert === 'pl' ? 'Uploading...' : surveyor.pl_certificate_path ? 'View file' : 'Upload file'}
+              </Text>
+            </TouchableOpacity>
+            {surveyor.pl_certificate_path ? (
+              <TouchableOpacity onPress={() => replaceCertificate('pl')}>
+                <Text style={s.certLinkSecondary}>Replace</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           <View style={s.insuranceItem}>
-            <Text style={s.insuranceLight}>{trafficLight(surveyor.dbs_expiry)}</Text>
+            <Text style={s.insuranceLight}>{trafficLight(surveyor.dbs_expiry_date)}</Text>
             <Text style={s.insuranceLabel}>DBS Check</Text>
-            <Text style={s.insuranceDate}>{formatDate(surveyor.dbs_expiry)}</Text>
+            <Text style={s.insuranceDate}>{formatDate(surveyor.dbs_expiry_date)}</Text>
+            <TouchableOpacity onPress={() => surveyor.dbs_certificate_path ? openCertificate(surveyor.dbs_certificate_path) : replaceCertificate('dbs')}>
+              <Text style={s.certLink}>
+                {uploadingCert === 'dbs' ? 'Uploading...' : surveyor.dbs_certificate_path ? 'View file' : 'Upload file'}
+              </Text>
+            </TouchableOpacity>
+            {surveyor.dbs_certificate_path ? (
+              <TouchableOpacity onPress={() => replaceCertificate('dbs')}>
+                <Text style={s.certLinkSecondary}>Replace</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       </View>
@@ -316,6 +368,8 @@ const s = StyleSheet.create({
   insuranceLight:{ fontSize: 28 },
   insuranceLabel:{ fontSize: 12, color: '#6b7280', fontWeight: '600', textAlign: 'center' },
   insuranceDate: { fontSize: 11, color: '#9ca3af', textAlign: 'center' },
+  certLink:      { fontSize: 12, color: GREEN, fontWeight: '600', marginTop: 6, textAlign: 'center' },
+  certLinkSecondary:{ fontSize: 11, color: '#6b7280', fontWeight: '500', marginTop: 4, textAlign: 'center' },
   noProfile:     { fontSize: 18, fontWeight: '600', color: GREEN, marginBottom: 8 },
   hint:          { fontSize: 14, color: '#6b7280', marginBottom: 12 },
   helperText:    { fontSize: 12, color: '#6b7280', marginTop: -8, marginBottom: 12 },
