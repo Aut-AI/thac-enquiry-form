@@ -111,7 +111,7 @@ export default function JobDetailScreen() {
     if (jobData?.enquiry_id) {
       const { data: enqData } = await supabase
         .from('enquiries')
-        .select('contact_name,contact_phone,access_details,parking_details,report_title,parking_lat,parking_lng,tree_count_band')
+        .select('contact_name,contact_phone,access_details,parking_details,report_title,parking_lat,parking_lng,tree_count_band,site_street,site_city')
         .eq('id', jobData.enquiry_id)
         .single();
       setEnquiry(enqData);
@@ -369,9 +369,16 @@ export default function JobDetailScreen() {
       ) : null}
 
       {/* Client & Site Details */}
-      {isMine && enquiry && (enquiry.access_details || enquiry.parking_details || enquiry.contact_name || enquiry.report_title) ? (
+      {isMine && enquiry && (enquiry.site_street || enquiry.site_city || enquiry.access_details || enquiry.parking_details || enquiry.contact_name || enquiry.report_title) ? (
         <View style={s.card}>
           <Text style={s.sectionTitle}>Client & Site Details</Text>
+          {(enquiry.site_street || enquiry.site_city) && (
+            <View style={{marginBottom: 10}}>
+              <Text style={s.label}>Site Address</Text>
+              {enquiry.site_street && <Text style={s.body}>{enquiry.site_street}</Text>}
+              {enquiry.site_city && <Text style={s.body}>{enquiry.site_city}</Text>}
+            </View>
+          )}
           {enquiry.contact_name && (
             <View style={{marginBottom: 10}}>
               <Text style={s.label}>Contact</Text>
