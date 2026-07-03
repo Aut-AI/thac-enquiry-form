@@ -42,36 +42,42 @@ export async function uploadCertificate(
   const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
   try {
-    console.log('Reading file from:', file.uri);
-    const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-    console.log('File read successfully, size:', base64.length);
+    console.log('File URI:', file.uri);
+    console.log('File name:', file.name);
+    console.log('File mimeType:', file.mimeType);
+
+    // Read file as base64
+    const fileData = await FileSystem.readAsStringAsync(file.uri, {
+      encoding: FileSystem.EncodingType.Base64
+    });
+
+    if (!fileData) {
+      throw new Error('Failed to read file data');
+    }
+
+    console.log('File read, base64 length:', fileData.length);
+
+    // Convert base64 to bytes
+    const byteArray = new Uint8Array(atob(fileData).split('').map(c => c.charCodeAt(0)));
 
     const { error } = await supabase.storage
       .from('surveyor-documents')
-      .upload(path, decode(base64), {
+      .upload(path, byteArray, {
         contentType: file.mimeType || 'application/octet-stream',
         upsert: false,
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error('Supabase upload error:', error);
       throw new Error(`Upload failed: ${error.message}`);
     }
+
     console.log('Upload successful to path:', path);
     return path;
   } catch (e: any) {
-    console.error('Certificate upload error:', e);
+    console.error('Certificate upload error details:', e.message || e);
     throw e;
   }
-}
-
-function decode(base64: string): Uint8Array {
-  const binaryStr = atob(base64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i);
-  }
-  return bytes;
 }
 
 // Opens a 1hr signed URL for viewing/downloading an existing certificate.
