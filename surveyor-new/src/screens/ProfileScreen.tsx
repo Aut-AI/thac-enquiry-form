@@ -51,7 +51,7 @@ export default function ProfileScreen() {
       .from('surveyors')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     setSurveyor(surveyorData);
     if (surveyorData) {
