@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 
 export type CertificateType = 'pi' | 'pl' | 'dbs';
@@ -41,13 +42,13 @@ export async function uploadCertificate(
   const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
   try {
-    const response = await fetch(file.uri);
-    if (!response.ok) throw new Error(`Failed to read file: ${response.statusText}`);
-    const blob = await response.blob();
+    console.log('Reading file from:', file.uri);
+    const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+    console.log('File read successfully, size:', base64.length);
 
-    const { error, data } = await supabase.storage
+    const { error } = await supabase.storage
       .from('surveyor-documents')
-      .upload(path, blob, {
+      .upload(path, decode(base64), {
         contentType: file.mimeType || 'application/octet-stream',
         upsert: false,
       });
@@ -56,11 +57,21 @@ export async function uploadCertificate(
       console.error('Upload error:', error);
       throw new Error(`Upload failed: ${error.message}`);
     }
+    console.log('Upload successful to path:', path);
     return path;
   } catch (e: any) {
     console.error('Certificate upload error:', e);
     throw e;
   }
+}
+
+function decode(base64: string): Uint8Array {
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
 }
 
 // Opens a 1hr signed URL for viewing/downloading an existing certificate.
