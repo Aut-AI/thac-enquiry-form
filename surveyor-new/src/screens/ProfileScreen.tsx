@@ -35,6 +35,10 @@ export default function ProfileScreen() {
   const [savingLocation, setSavingLocation] = useState(false);
   const [showOutcodes, setShowOutcodes] = useState(false);
   const [uploadingCert, setUploadingCert] = useState<CertificateType | null>(null);
+  const [editPiExpiry, setEditPiExpiry] = useState('');
+  const [editPlExpiry, setEditPlExpiry] = useState('');
+  const [editDbsExpiry, setEditDbsExpiry] = useState('');
+  const [savingInsurance, setSavingInsurance] = useState(false);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, []));
 
@@ -53,6 +57,9 @@ export default function ProfileScreen() {
     if (surveyorData) {
       setEditPostcode(surveyorData.home_postcode || '');
       setEditRadius(String(surveyorData.radius_miles || 25));
+      setEditPiExpiry(surveyorData.pi_expiry_date || '');
+      setEditPlExpiry(surveyorData.pl_expiry_date || '');
+      setEditDbsExpiry(surveyorData.dbs_expiry_date || '');
     }
 
     if (surveyorData?.id) {
@@ -142,6 +149,30 @@ export default function ProfileScreen() {
       Alert.alert('Error', e.message);
     } finally {
       setUploadingCert(null);
+    }
+  }
+
+  async function saveInsuranceDates() {
+    if (!surveyor) return;
+    setSavingInsurance(true);
+
+    try {
+      const { error } = await supabase
+        .from('surveyors')
+        .update({
+          pi_expiry_date: editPiExpiry || null,
+          pl_expiry_date: editPlExpiry || null,
+          dbs_expiry_date: editDbsExpiry || null,
+        })
+        .eq('id', surveyor.id);
+
+      if (error) throw error;
+      Alert.alert('Saved', 'Insurance expiry dates have been updated.');
+      await loadProfile();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSavingInsurance(false);
     }
   }
 
@@ -248,6 +279,52 @@ export default function ProfileScreen() {
 
       <View style={s.card}>
         <Text style={s.sectionTitle}>Insurance & Compliance</Text>
+
+        <View style={s.insuranceEditGroup}>
+          <View style={s.insuranceEditItem}>
+            <Text style={s.label}>PI Expiry Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={s.input}
+              placeholder="YYYY-MM-DD"
+              value={editPiExpiry}
+              onChangeText={setEditPiExpiry}
+              editable={!savingInsurance}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={s.insuranceEditItem}>
+            <Text style={s.label}>PL Expiry Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={s.input}
+              placeholder="YYYY-MM-DD"
+              value={editPlExpiry}
+              onChangeText={setEditPlExpiry}
+              editable={!savingInsurance}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={s.insuranceEditItem}>
+            <Text style={s.label}>DBS Expiry Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={s.input}
+              placeholder="YYYY-MM-DD"
+              value={editDbsExpiry}
+              onChangeText={setEditDbsExpiry}
+              editable={!savingInsurance}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <TouchableOpacity
+            style={[s.saveBtn, savingInsurance && s.saveBtnDisabled]}
+            onPress={saveInsuranceDates}
+            disabled={savingInsurance}
+          >
+            <Text style={s.saveBtnText}>{savingInsurance ? 'Saving...' : 'Save Dates'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={s.divider} />
+
         <View style={s.insuranceRow}>
           <View style={s.insuranceItem}>
             <Text style={s.insuranceLight}>{trafficLight(surveyor.pi_expiry_date)}</Text>
@@ -370,6 +447,8 @@ const s = StyleSheet.create({
   insuranceDate: { fontSize: 11, color: '#9ca3af', textAlign: 'center' },
   certLink:      { fontSize: 12, color: GREEN, fontWeight: '600', marginTop: 6, textAlign: 'center' },
   certLinkSecondary:{ fontSize: 11, color: '#6b7280', fontWeight: '500', marginTop: 4, textAlign: 'center' },
+  insuranceEditGroup:{ marginBottom: 16 },
+  insuranceEditItem:{ marginBottom: 12 },
   noProfile:     { fontSize: 18, fontWeight: '600', color: GREEN, marginBottom: 8 },
   hint:          { fontSize: 14, color: '#6b7280', marginBottom: 12 },
   helperText:    { fontSize: 12, color: '#6b7280', marginTop: -8, marginBottom: 12 },

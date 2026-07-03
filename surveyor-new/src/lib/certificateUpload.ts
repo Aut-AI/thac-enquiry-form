@@ -40,18 +40,27 @@ export async function uploadCertificate(
   const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
   const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
-  const response = await fetch(file.uri);
-  const blob = await response.blob();
+  try {
+    const response = await fetch(file.uri);
+    if (!response.ok) throw new Error(`Failed to read file: ${response.statusText}`);
+    const blob = await response.blob();
 
-  const { error } = await supabase.storage
-    .from('surveyor-documents')
-    .upload(path, blob, {
-      contentType: file.mimeType || 'application/octet-stream',
-      upsert: false,
-    });
+    const { error, data } = await supabase.storage
+      .from('surveyor-documents')
+      .upload(path, blob, {
+        contentType: file.mimeType || 'application/octet-stream',
+        upsert: false,
+      });
 
-  if (error) throw error;
-  return path;
+    if (error) {
+      console.error('Upload error:', error);
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+    return path;
+  } catch (e: any) {
+    console.error('Certificate upload error:', e);
+    throw e;
+  }
 }
 
 // Opens a 1hr signed URL for viewing/downloading an existing certificate.
