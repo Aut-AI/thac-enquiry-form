@@ -1028,7 +1028,7 @@ const DEADLINE_LABELS = {
 // ============================================================
 function extractOutcode(postcode) {
   const cleaned = postcode.replace(/\s+/g, '').toUpperCase();
-  const match = cleaned.match(/^[A-Z]{1,2}/);
+  const match = cleaned.match(/^[A-Z]{1,2}\d{1,2}/);
   return match ? match[0] : null;
 }
 
