@@ -1412,7 +1412,6 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
         agreed_amount: enquiry.quoted_price,
         billing_contact_name: enquiry.contact_name,
         billing_contact_email: enquiry.contact_email,
-        extended_info_received: false,
       };
     } else if (enquiry.enquiry_type === 'amendment') {
       jobData = {
@@ -1420,7 +1419,6 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
         job_type: 'amendment',
         dispatch_state: 'pending_approval',
         internal_notes: `Amendment request — customer-provided original job ref: "${enquiry.original_job_ref}". Scope: ${enquiry.amendment_scope}`,
-        extended_info_received: true,
       };
     }
 
