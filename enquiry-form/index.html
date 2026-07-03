@@ -967,7 +967,7 @@ let selectedSurveyType = null;
 let currentStep = 'step-0';
 
 // Postcode gate
-let operatingOutcodes = [];
+let operatingAreas = [];
 let validatedPostcode = null;
 
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
@@ -981,8 +981,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     });
     if (res.ok) {
       const rows = await res.json();
-      operatingOutcodes = [...new Set(rows.map(r => r.outcode))];
-      console.log('Loaded service outcodes:', operatingOutcodes);
+      operatingAreas = [...new Set(rows.map(r => r.outcode))];
+      console.log('Loaded service outcodes:', operatingAreas);
     }
   } catch (e) {
     console.error('Failed to load surveyor service outcodes:', e);
@@ -1026,7 +1026,7 @@ const DEADLINE_LABELS = {
 // ============================================================
 // POSTCODE AREA GATE
 // ============================================================
-function extractOutcode(postcode) {
+function extractPostcodeArea(postcode) {
   const cleaned = postcode.replace(/\s+/g, '').toUpperCase();
   const match = cleaned.match(/^[A-Z]{1,2}/);
   return match ? match[0] : null;
@@ -1043,18 +1043,18 @@ function checkPostcodeArea() {
   }
 
   // Hard stop: if outcodes list failed to load, block entry
-  if (operatingOutcodes.length === 0) {
+  if (operatingAreas.length === 0) {
     console.error('Operating outcodes list failed to load; blocking postcode check');
     document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
     showError('gatePostcodeError', 'gatePostcode');
     return;
   }
 
-  const outcode = extractOutcode(raw);
-  const hasArea = operatingOutcodes.some(o => o.startsWith(outcode));
+  const outcode = extractPostcodeArea(raw);
+  const hasArea = operatingAreas.some(o => o.startsWith(outcode));
   console.log('Extracted outcode:', outcode);
   console.log('Has matching area?', hasArea);
-  console.log('Operating outcodes sample:', operatingOutcodes.slice(0, 10));
+  console.log('Operating outcodes sample:', operatingAreas.slice(0, 10));
 
   if (!outcode || !hasArea) {
     document.getElementById('gateOutOfAreaError').style.display = 'block';
