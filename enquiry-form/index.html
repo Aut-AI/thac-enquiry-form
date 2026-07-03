@@ -1051,11 +1051,12 @@ function checkPostcodeArea() {
   }
 
   const outcode = extractOutcode(raw);
+  const hasArea = operatingOutcodes.some(o => o.startsWith(outcode));
   console.log('Extracted outcode:', outcode);
-  console.log('Is in list?', operatingOutcodes.includes(outcode));
+  console.log('Has matching area?', hasArea);
   console.log('Operating outcodes sample:', operatingOutcodes.slice(0, 10));
 
-  if (!outcode || !operatingOutcodes.includes(outcode)) {
+  if (!outcode || !hasArea) {
     document.getElementById('gateOutOfAreaError').style.display = 'block';
     return;
   }
