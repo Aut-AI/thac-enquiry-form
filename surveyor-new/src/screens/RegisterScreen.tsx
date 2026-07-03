@@ -56,6 +56,20 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
     paddingHorizontal: 4,
   },
+  infoBox: {
+    backgroundColor: '#f0fdf4',
+    borderLeftWidth: 4,
+    borderLeftColor: '#1a3c2e',
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#1a3c2e',
+    lineHeight: 1.5,
+  },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -266,9 +280,11 @@ export function RegisterScreen({ navigation }: any) {
               keyboardType="number-pad"
               editable={!loading}
             />
-            <Text style={styles.sectionSubtitle}>
-              A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
-            </Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                💡 A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
+              </Text>
+            </View>
           </View>
 
           {/* Insurance */}
