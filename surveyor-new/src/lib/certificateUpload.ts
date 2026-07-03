@@ -47,7 +47,7 @@ export async function uploadCertificate(
   if (!token) throw new Error('Not authenticated');
 
   const uploadResponse = await fetch(
-    `https://lemppaqqpntadeylzzzwdn.supabase.co/storage/v1/object/surveyor-documents/${path}`,
+    `http://localhost:8084/storage/v1/object/surveyor-documents/${path}`,
     {
       method: 'POST',
       headers: {
