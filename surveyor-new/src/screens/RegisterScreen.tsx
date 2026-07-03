@@ -48,6 +48,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 0.5,
   },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 1.4,
+  },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -109,7 +115,7 @@ export function RegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [postcode, setPostcode] = useState('');
-  const [radiusMiles, setRadiusMiles] = useState('25');
+  const [radiusMiles, setRadiusMiles] = useState('');
   const [piPolicyNumber, setPiPolicyNumber] = useState('');
   const [piExpiryDate, setPiExpiryDate] = useState('');
   const [plPolicyNumber, setPlPolicyNumber] = useState('');
@@ -241,6 +247,9 @@ export function RegisterScreen({ navigation }: any) {
           {/* Location & Coverage */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Coverage Area</Text>
+            <Text style={styles.sectionSubtitle}>
+              A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Home Postcode *"

@@ -180,6 +180,7 @@ export default function ProfileScreen() {
             editable={!savingLocation}
             placeholderTextColor="#9ca3af"
           />
+          <Text style={s.helperText}>Larger radius = more nearby jobs to group together. You're never obligated to accept any work.</Text>
         </View>
 
         <TouchableOpacity
@@ -317,6 +318,7 @@ const s = StyleSheet.create({
   insuranceDate: { fontSize: 11, color: '#9ca3af', textAlign: 'center' },
   noProfile:     { fontSize: 18, fontWeight: '600', color: GREEN, marginBottom: 8 },
   hint:          { fontSize: 14, color: '#6b7280', marginBottom: 12 },
+  helperText:    { fontSize: 12, color: '#6b7280', marginTop: -8, marginBottom: 12 },
   label:         { fontSize: 12, fontWeight: '600', color: GREEN, marginBottom: 6 },
   input:         { backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#374151', marginBottom: 12 },
   signOutBtn:    { backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
