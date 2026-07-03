@@ -1323,7 +1323,14 @@ async function submitNewEnquiry() {
 
   const treeCount   = document.getElementById('treeCount').value;
   const deadlineTier = document.getElementById('deadline').value;
-  const base        = BASE_PRICES[treeCount];
+
+  // Calculate base price: hours_per_band × band_index × thac_hourly_rate
+  let base = null;
+  if (treeCount !== '100+') {
+    const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
+    base = Math.round(hours * thacHourlyRate);
+  }
+
   const surcharge   = SURCHARGES[deadlineTier] || 0;
   const quoted_price = (base !== null && base !== undefined) ? base + surcharge : null;
 
