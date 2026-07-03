@@ -30,7 +30,7 @@ export async function pickCertificate(): Promise<PickedCertificate | null> {
   return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null };
 }
 
-// Uploads a file to Supabase storage - accepts any file type, stores as-is
+// Uploads a file to Supabase storage using REST API with explicit auth
 export async function uploadCertificate(
   surveyorId: string,
   type: CertificateType,
@@ -41,11 +41,28 @@ export async function uploadCertificate(
   const response = await fetch(file.uri);
   const blob = await response.blob();
 
-  const { error } = await supabase.storage
-    .from('surveyor-documents')
-    .upload(path, blob);
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
 
-  if (error) throw error;
+  if (!token) throw new Error('Not authenticated');
+
+  const uploadResponse = await fetch(
+    `https://lemppaqqpntadeylzzzwdn.supabase.co/storage/v1/object/surveyor-documents/${path}`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': file.mimeType || 'application/octet-stream',
+      },
+      body: blob,
+    }
+  );
+
+  if (!uploadResponse.ok) {
+    const error = await uploadResponse.text();
+    throw new Error(`Upload failed: ${uploadResponse.status} - ${error}`);
+  }
+
   return path;
 }
 
