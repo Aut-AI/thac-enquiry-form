@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
+import { isValidDate } from '../lib/date';
 import { Surveyor } from '../types';
 import { pickCertificate, uploadCertificate, openCertificate, CertificateType, certificateLabel } from '../lib/certificateUpload';
 
@@ -154,6 +155,19 @@ export default function ProfileScreen() {
 
   async function saveInsuranceDates() {
     if (!surveyor) return;
+
+    const dateFields: [string, string][] = [
+      ['PI expiry date', editPiExpiry],
+      ['PL expiry date', editPlExpiry],
+      ['DBS expiry date', editDbsExpiry],
+    ];
+    for (const [label, value] of dateFields) {
+      if (value && !isValidDate(value)) {
+        Alert.alert('Error', `${label} must be a valid date in YYYY-MM-DD format`);
+        return;
+      }
+    }
+
     setSavingInsurance(true);
 
     try {

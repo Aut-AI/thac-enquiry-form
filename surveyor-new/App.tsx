@@ -151,7 +151,10 @@ export default function App() {
         }}
       >
         {!session
-          ? <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          ? <>
+              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+            </>
           : surveyorStatus === 'pending'
           ? <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} options={{ headerShown: false }} />
           : surveyorStatus === 'active'

@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { isValidDate } from '../lib/date';
 
 const styles = StyleSheet.create({
   container: {
@@ -150,6 +151,18 @@ export function RegisterScreen({ navigation }: any) {
       return;
     }
 
+    const dateFields: [string, string][] = [
+      ['PI expiry date', piExpiryDate],
+      ['PL expiry date', plExpiryDate],
+      ['DBS expiry date', dbsExpiryDate],
+    ];
+    for (const [label, value] of dateFields) {
+      if (value && !isValidDate(value)) {
+        setError(`${label} must be a valid date in YYYY-MM-DD format`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       // Create auth user
@@ -193,8 +206,7 @@ export function RegisterScreen({ navigation }: any) {
 
       Alert.alert(
         'Registration Successful',
-        'Your account is awaiting admin approval. You will receive an email once approved.',
-        [{ text: 'OK', onPress: () => navigation.replace('PendingApproval') }]
+        'Your account is awaiting admin approval. You will receive an email once approved.'
       );
     } catch (err: any) {
       setError(err.message || 'Registration failed');
