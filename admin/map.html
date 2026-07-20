@@ -141,8 +141,6 @@ async function init() {
     </div>
   `;
 
-  await loadEnquiryBadge();
-
   if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY === 'YOUR_GOOGLE_MAPS_KEY_HERE') {
     document.getElementById('mapCanvas').innerHTML = `
       <div class="map-no-key">
