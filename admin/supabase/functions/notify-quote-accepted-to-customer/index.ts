@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')
-const ADMIN_EMAIL = 'ciaran@aut-ai.com'
+const ADMIN_EMAIL = 'trevor@trevorheaps.co.uk'
 
 serve(async (req) => {
   const { record } = await req.json()

@@ -3,7 +3,7 @@
 // Shared across all notification edge functions
 // ============================================================
 
-export const ADMIN_EMAIL = 'ciaran@aut-ai.com'; // ← will swap to Trevor's when ready
+export const ADMIN_EMAIL = 'trevor@trevorheaps.co.uk';
 export const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')!;
 export const FROM_ADDRESS = 'THAC <ciaran@aut-ai.com>'; // ← verified sender
 
