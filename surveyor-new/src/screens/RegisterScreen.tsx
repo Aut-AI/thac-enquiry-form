@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -142,12 +142,20 @@ export function RegisterScreen({ navigation }: any) {
   const [qualifications, setQualifications] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // setLoading(true) below doesn't take effect (and disable the button) until
+  // the next render, so two taps fired in the same tick both slip past the
+  // `disabled={loading}` check and double-submit. This ref flips synchronously.
+  const submittingRef = useRef(false);
 
   const handleRegister = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setError('');
 
     if (!fullName || !email || !password || !postcode) {
       setError('Please fill in all required fields');
+      submittingRef.current = false;
       return;
     }
 
@@ -159,6 +167,7 @@ export function RegisterScreen({ navigation }: any) {
     for (const [label, value] of dateFields) {
       if (value && !isValidDate(value)) {
         setError(`${label} must be a valid date in YYYY-MM-DD format`);
+        submittingRef.current = false;
         return;
       }
     }
@@ -204,15 +213,44 @@ export function RegisterScreen({ navigation }: any) {
         throw new Error(`Registration failed: ${dbError.message}`);
       }
 
+      // If email confirmation is required, signUp() returns no session -- the
+      // user isn't logged in yet. Otherwise a session already exists and
+      // App.tsx's session/status effect will swap straight to
+      // PendingApprovalScreen on its own once this alert closes.
+      const hasSession = !!authData.session;
+
       Alert.alert(
         'Registration Successful',
-        'Your account is awaiting admin approval. You will receive an email once approved.'
+        hasSession
+          ? 'Your account is awaiting admin approval. You will receive an email once approved.'
+          : 'Please check your email to confirm your account. Your registration is also awaiting admin approval — you will receive an email once approved.',
+        [
+          {
+            text: 'OK',
+            onPress: async () => {
+              if (!hasSession) {
+                // Sign out first in case a stale session from another
+                // account is still active -- that would put App.tsx's
+                // Stack.Navigator in the "logged in but no matching
+                // surveyor" fallback branch, which has no Login screen in
+                // it. The setTimeout gives that session-clear a tick to
+                // flush and swap the navigator back to the Login+Register
+                // stack before we ask it to go to Login (a no-op if there
+                // was no stale session -- Login already exists and this
+                // just runs on the next tick instead).
+                await supabase.auth.signOut();
+                setTimeout(() => navigation.replace('Login'), 0);
+              }
+            },
+          },
+        ]
       );
     } catch (err: any) {
       setError(err.message || 'Registration failed');
       Alert.alert('Error', err.message || 'Registration failed');
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
