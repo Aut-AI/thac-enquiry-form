@@ -182,6 +182,16 @@ export function RegisterScreen({ navigation }: any) {
 
       if (authError) throw authError;
 
+      // Supabase returns 200 with a decoy user object (no error, empty
+      // identities array, no session) when signUp() is called with an email
+      // that already has an account — this is deliberate, to stop attackers
+      // enumerating registered emails. Trusting that decoy id here created
+      // surveyors rows with a user_id pointing at a non-existent auth user,
+      // leaving the real account permanently unable to see its own profile.
+      if (authData.user && authData.user.identities?.length === 0) {
+        throw new Error('An account with this email already exists. Please log in instead.');
+      }
+
       const userId = authData.user?.id;
       if (!userId) throw new Error('Failed to create user');
 

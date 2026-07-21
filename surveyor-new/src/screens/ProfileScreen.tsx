@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
@@ -41,18 +41,38 @@ export default function ProfileScreen() {
   const [editDbsExpiry, setEditDbsExpiry] = useState('');
   const [savingInsurance, setSavingInsurance] = useState(false);
 
+  const loadRequestId = useRef(0);
+
   useFocusEffect(useCallback(() => { loadProfile(); }, []));
 
   async function loadProfile() {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    const { data: surveyorData } = await supabase
+    // getSession() reads the already-established local session instead of
+    // making a fresh network round-trip to the auth server — loadProfile can
+    // fire again (useFocusEffect re-runs on every focus, e.g. rapid tab
+    // switching right after login) before an in-flight getUser() call has
+    // resolved, and a stale response landing after a newer one previously
+    // clobbered the profile back to empty.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) {
+      if (requestId === loadRequestId.current) setLoading(false);
+      return;
+    }
+
+    const { data: surveyorData, error: surveyorError } = await supabase
       .from('surveyors')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    if (requestId !== loadRequestId.current) return; // a newer loadProfile() call has since started
+
+    if (surveyorError) {
+      console.error('Failed to load surveyor profile:', surveyorError.message);
+    }
 
     setSurveyor(surveyorData);
     if (surveyorData) {
@@ -80,10 +100,11 @@ export default function ProfileScreen() {
         .eq('surveyor_id', surveyorData.id)
         .order('distance_miles', { ascending: true });
 
+      if (requestId !== loadRequestId.current) return;
       setServiceOutcodes(serviceData || []);
     }
 
-    setLoading(false);
+    if (requestId === loadRequestId.current) setLoading(false);
   }
 
   async function toggleAvailability(date: string) {
