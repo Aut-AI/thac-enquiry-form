@@ -304,6 +304,52 @@
     line-height: 1.4;
   }
 
+  /* Deadline option buttons */
+  .deadline-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .deadline-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(245, 242, 235, 0.7);
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .deadline-option:hover {
+    border-color: var(--green-light);
+    background: var(--green-pale);
+  }
+
+  .deadline-option.selected {
+    border-color: var(--green-mid);
+    background: var(--green-pale);
+  }
+
+  .deadline-option-label {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--green-dark);
+    line-height: 1.4;
+  }
+
+  .deadline-option-price {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green-mid);
+  }
+
   /* Branch selector */
   .branch-cards {
     display: grid;
@@ -572,6 +618,7 @@
     .form-card { padding: 24px 20px; }
     .branch-cards { grid-template-columns: 1fr; }
     .form-header h1 { font-size: 22px; }
+    .deadline-options { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -742,13 +789,25 @@
 
       <div class="field-group">
         <label>Required Deadline <span class="required">*</span></label>
-        <select id="amendDeadline">
-          <option value="">Select deadline...</option>
-          <option value="1day">Within 1 working day (+£150 surcharge)</option>
-          <option value="3days">Within 3 working days (+£50 surcharge)</option>
-          <option value="5days">Within 5 working days (standard rate)</option>
-          <option value="10days">Within 10 working days / No urgency (standard rate)</option>
-        </select>
+        <div class="deadline-options" id="amendDeadlineOptions">
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('3days', this)">
+            <span class="deadline-option-label">Within 3 working days</span>
+            <span class="deadline-option-price">+£200</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('5days', this)">
+            <span class="deadline-option-label">Within 5 working days</span>
+            <span class="deadline-option-price">+£100</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('7days', this)">
+            <span class="deadline-option-label">Within 7 working days</span>
+            <span class="deadline-option-price">+£50</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('10days', this)">
+            <span class="deadline-option-label">Within 10 working days / No rush</span>
+            <span class="deadline-option-price">As quoted</span>
+          </button>
+        </div>
+        <input type="hidden" id="amendDeadline" value="">
         <div class="field-error" id="amendDeadlineError">Please select a deadline.</div>
       </div>
 
@@ -804,13 +863,25 @@
 
       <div class="field-group">
         <label>Required Deadline <span class="required">*</span></label>
-        <select id="deadline" onchange="updateDeadlineSurcharge()">
-          <option value="">Select deadline...</option>
-          <option value="1day">Within 1 working day (+£150 surcharge)</option>
-          <option value="3days">Within 3 working days (+£50 surcharge)</option>
-          <option value="5days">Within 5 working days (standard rate)</option>
-          <option value="10days">Within 10 working days / No urgency (standard rate)</option>
-        </select>
+        <div class="deadline-options" id="deadlineOptions">
+          <button type="button" class="deadline-option" onclick="selectDeadline('3days', this)">
+            <span class="deadline-option-label">Within 3 working days</span>
+            <span class="deadline-option-price">+£200</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectDeadline('5days', this)">
+            <span class="deadline-option-label">Within 5 working days</span>
+            <span class="deadline-option-price">+£100</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectDeadline('7days', this)">
+            <span class="deadline-option-label">Within 7 working days</span>
+            <span class="deadline-option-price">+£50</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectDeadline('10days', this)">
+            <span class="deadline-option-label">Within 10 working days / No rush</span>
+            <span class="deadline-option-price">As quoted</span>
+          </button>
+        </div>
+        <input type="hidden" id="deadline" value="">
         <div class="field-hint">Select when you need the work completed — this affects the price below.</div>
         <div class="field-error" id="deadlineError">Please select a deadline.</div>
       </div>
@@ -1033,9 +1104,9 @@ let thacHourlyRate = 100; // Fetched from pricing_settings
 const hoursPerBand = {}; // Fetched from survey_types: { survey_type -> hours_per_band }
 
 const SURCHARGES = {
-  '1day':  150,
-  '3days': 50,
-  '5days': 0,
+  '3days': 200,
+  '5days': 100,
+  '7days': 50,
   '10days': 0
 };
 
@@ -1057,10 +1128,10 @@ const SURVEY_TYPE_LABELS = {
 };
 
 const DEADLINE_LABELS = {
-  '1day':   'Within 1 working day',
   '3days':  'Within 3 working days',
   '5days':  'Within 5 working days',
-  '10days': 'Within 10 working days / No urgency'
+  '7days':  'Within 7 working days',
+  '10days': 'Within 10 working days / No rush'
 };
 
 // ============================================================
@@ -1203,6 +1274,21 @@ function selectService(el, value) {
 function goToStep2New() {
   if (!selectedSurveyType) return;
   goTo('step-2-new');
+}
+
+function selectDeadline(value, el) {
+  document.getElementById('deadline').value = value;
+  document.querySelectorAll('#deadlineOptions .deadline-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  hideError('deadlineError', 'deadline');
+  updateDeadlineSurcharge();
+}
+
+function selectAmendDeadline(value, el) {
+  document.getElementById('amendDeadline').value = value;
+  document.querySelectorAll('#amendDeadlineOptions .deadline-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  hideError('amendDeadlineError', 'amendDeadline');
 }
 
 // ============================================================
@@ -1481,9 +1567,9 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
 
     if (enquiry.enquiry_type === 'new') {
       const now = new Date();
-      const daysToAdd = enquiry.deadline_tier === '1day' ? 1 :
-                        enquiry.deadline_tier === '3days' ? 3 :
-                        enquiry.deadline_tier === '5days' ? 5 : 0;
+      const daysToAdd = enquiry.deadline_tier === '3days' ? 3 :
+                        enquiry.deadline_tier === '5days' ? 5 :
+                        enquiry.deadline_tier === '7days' ? 7 : 10;
       const slaDeadline = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
 
       jobData = {
@@ -1492,9 +1578,9 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
         survey_type: enquiry.survey_type,
         site_postcode: enquiry.site_postcode,
         dispatch_state: 'pending_approval',
-        urgency_state: enquiry.deadline_tier === '1day' ? 'red' :
-                       enquiry.deadline_tier === '3days' ? 'orange' :
-                       enquiry.deadline_tier === '5days' ? 'yellow' : 'grey',
+        urgency_state: enquiry.deadline_tier === '3days' ? 'red' :
+                       enquiry.deadline_tier === '5days' ? 'orange' :
+                       enquiry.deadline_tier === '7days' ? 'yellow' : 'grey',
         sla_deadline: slaDeadline,
         quoted_amount: enquiry.quoted_price,
         agreed_amount: enquiry.quoted_price,

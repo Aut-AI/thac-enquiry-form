@@ -104,10 +104,10 @@ export const SURVEY_LABELS: Record<string, string> = {
 // ── Urgency state badge (uses urgency_state values: red/orange/yellow/grey)
 export function urgencyStateBadge(state: string): string {
   const map: Record<string, string> = {
-    red:    '<span class="badge badge-urgent">🔴 Urgent — within 1 working day</span>',
-    orange: '<span class="badge badge-elevated">🟠 Elevated — within 3 working days</span>',
-    yellow: '<span class="badge badge-standard">🟡 Standard — within 5 working days</span>',
-    grey:   '<span class="badge badge-grey">⚪ Low Priority — 10+ working days</span>',
+    red:    '<span class="badge badge-urgent">🔴 Urgent — within 3 working days</span>',
+    orange: '<span class="badge badge-elevated">🟠 Elevated — within 5 working days</span>',
+    yellow: '<span class="badge badge-standard">🟡 Standard — within 7 working days</span>',
+    grey:   '<span class="badge badge-grey">⚪ Low Priority — 10 working days / No rush</span>',
     green:  '<span class="badge badge-grey">🟢 Complete</span>',
   };
   return map[state] || `<span class="badge badge-grey">${state || '—'}</span>`;

@@ -24,10 +24,10 @@ const SURVEY_LABELS: Record<string, string> = {
 };
 
 const DEADLINE_LABELS: Record<string, string> = {
-  '1day':   'Within 1 working day',
   '3days':  'Within 3 working days',
   '5days':  'Within 5 working days',
-  '10days': 'Within 10 working days / No urgency',
+  '7days':  'Within 7 working days',
+  '10days': 'Within 10 working days / No rush',
 };
 
 serve(async (req) => {

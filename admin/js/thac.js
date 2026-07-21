@@ -65,9 +65,9 @@ function timeAgo(dateStr) {
 
 function getUrgencyTier(deadlineTier) {
   switch (deadlineTier) {
-    case '1day':   return { tier: 'urgent',   label: 'Urgent',    class: 'badge-urgent' };
-    case '3days':  return { tier: 'elevated', label: 'Elevated',  class: 'badge-elevated' };
-    case '5days':  return { tier: 'standard', label: 'Standard',  class: 'badge-standard' };
+    case '3days':  return { tier: 'urgent',   label: 'Urgent',    class: 'badge-urgent' };
+    case '5days':  return { tier: 'elevated', label: 'Elevated',  class: 'badge-elevated' };
+    case '7days':  return { tier: 'standard', label: 'Standard',  class: 'badge-standard' };
     case '10days': return { tier: 'low',      label: 'Low',       class: 'badge-low' };
     default:       return { tier: 'low',      label: 'Low',       class: 'badge-low' };
   }
@@ -75,9 +75,9 @@ function getUrgencyTier(deadlineTier) {
 
 function getUrgencyRowClass(deadlineTier) {
   switch (deadlineTier) {
-    case '1day':   return 'urgency-urgent';
-    case '3days':  return 'urgency-elevated';
-    case '5days':  return 'urgency-standard';
+    case '3days':  return 'urgency-urgent';
+    case '5days':  return 'urgency-elevated';
+    case '7days':  return 'urgency-standard';
     case '10days': return 'urgency-low';
     default:       return 'urgency-low';
   }
@@ -121,10 +121,10 @@ function getSurveyLabel(type) {
 // ============================================================
 
 const DEADLINE_LABELS = {
-  '1day':   'Within 1 working day',
   '3days':  'Within 3 working days',
   '5days':  'Within 5 working days',
-  '10days': 'Within 10 working days',
+  '7days':  'Within 7 working days',
+  '10days': 'Within 10 working days / No rush',
 };
 
 function getDeadlineLabel(tier) {

@@ -136,10 +136,10 @@ const SURVEY_LABELS = {
 };
 
 const DEADLINE_LABELS = {
-  '1day':   'Within 1 working day',
   '3days':  'Within 3 working days',
   '5days':  'Within 5 working days',
-  '10days': 'Within 10 working days',
+  '7days':  'Within 7 working days',
+  '10days': 'Within 10 working days / No rush',
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -449,9 +449,9 @@ async function submitStep2(enquiryId, ref) {
         survey_type: currentEnquiry?.survey_type,
         site_postcode: currentEnquiry?.site_postcode,
         dispatch_state: 'pending_approval',
-        urgency_state: currentEnquiry?.deadline_tier === '1day' ? 'red' :
-                       currentEnquiry?.deadline_tier === '3days' ? 'orange' :
-                       currentEnquiry?.deadline_tier === '5days' ? 'yellow' : 'grey',
+        urgency_state: currentEnquiry?.deadline_tier === '3days' ? 'red' :
+                       currentEnquiry?.deadline_tier === '5days' ? 'orange' :
+                       currentEnquiry?.deadline_tier === '7days' ? 'yellow' : 'grey',
         quoted_amount: currentEnquiry?.quoted_price,
         agreed_amount: currentEnquiry?.quoted_price,
         site_access_notes: document.getElementById('accessDetails').value.trim() || null,

@@ -1966,10 +1966,10 @@ function showCreateStage2Modal() {
         <label>Report Deadline <span class="required">*</span></label>
         <select id="stage2Deadline">
           <option value="">Select deadline...</option>
-          <option value="1day">Within 1 working day (+£150 surcharge)</option>
-          <option value="3days">Within 3 working days (+£50 surcharge)</option>
-          <option value="5days">Within 5 working days (standard rate)</option>
-          <option value="10days">Within 10 working days / No urgency (standard rate)</option>
+          <option value="3days">Within 3 working days (+£200 surcharge)</option>
+          <option value="5days">Within 5 working days (+£100 surcharge)</option>
+          <option value="7days">Within 7 working days (+£50 surcharge)</option>
+          <option value="10days">Within 10 working days / No rush (as quoted)</option>
         </select>
       </div>
 
@@ -1993,10 +1993,10 @@ async function createStage2Job() {
   }
 
   try {
-    const surchargeMap = { '1day': 150, '3days': 50, '5days': 0, '10days': 0 };
+    const surchargeMap = { '3days': 200, '5days': 100, '7days': 50, '10days': 0 };
     const urgency_surcharge = surchargeMap[deadline] || null;
     const slaDeadline = new Date();
-    const daysMap = { '1day': 1, '3days': 3, '5days': 5, '10days': 10 };
+    const daysMap = { '3days': 3, '5days': 5, '7days': 7, '10days': 10 };
     slaDeadline.setDate(slaDeadline.getDate() + daysMap[deadline]);
 
     const stage2Reference = job.reference ? `${job.reference}-1` : null;
@@ -2007,7 +2007,7 @@ async function createStage2Job() {
       job_type: 'new',
       site_postcode: job.site_postcode,
       dispatch_state: 'red',
-      urgency_state: deadline === '1day' ? '1day' : deadline === '3days' ? '3days' : deadline === '5days' ? '5days' : '10days',
+      urgency_state: deadline === '3days' ? '3days' : deadline === '5days' ? '5days' : deadline === '7days' ? '7days' : '10days',
       billing_mode: job.billing_mode,
       urgency_surcharge: urgency_surcharge || 0,
       sla_deadline: slaDeadline.toISOString(),
