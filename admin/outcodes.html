@@ -16,6 +16,7 @@
 requireAuth();
 
 let allAreas = [];
+let postcodeAreas = [];
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -26,6 +27,15 @@ async function init() {
       </div>
       <div class="page-body">
         <div class="card">
+          <div class="card-title">Area-Level Coverage</div>
+          <div style="margin-bottom:20px;font-size:13px;color:var(--text-muted);">
+            Business-level gate used by the public enquiry form: a postcode is only accepted if its
+            broad area (e.g. "GL") is checked here <strong>and</strong> an active surveyor covers the
+            exact outcode (see Service Coverage below).
+          </div>
+          <div id="postcodeAreasTable"><div class="loading"><div class="spinner"></div><br>Loading areas...</div></div>
+        </div>
+        <div class="card">
           <div class="card-title">Service Coverage</div>
           <div style="margin-bottom:20px;font-size:13px;color:var(--text-muted);">
             Postcode areas automatically covered by active surveyors based on their location and service radius.
@@ -35,7 +45,52 @@ async function init() {
       </div>
     </div>
   `;
+  await loadPostcodeAreas();
   await loadAreas();
+}
+
+async function loadPostcodeAreas() {
+  try {
+    postcodeAreas = await dbGet('postcode_areas', { 'select': 'id,area_code,area_name,region,is_covered', 'order': 'area_code.asc' });
+    renderPostcodeAreasTable();
+  } catch (e) {
+    document.getElementById('postcodeAreasTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+function renderPostcodeAreasTable() {
+  if (!postcodeAreas.length) {
+    document.getElementById('postcodeAreasTable').innerHTML = `<div class="empty-state"><p>No postcode areas found.</p></div>`;
+    return;
+  }
+
+  const rows = postcodeAreas.map(area => `
+    <tr>
+      <td style="font-weight:600;color:var(--text);">${area.area_code}</td>
+      <td>${area.area_name}</td>
+      <td>${area.region}</td>
+      <td style="text-align:center;">
+        <input type="checkbox" ${area.is_covered ? 'checked' : ''} onchange="toggleAreaCovered('${area.id}', this.checked)">
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('postcodeAreasTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Area</th><th>Area Name</th><th>Region</th><th>Covered</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function toggleAreaCovered(id, checked) {
+  try {
+    await dbUpdate('postcode_areas', `id=eq.${id}`, { is_covered: checked });
+    const area = postcodeAreas.find(a => a.id === id);
+    if (area) area.is_covered = checked;
+    showToast(checked ? 'Area marked as covered' : 'Area marked as not covered');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 async function loadAreas() {

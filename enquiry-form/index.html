@@ -969,6 +969,7 @@ let currentStep = 'step-0';
 
 // Postcode gate
 let operatingAreas = [];
+let coveredAreaCodes = [];
 let validatedPostcode = null;
 
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
@@ -987,6 +988,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   } catch (e) {
     console.error('Failed to load surveyor service outcodes:', e);
+  }
+
+  // Fetch area-level coverage (business-level gate, independent of live surveyor outcodes)
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/postcode_areas?select=area_code&is_covered=eq.true`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      coveredAreaCodes = [...new Set(rows.map(r => r.area_code))];
+      console.log('Loaded covered area codes:', coveredAreaCodes);
+    }
+  } catch (e) {
+    console.error('Failed to load postcode areas:', e);
   }
 
   // Fetch pricing settings (thac hourly rate)
@@ -1061,9 +1076,15 @@ const DEADLINE_LABELS = {
 // ============================================================
 // POSTCODE AREA GATE
 // ============================================================
-function extractPostcodeArea(postcode) {
+// Full outward code, e.g. "GL52 4AB" -> "GL52" (mirrors surveyor-new/src/lib/outcode.ts)
+function extractOutcode(postcode) {
   const cleaned = postcode.replace(/\s+/g, '').toUpperCase();
-  const match = cleaned.match(/^[A-Z]{1,2}/);
+  return cleaned.slice(0, -3);
+}
+
+// Leading 1-2 letter area code, e.g. "GL52" -> "GL"
+function extractPostcodeArea(outcode) {
+  const match = outcode.match(/^[A-Z]{1,2}/);
   return match ? match[0] : null;
 }
 
@@ -1077,21 +1098,25 @@ function checkPostcodeArea() {
     return;
   }
 
-  // Hard stop: if outcodes list failed to load, block entry
-  if (operatingAreas.length === 0) {
-    console.error('Operating outcodes list failed to load; blocking postcode check');
+  // Hard stop: if either coverage list failed to load, block entry
+  if (operatingAreas.length === 0 || coveredAreaCodes.length === 0) {
+    console.error('Coverage data failed to load; blocking postcode check');
     document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
     showError('gatePostcodeError', 'gatePostcode');
     return;
   }
 
-  const outcode = extractPostcodeArea(raw);
-  const hasArea = operatingAreas.some(o => o.startsWith(outcode));
-  console.log('Extracted outcode:', outcode);
-  console.log('Has matching area?', hasArea);
-  console.log('Operating outcodes sample:', operatingAreas.slice(0, 10));
+  const outcode = extractOutcode(raw);
+  const areaCode = extractPostcodeArea(outcode);
 
-  if (!outcode || !hasArea) {
+  // Coarse gate: is this broad area (e.g. "GL") one THAC operates in at all?
+  const areaCovered = areaCode && coveredAreaCodes.includes(areaCode);
+  // Granular gate: does an active surveyor actually cover this exact outcode (e.g. "GL52")?
+  const outcodeCovered = operatingAreas.includes(outcode);
+  console.log('Extracted outcode/area:', outcode, areaCode);
+  console.log('Area covered?', areaCovered, 'Outcode covered?', outcodeCovered);
+
+  if (!areaCovered || !outcodeCovered) {
     document.getElementById('gateOutOfAreaError').style.display = 'block';
     return;
   }
