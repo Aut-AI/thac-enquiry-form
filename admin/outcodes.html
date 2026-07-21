@@ -30,8 +30,9 @@ async function init() {
           <div class="card-title">Area-Level Coverage</div>
           <div style="margin-bottom:20px;font-size:13px;color:var(--text-muted);">
             Business-level gate used by the public enquiry form: a postcode is only accepted if its
-            broad area (e.g. "GL") is checked here <strong>and</strong> an active surveyor covers the
-            exact outcode (see Service Coverage below).
+            broad area (e.g. "GL") is covered here <strong>and</strong> an active surveyor covers the
+            exact outcode (see Service Coverage below). This updates automatically as surveyors are
+            added, removed, or reactivated — it's not manually editable.
           </div>
           <div id="postcodeAreasTable"><div class="loading"><div class="spinner"></div><br>Loading areas...</div></div>
         </div>
@@ -70,7 +71,7 @@ function renderPostcodeAreasTable() {
       <td>${area.area_name}</td>
       <td>${area.region}</td>
       <td style="text-align:center;">
-        <input type="checkbox" ${area.is_covered ? 'checked' : ''} onchange="toggleAreaCovered('${area.id}', this.checked)">
+        <input type="checkbox" disabled ${area.is_covered ? 'checked' : ''} title="Computed automatically from active surveyor coverage">
       </td>
     </tr>
   `).join('');
@@ -80,17 +81,6 @@ function renderPostcodeAreasTable() {
       <thead><tr><th>Area</th><th>Area Name</th><th>Region</th><th>Covered</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
-}
-
-async function toggleAreaCovered(id, checked) {
-  try {
-    await dbUpdate('postcode_areas', `id=eq.${id}`, { is_covered: checked });
-    const area = postcodeAreas.find(a => a.id === id);
-    if (area) area.is_covered = checked;
-    showToast(checked ? 'Area marked as covered' : 'Area marked as not covered');
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
-  }
 }
 
 async function loadAreas() {
