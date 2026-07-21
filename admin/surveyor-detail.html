@@ -201,8 +201,6 @@ function renderView() {
         <div class="card">
           <div class="card-title">Quick Actions</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            ${surveyor.email ? `<a href="mailto:${surveyor.email}" class="btn btn-secondary w-100" style="justify-content:center;">📧 Email Surveyor</a>` : ''}
-            ${surveyor.phone ? `<a href="tel:${surveyor.phone}" class="btn btn-secondary w-100" style="justify-content:center;">📞 Call Surveyor</a>` : ''}
             <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderEdit()">✏️ Edit Details</button>
             ${surveyor.status === 'pending'
               ? `<button class="btn btn-primary w-100" style="justify-content:center;" onclick="approveSurveyor()">✅ Approve & Activate</button>`
