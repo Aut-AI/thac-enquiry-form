@@ -968,28 +968,18 @@ let selectedSurveyType = null;
 let currentStep = 'step-0';
 
 // Postcode gate
-let operatingAreas = [];
 let coveredAreaCodes = [];
 let validatedPostcode = null;
 
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
-// Load surveyor service outcodes, pricing settings, and survey hours on page load
+// Load pricing settings and survey hours on page load.
+// (Granular outcode coverage is checked on demand in checkPostcodeArea() rather
+// than preloaded here — surveyor_service_outcodes has grown past PostgREST's
+// default 1000-row cap on an unfiltered select, so a full-table preload
+// silently drops rows and misreports coverage for outcodes outside that page.)
 (async function() {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    if (res.ok) {
-      const rows = await res.json();
-      operatingAreas = [...new Set(rows.map(r => r.outcode))];
-      console.log('Loaded service outcodes:', operatingAreas);
-    }
-  } catch (e) {
-    console.error('Failed to load surveyor service outcodes:', e);
-  }
-
   // Fetch area-level coverage (business-level gate, independent of live surveyor outcodes)
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/postcode_areas?select=area_code&is_covered=eq.true`, {
@@ -1088,7 +1078,7 @@ function extractPostcodeArea(outcode) {
   return match ? match[0] : null;
 }
 
-function checkPostcodeArea() {
+async function checkPostcodeArea() {
   const raw = document.getElementById('gatePostcode').value.trim();
   hideError('gatePostcodeError', 'gatePostcode');
   document.getElementById('gateOutOfAreaError').style.display = 'none';
@@ -1098,8 +1088,8 @@ function checkPostcodeArea() {
     return;
   }
 
-  // Hard stop: if either coverage list failed to load, block entry
-  if (operatingAreas.length === 0 || coveredAreaCodes.length === 0) {
+  // Hard stop: if the area coverage list failed to load, block entry
+  if (coveredAreaCodes.length === 0) {
     console.error('Coverage data failed to load; blocking postcode check');
     document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
     showError('gatePostcodeError', 'gatePostcode');
@@ -1111,8 +1101,25 @@ function checkPostcodeArea() {
 
   // Coarse gate: is this broad area (e.g. "GL") one THAC operates in at all?
   const areaCovered = areaCode && coveredAreaCodes.includes(areaCode);
+
   // Granular gate: does an active surveyor actually cover this exact outcode (e.g. "GL52")?
-  const outcodeCovered = operatingAreas.includes(outcode);
+  // Queried per-outcode (rather than preloading the whole table) so it stays
+  // correct regardless of how large surveyor_service_outcodes grows.
+  let outcodeCovered = false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode&limit=1&outcode=eq.${encodeURIComponent(outcode)}`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      outcodeCovered = rows.length > 0;
+    } else {
+      console.error('Outcode coverage check failed:', res.status);
+    }
+  } catch (e) {
+    console.error('Failed to check outcode coverage:', e);
+  }
+
   console.log('Extracted outcode/area:', outcode, areaCode);
   console.log('Area covered?', areaCovered, 'Outcode covered?', outcodeCovered);
 

@@ -85,10 +85,23 @@ function renderPostcodeAreasTable() {
 
 async function loadAreas() {
   try {
-    const data = await dbGet('surveyor_service_outcodes', {
-      'select': 'outcode,uk_outcodes(area_name)'
-    });
-    allAreas = data || [];
+    // Paginated: surveyor_service_outcodes has grown past PostgREST's default
+    // 1000-row cap on an unfiltered select, so a single dbGet() call silently
+    // drops rows once the table exceeds that page size.
+    const pageSize = 1000;
+    let all = [];
+    let offset = 0;
+    while (true) {
+      const page = await dbGet('surveyor_service_outcodes', {
+        'select': 'outcode,uk_outcodes(area_name)',
+        'limit': String(pageSize),
+        'offset': String(offset)
+      });
+      all = all.concat(page || []);
+      if (!page || page.length < pageSize) break;
+      offset += pageSize;
+    }
+    allAreas = all;
     renderTable();
   } catch (e) {
     document.getElementById('areasTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
