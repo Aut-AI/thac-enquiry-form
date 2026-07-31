@@ -1,0 +1,14 @@
+# Secrets — this repo is PUBLIC; never commit credentials of any kind
+.env
+.env.*
+*.pem
+*secret*
+*passphrase*
+
+# OS noise
+.DS_Store
+
+# Local dumps/backups must never land in the public repo
+*.dump
+*.dump.gpg
+*.sql.gz
