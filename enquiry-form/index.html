@@ -894,6 +894,7 @@
           <div class="quote-line"><span class="label">Tree count</span><span class="value" id="qTreeCount">—</span></div>
           <div class="quote-line"><span class="label">Deadline</span><span class="value" id="qDeadline">—</span></div>
           <div class="quote-line"><span class="label">Base price</span><span class="value" id="qBasePrice">—</span></div>
+          <div class="quote-line" id="qTravelRow" style="display:none"><span class="label">Travel</span><span class="value" id="qTravelCost">—</span></div>
           <div class="quote-line" id="qSurchargeRow" style="display:none"><span class="label">Urgency surcharge</span><span class="value" id="qSurcharge">—</span></div>
           <div class="quote-total">
             <div>
@@ -905,6 +906,7 @@
             </div>
           </div>
         </div>
+        <div id="qTravelNote" style="display:none;font-size:13px;color:#5c4a00;background:#fff8e1;border:1px solid #f0e0a0;border-radius:8px;padding:12px 14px;margin-bottom:16px;line-height:1.5;"></div>
         <p style="font-size:12px;color:#000000;margin-bottom:24px;line-height:1.5;">This is an estimate based on the information provided. The final quote may vary slightly following site assessment. To proceed, please provide your contact details below.</p>
       </div>
 
@@ -1042,6 +1044,13 @@ let currentStep = 'step-0';
 let coveredAreaCodes = [];
 let validatedPostcode = null;
 
+// Coverage mode switch (pricing_settings.coverage_mode, developer-only — see CLAUDE.md):
+// 'surveyor_coverage'  — gate on auto-computed surveyor radius coverage (original behavior)
+// 'travel_cost_areas'  — gate on Trevor's static area list; area travel cost is added to the quote
+let coverageMode = 'surveyor_coverage';
+let travelAreas = {};     // area_code -> { travel_cost, note }, loaded only in travel_cost_areas mode
+let appliedTravel = null; // { cost, note } for the validated postcode's area, null in surveyor mode
+
 const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
@@ -1065,20 +1074,45 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     console.error('Failed to load postcode areas:', e);
   }
 
-  // Fetch pricing settings (thac hourly rate)
+  // Fetch pricing settings (thac hourly rate + coverage mode). Falls back to a
+  // rate-only select if the coverage_mode column doesn't exist yet (form can
+  // deploy before the 20260731 migration is applied).
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/pricing_settings?select=thac_hourly_rate`, {
+    let res = await fetch(`${SUPABASE_URL}/rest/v1/pricing_settings?select=thac_hourly_rate,coverage_mode`, {
       headers: { 'apikey': SUPABASE_ANON_KEY }
     });
+    if (!res.ok) {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/pricing_settings?select=thac_hourly_rate`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY }
+      });
+    }
     if (res.ok) {
       const rows = await res.json();
       if (rows?.length > 0) {
         thacHourlyRate = rows[0].thac_hourly_rate;
-        console.log('Loaded THAC hourly rate:', thacHourlyRate);
+        if (rows[0].coverage_mode) coverageMode = rows[0].coverage_mode;
+        console.log('Loaded THAC hourly rate:', thacHourlyRate, 'coverage mode:', coverageMode);
       }
     }
   } catch (e) {
     console.warn('Failed to load pricing settings, using default £100/hr:', e);
+  }
+
+  // Travel-cost-areas mode: preload the static area list (~50 rows, well under
+  // PostgREST's 1000-row page cap, so a full preload is safe here)
+  if (coverageMode === 'travel_cost_areas') {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/travel_cost_areas?select=area_code,travel_cost,note`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        rows.forEach(r => { travelAreas[r.area_code] = { travel_cost: Number(r.travel_cost), note: r.note || null }; });
+        console.log('Loaded travel cost areas:', Object.keys(travelAreas).length);
+      }
+    } catch (e) {
+      console.error('Failed to load travel cost areas:', e);
+    }
   }
 
   // Fetch survey types with hours_per_band
@@ -1159,44 +1193,67 @@ async function checkPostcodeArea() {
     return;
   }
 
-  // Hard stop: if the area coverage list failed to load, block entry
-  if (coveredAreaCodes.length === 0) {
-    console.error('Coverage data failed to load; blocking postcode check');
-    document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
-    showError('gatePostcodeError', 'gatePostcode');
-    return;
-  }
-
   const outcode = extractOutcode(raw);
   const areaCode = extractPostcodeArea(outcode);
 
-  // Coarse gate: is this broad area (e.g. "GL") one THAC operates in at all?
-  const areaCovered = areaCode && coveredAreaCodes.includes(areaCode);
-
-  // Granular gate: does an active surveyor actually cover this exact outcode (e.g. "GL52")?
-  // Queried per-outcode (rather than preloading the whole table) so it stays
-  // correct regardless of how large surveyor_service_outcodes grows.
-  let outcodeCovered = false;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode&limit=1&outcode=eq.${encodeURIComponent(outcode)}`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    if (res.ok) {
-      const rows = await res.json();
-      outcodeCovered = rows.length > 0;
-    } else {
-      console.error('Outcode coverage check failed:', res.status);
+  if (coverageMode === 'travel_cost_areas') {
+    // Static working-area list: gate on the postcode area and record its
+    // travel cost for the quote. No surveyor-coverage lookups in this mode.
+    if (Object.keys(travelAreas).length === 0) {
+      console.error('Travel cost areas failed to load; blocking postcode check');
+      document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
+      showError('gatePostcodeError', 'gatePostcode');
+      return;
     }
-  } catch (e) {
-    console.error('Failed to check outcode coverage:', e);
-  }
 
-  console.log('Extracted outcode/area:', outcode, areaCode);
-  console.log('Area covered?', areaCovered, 'Outcode covered?', outcodeCovered);
+    const area = areaCode ? travelAreas[areaCode] : null;
+    console.log('Extracted outcode/area:', outcode, areaCode, 'Travel area:', area);
 
-  if (!areaCovered || !outcodeCovered) {
-    document.getElementById('gateOutOfAreaError').style.display = 'block';
-    return;
+    if (!area) {
+      document.getElementById('gateOutOfAreaError').style.display = 'block';
+      return;
+    }
+
+    appliedTravel = { cost: area.travel_cost, note: area.note };
+  } else {
+    appliedTravel = null;
+
+    // Hard stop: if the area coverage list failed to load, block entry
+    if (coveredAreaCodes.length === 0) {
+      console.error('Coverage data failed to load; blocking postcode check');
+      document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
+      showError('gatePostcodeError', 'gatePostcode');
+      return;
+    }
+
+    // Coarse gate: is this broad area (e.g. "GL") one THAC operates in at all?
+    const areaCovered = areaCode && coveredAreaCodes.includes(areaCode);
+
+    // Granular gate: does an active surveyor actually cover this exact outcode (e.g. "GL52")?
+    // Queried per-outcode (rather than preloading the whole table) so it stays
+    // correct regardless of how large surveyor_service_outcodes grows.
+    let outcodeCovered = false;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/surveyor_service_outcodes?select=outcode&limit=1&outcode=eq.${encodeURIComponent(outcode)}`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        outcodeCovered = rows.length > 0;
+      } else {
+        console.error('Outcode coverage check failed:', res.status);
+      }
+    } catch (e) {
+      console.error('Failed to check outcode coverage:', e);
+    }
+
+    console.log('Extracted outcode/area:', outcode, areaCode);
+    console.log('Area covered?', areaCovered, 'Outcode covered?', outcodeCovered);
+
+    if (!areaCovered || !outcodeCovered) {
+      document.getElementById('gateOutOfAreaError').style.display = 'block';
+      return;
+    }
   }
 
   validatedPostcode = raw;
@@ -1330,12 +1387,29 @@ function goToQuote() {
     // Calculate base price: hours_per_band × band_index × thac_hourly_rate
     const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
     const base = Math.round(hours * thacHourlyRate);
+    const travel = appliedTravel ? appliedTravel.cost : 0;
 
     document.getElementById('qSurveyType').textContent = SURVEY_TYPE_LABELS[selectedSurveyType] || '—';
     document.getElementById('qTreeCount').textContent = treeCount + ' trees';
     document.getElementById('qDeadline').textContent = '—';
     document.getElementById('qBasePrice').textContent = '£' + base;
-    document.getElementById('qTotal').textContent = '£' + base;
+
+    if (travel > 0) {
+      document.getElementById('qTravelRow').style.display = 'flex';
+      document.getElementById('qTravelCost').textContent = '+£' + travel;
+    } else {
+      document.getElementById('qTravelRow').style.display = 'none';
+    }
+
+    const noteEl = document.getElementById('qTravelNote');
+    if (appliedTravel?.note) {
+      noteEl.textContent = appliedTravel.note;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    document.getElementById('qTotal').textContent = '£' + (base + travel);
   }
 
   goTo('step-3-new');
@@ -1346,12 +1420,13 @@ function updateDeadlineSurcharge() {
   const deadline = document.getElementById('deadline').value;
 
   if (treeCount !== '100+') {
+    const travel = appliedTravel ? appliedTravel.cost : 0;
     if (deadline) {
       // Calculate base price: hours_per_band × band_index × thac_hourly_rate
       const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
       const base = Math.round(hours * thacHourlyRate);
       const surcharge = SURCHARGES[deadline] || 0;
-      const total = base + surcharge;
+      const total = base + travel + surcharge;
 
       document.getElementById('qDeadline').textContent = DEADLINE_LABELS[deadline] || '—';
 
@@ -1368,7 +1443,7 @@ function updateDeadlineSurcharge() {
       document.getElementById('qSurchargeRow').style.display = 'none';
       const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
       const base = Math.round(hours * thacHourlyRate);
-      document.getElementById('qTotal').textContent = '£' + base;
+      document.getElementById('qTotal').textContent = '£' + (base + travel);
     }
   }
 }
@@ -1450,7 +1525,8 @@ async function submitNewEnquiry() {
   }
 
   const surcharge   = SURCHARGES[deadlineTier] || 0;
-  const quoted_price = (base !== null && base !== undefined) ? base + surcharge : null;
+  const travel      = appliedTravel ? appliedTravel.cost : 0;
+  const quoted_price = (base !== null && base !== undefined) ? base + travel + surcharge : null;
 
   // Geocode the postcode
   const postcode = document.getElementById('sitePostcode').value.trim().toUpperCase();
@@ -1471,6 +1547,10 @@ async function submitNewEnquiry() {
     contact_phone: document.getElementById('newPhone').value.trim(),
     company: document.getElementById('newCompany').value.trim(),
     quoted_price,
+    // Only sent in travel_cost_areas mode — the enquiries.travel_cost column
+    // arrives with the same migration as that mode, so this can't hit a
+    // database that lacks the column
+    ...(appliedTravel ? { travel_cost: appliedTravel.cost } : {}),
     status: quoted_price ? 'quoted' : 'new',
     submitted_at: new Date().toISOString()
   };
