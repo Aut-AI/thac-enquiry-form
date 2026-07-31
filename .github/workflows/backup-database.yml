@@ -1,0 +1,75 @@
+# Hourly encrypted backup of the Supabase Postgres database.
+#
+# Dumps the full database with pg_dump, encrypts it with AES-256 (the repo is
+# public — dumps contain customer personal data and must never be stored in
+# plaintext), and keeps it as a workflow artifact for 30 days.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL    — Postgres connection string from the Supabase dashboard
+#                        (Connect -> Session pooler URI, with the DB password filled in)
+#   BACKUP_PASSPHRASE  — passphrase used to encrypt/decrypt dumps; store a copy
+#                        somewhere safe outside GitHub — without it backups are unrecoverable
+#
+# To restore:
+#   1. Download the artifact from the workflow run (Actions -> Hourly Database Backup;
+#      each run is timestamped in the run list — pick the hour you want to restore to)
+#   2. gpg --batch --passphrase "$BACKUP_PASSPHRASE" -d backup.dump.gpg > backup.dump
+#   3. pg_restore --clean --if-exists --no-owner --no-privileges -d "$SUPABASE_DB_URL" backup.dump
+#
+# Note: GitHub cron is best-effort — runs can be delayed or occasionally skipped
+# under load. For guaranteed continuous protection, enable Supabase PITR in the
+# dashboard (Database -> Backups); this workflow is a supplement, not a substitute.
+
+name: Hourly Database Backup
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set — backup cannot run"
+            exit 1
+          fi
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges -Fc -f backup.dump
+          ls -lh backup.dump
+
+      - name: Encrypt dump
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::BACKUP_PASSPHRASE secret is not set — refusing to upload an unencrypted dump"
+            exit 1
+          fi
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "$BACKUP_PASSPHRASE" -o backup.dump.gpg backup.dump
+          rm backup.dump
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-run-${{ github.run_id }}
+          path: backup.dump.gpg
+          if-no-files-found: error
+          retention-days: 30
