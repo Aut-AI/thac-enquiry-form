@@ -1,4 +1,4 @@
-# Hourly encrypted backup of the Supabase Postgres database.
+# Encrypted backup of the Supabase Postgres database, every 4 hours.
 #
 # Dumps the full database with pg_dump, encrypts it with AES-256 (the repo is
 # public — dumps contain customer personal data and must never be stored in
@@ -11,8 +11,8 @@
 #                        somewhere safe outside GitHub — without it backups are unrecoverable
 #
 # To restore:
-#   1. Download the artifact from the workflow run (Actions -> Hourly Database Backup;
-#      each run is timestamped in the run list — pick the hour you want to restore to)
+#   1. Download the artifact from the workflow run (Actions -> Database Backup;
+#      each run is timestamped in the run list — pick the point you want to restore to)
 #   2. gpg --batch --passphrase "$BACKUP_PASSPHRASE" -d backup.dump.gpg > backup.dump
 #   3. pg_restore --clean --if-exists --no-owner --no-privileges -d "$SUPABASE_DB_URL" backup.dump
 #
@@ -20,11 +20,11 @@
 # under load. For guaranteed continuous protection, enable Supabase PITR in the
 # dashboard (Database -> Backups); this workflow is a supplement, not a substitute.
 
-name: Hourly Database Backup
+name: Database Backup
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch: {}
 
 permissions:
