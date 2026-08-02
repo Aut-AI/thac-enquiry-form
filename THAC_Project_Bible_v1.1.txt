@@ -1,220 +1,0 @@
-
-
-
-TREVOR HEAPS ARBORICULTURAL CONSULTANCY
-CRM & Surveyor App — Project Bible
-Version 1.1  |  21 May 2026
-Prepared by: Ciaran Murphy
-QA: Nick Abraham
-Client: Trevor Heaps Arboricultural Consultancy Ltd.
-
-
-This document is the single source of truth for the THAC CRM build. All architecture, data models, workflows, business rules, and open items are recorded here. Nothing is designed or built without first being locked in this document.
-
-
-1. PROJECT OVERVIEW
-
-1.1 The Business
-Trevor Heaps Arboricultural Consultancy Ltd. (THAC) is a professional tree consultancy. The business surveys trees and produces formal written reports for clients who need professional arboricultural assessments. These reports are primarily used to support planning applications, discharge planning conditions, assess tree safety, manage insurance claims, or advise on development near trees.
-
-THAC does not carry out physical tree works. Trevor is the consultant — he assesses, advises, and reports. The tree surgeon (the contractor who does the physical cutting, pruning, or felling) is a completely separate business engaged directly by the client and has no presence in this system.
-
-1.2 The Problem
-THAC currently operates from a 1,020-row Excel spreadsheet, Google Drive for document storage, and QuickBooks for invoicing. This works for 3–4 internal surveyors. It will not scale to a growing network of freelance surveyors, which is why this CRM is being built.
-
-1.3 The Solution
-A unified three-interface system — Client Portal, Admin CRM, Surveyor Mobile App — all powered by a single Supabase database. Data flows from a client's initial online enquiry through to a surveyor's mobile app, eliminating manual data entry and replacing the spreadsheet entirely.
-
-1.4 The Four People in This System
-RoleDescriptionClientThe person or company commissioning the work. Could be a homeowner, architect, developer, solicitor, or insurance company. They submit an enquiry, receive a quote, accept, and eventually receive a report. They have no system account — they interact via web forms and email only.Trevor / AdminThe business: Trevor personally, his admin team, and internal staff. They receive enquiries, generate quotes, manage jobs, dispatch surveyors, finalise reports, and invoice clients. Trevor personally approves jobs before they go live on the map and signs off final reports.SurveyorGoes to site on Trevor's behalf and collects tree data. Could be an internal employee or freelance subcontractor. Records data in Axiscape, uploads photos and notes via the mobile app. Paid by Trevor at their personal hourly rate. Has no direct relationship with the client.Tree SurgeonNOT a system user. A completely separate business engaged directly by the client to carry out physical tree works. They work from Trevor's completed report. They have no account, no login, and no involvement in Trevor's workflow. Mentioned here for context only.
-
-
-2. TECHNOLOGY STACK
-
-TechnologyRole in BuildFlutterFlow (Growth)Primary build environment for Admin web app and Surveyor mobile app. Cross-platform — one codebase for iOS, Android, and web admin.SupabaseBackend database (PostgreSQL), authentication, and row-level security (RLS). All role-based permissions live here. The single master database all three interfaces connect to.Google CloudMaps JavaScript API (admin map, job dots), Maps SDK (surveyor mobile navigation to site coordinates), Geocoding API (home postcode to lat/lng at surveyor onboarding), Distance Matrix API (drive-time shown to surveyor on job preview tap).GitHubSource of truth for all custom code exported from FlutterFlow or hand-written in VS Code.VS CodeCustom code — database migrations, Supabase edge functions, anything FlutterFlow cannot handle natively.QuickBooksInvoicing only. No API integration. Admin raises invoices manually in QuickBooks and records the event in the CRM.AxiscapeExternal tree survey database tool used by surveyors in the field. Not integrated with the CRM. Files move via Google Drive. The CRM tracks workflow state only (prepared / uploaded).
-
-
-3. THE THREE INTERFACES
-
-3.1 Client Portal (Web — iframe embedded into trevorheaps.co.uk)
-Public-facing. No login required. The client fills in a short enquiry form which branches based on whether the work is new or existing. The system auto-generates a quote and emails it. If accepted, a second detailed form captures full job information. Forms can also be completed internally by admin on behalf of a client (from a phone call, email, or web enquiry).
-
-3.2 Admin Control Centre (Desktop Web App)
-Used by Trevor and his admin team. The mission control interface for the entire operation. Contains two primary views of the same underlying data:
-• The Urgency Dashboard — what jobs are due when, colour-coded by time remaining. Drives workload triage.
-• The Live Map — what state each job is in, displayed as coloured dots at site coordinates. Drives surveyor dispatch.
-
-3.3 Surveyor Field App (Mobile — iOS and Android)
-Used by surveyors in the field. They only see the map interface — available jobs as red dots within their chosen mile radius from home. They tap a dot to preview a job, claim it, navigate to the exact site location, carry out the survey, and upload field data. They never see the admin triage, urgency tiers, or other surveyors' jobs.
-
-
-
-4. COMPLETE JOB LIFECYCLE
-
-StepPhaseWhat Happens1Intake & QuoteClient submits short enquiry form (new or existing branch). System auto-generates quote based on tree count band, survey type, and urgency tier. Quote emailed automatically.2Quote DecisionClient accepts or declines. Declined: automated 'Why declined?' email sent, lead analytics logged. Accepted: client fills in detailed second form.3Job CreationDetailed form submitted. Job record created in Supabase. Reference number TH XXXX generated. SLA deadline and dashboard urgency tier assigned. Admin and Trevor notified.4Database & PrepAdmin prepares the Axiscape survey database and drafts the initial report template. Trevor reviews the job, optionally overrides the quote value, then approves.5Geographic DispatchOn Trevor's approval, the job appears as a RED dot on the marketplace map. Visible only to surveyors whose home postcode is within their chosen mile radius of the job's site coordinates.6Surveyor ClaimsSurveyor taps red dot. Preview shows: survey type, £ value to them, estimated tree numbers, required deadline. No client data shown yet. Surveyor accepts job.7Field ExecutionDot turns ORANGE. Full client details, site address, parking/access notes, and uploaded plans are unlocked for the surveyor. Surveyor navigates to exact site coordinates, carries out survey, records data in Axiscape, takes photos.8Data UploadSurveyor uploads field data, photos, and notes via the mobile app. Dot turns YELLOW. Admin receives notification that field data is ready and the draft report needs finalising.9Report FinalisationAdmin incorporates surveyor's field data into the draft report. Trevor reviews and signs off. Report sent to client. Dot turns GREEN.10Invoice & ArchiveAdmin raises invoice in QuickBooks manually. Marks 'Invoiced' in CRM with date and amount. Green dot disappears from active map. Job drops off active dashboard. Archived and searchable forever.
-
-
-5. STATE MACHINES
-
-A single job simultaneously holds two independent states. These use the same colour palette but mean completely different things in different parts of the UI. A third state applies at field level to the survey date only.
-
-5.1 Dashboard Urgency State (Time-Based)
-Displayed on the Admin Dashboard. Represents how urgently the job needs to be actioned based on time remaining until the SLA deadline. Jobs auto-escalate as their deadline approaches.
-
-ColourLabelTime RemainingNotesREDUrgentWithin 1 working dayHighest priority. Typically next-day amendment jobs.ORANGEElevatedWithin 3 working daysUrgency surcharge applies (+£50).YELLOWStandardWithin 5 working daysStandard pricing. Most common tier.GREYLow Priority10+ days / no urgencyStandard pricing. Example: school requesting holiday survey. Auto-escalates as deadline approaches.GREENSortedCompleteJob invoiced and archived. Drops off active dashboard. Remains searchable.
-5.2 Map Dispatch State (Action-Based)
-Displayed on the Live Map (Admin and Surveyor App). Represents where the job is in its physical lifecycle, not when it is due.
-
-Dot ColourAction StateWhat It MeansREDLive — UnallocatedApproved by Trevor. Job is live on the marketplace. No surveyor has claimed it yet. Visible to all surveyors whose home postcode falls within their chosen radius of the job site.ORANGEClaimed — Not AttendedSurveyor has accepted the job. Has not yet attended site. Job is locked — other surveyors cannot claim it.YELLOWAttended — Data UploadedSurveyor has been to site, uploaded field data, photos, and notes. Admin notified to finalise the draft report.GREENReport Sent — InvoicingReport has been sent to client. Awaiting invoice. Disappears from map once admin marks job as invoiced.
-5.3 Survey Date State (Field-Level Only)
-Applies only to the survey date field within a job record. Not a system-wide status.
-ColourStateMeaningORANGEProposedAdmin has suggested a survey date. Client has not yet confirmed. Admin updates manually after back-and-forth.GREENConfirmedClient has confirmed the survey date. Admin updates the field. Colour changes automatically.
-
-
-6. PRICING & QUOTING LOGIC
-
-6.1 Client Pricing Tiers
-Deadline SelectedSurchargeNotesWithin 1 working day+£150Amendments only. Not available for new surveys.Within 3 working days+£50Available for all job types.Within 5 working daysStandard rateMost common selection.Within 10 working days / No urgencyStandard rateSame price as 5-day. Appears as grey tier on dashboard. Auto-escalates as deadline approaches.100+ treesCustom quoteToo rare for automated pricing. Client draws site boundary on Google Maps (m² captured). Trevor prices manually. Form displays: 'We will be in touch with a custom quote.'
-6.2 Tree Count Pricing Bands (Standard Rate)
-These are the base prices before any urgency surcharge is applied. Exact band values to be confirmed by Trevor (lookup table pending).
-Tree Count BandBase PriceNotes1–25 trees£100 + VATFrom Extra CRM notes — to be confirmed.26–50 trees£200 + VATTo be confirmed.51–75 treesTBCPending Trevor's lookup table.76–100 treesTBCPending Trevor's lookup table.100+ treesCustomClient draws site boundary on Google Maps. Admin prices manually.
-6.3 Amendment Pricing
-Amendments to existing reports are not quoted in advance. They are charged at £100 + VAT per hour with a minimum charge of £25 + VAT. Admin records time taken and charges accordingly. Amendments reference the parent job as TH XXXX Rev B, Rev C, etc.
-
-
-
-7. BILLING & INVOICING
-
-7.1 Billing Modes
-Every job is assigned one of two billing modes. Admin sets the mode at the approval gate — the client does not choose this.
-
-ModeSingle Invoice (Default)Staged 50/50When usedStandard job. Survey and report expected to flow through without interruption.Where there is a likely or possible gap between the survey and the report being needed. Example: plans not yet finalised, development may not proceed.Invoice 1N/A — one invoice only.50% of agreed quote. Raised after the survey is completed and field data uploaded.Invoice 2100% of agreed quote. Raised when report is sent to client.Remaining 50%. Raised when/if the report is eventually needed. May never be raised if development is abandoned.SplitN/AAlways 50/50. Never variable.
-7.2 Invoice Tracking
-No QuickBooks API integration. Admin raises invoices manually in QuickBooks and records the following in the CRM:
-• Invoice date
-• Invoice amount
-• Paid / unpaid status
-• Overdue flag — automatically raised at 30+ days unpaid
-
-7.3 Payment Terms
-Payment due 30 days from invoice date. Small reasonable charges added if payment requires chasing after 30 days. Payment is due regardless of whether planning permission is granted or not.
-
-
-
-8. FORMS
-
-8.1 Short Enquiry Form — New Work
-• Survey type (dropdown)
-• Tree count band (1–25 / 26–50 / 51–75 / 76–100 / 100+ — triggers Google Maps drawing tool)
-• Site postcode
-• Required deadline tier (1 day / 3 days / 5 days / 10+ days / no urgency)
-
-8.2 Short Enquiry Form — Existing Work (Amendment)
-• Original job reference (TH XXXX)
-• Scope of amendment (free text)
-• Required deadline tier
-
-8.3 Detailed Form — Post-Acceptance
-Completed after the client accepts the quote. Can be completed by the client online or by admin on behalf of the client.
-
-• Person arranging the work — name, email, phone, company
-• Client (if different from person arranging) — name, contact details
-• Invoice recipient — name, email, postal address (with 'same as above' option)
-• Site access details — free-text field (parking location, access codes, what3words, gate codes, appointment requirements, etc.) plus option to drop a Google Maps pin
-• Topo survey provided? — checkbox + file upload
-• Proposed block plan upload — required minimum
-• Any other relevant documents — optional upload
-• Billing mode flag — set by admin at approval gate, not client-facing
-
-
-
-9. SURVEYOR SYSTEM
-
-9.1 Surveyor Onboarding Fields
-FieldNotesFull nameEmail addressPhone numberPersonal hourly rate (£)Set by admin. Used to calculate pay shown on map dot.Professional indemnity insurancePolicy number + expiry date. Traffic light indicator: green = valid, orange = expiring within 30 days, red = expired. Expired = account paused.Public liability insurancePolicy number + expiry date. Same traffic light logic.DBS checkDBS number + expiry date.Professional membershipsAA (Arboricultural Association), ICFor (Institute of Chartered Foresters), others as applicable.QualificationsFree text or structured list.Home postcodeGeocoded to lat/lng via Google Geocoding API at onboarding (one-time call). Lat/lng stored in Supabase. Used as the centre point for the radius calculation.Travel radius (miles)Single integer field (miles). Surveyor sets how far they are willing to travel from home. Jobs within this radius appear on their marketplace map. Stored in Supabase on the surveyor profile.Availability calendarDays surveyor is available / unavailable. Used by surveyor to manage their own schedule.
-9.2 Surveyor Pay Calculation
-Formula: (1 hour travel + estimated survey time on site) × surveyor's personal hourly rate
-
-• 1 hour travel is always paid regardless of actual distance to the site. Fixed and non-negotiable.
-• Survey time on site is determined from a lookup table of hours per survey type (Trevor to provide). Admin can override this estimate at the approval gate.
-• Each surveyor has their own hourly rate. The same job will display a different £ value to different surveyors on the marketplace map.
-• Urgent next-day jobs: surveyor earns standard calculated rate +20%. This percentage is stored as a configurable system value — not hardcoded — and can be adjusted without a code change.
-
-9.3 Marketplace Visibility Rules
-• A job is only visible to a surveyor on the marketplace map if the job's site coordinates fall within that surveyor's chosen mile radius from their home postcode.
-• Radius filtering is handled server-side in Supabase using the Haversine formula (PostgreSQL earthdistance extension). Runs on every job-live event. No API cost, no external call, scales to any number of surveyors.
-• When a surveyor taps a red dot, a single Google Distance Matrix API call fires and returns actual drive time and road distance from their current location to the job site. This is displayed on the job preview card to help them decide whether to claim.
-• The radius is a soft filter — it stops irrelevant jobs appearing, not a hard commitment to attend. The surveyor hand picks what they want from what appears on their map.
-• Pre-acceptance (red dot preview): surveyor sees survey type, £ value to them, estimated tree numbers, required deadline. No client data.
-• Post-acceptance (orange dot): full client details, site address, parking/access notes, and uploaded plans unlocked.
-• Hand-back: surveyor can return a claimed job (due to sickness or inability to attend). Job returns to red dot and becomes available to other surveyors.
-
-9.4 Radius Coverage — Technical Architecture (Option C)
-The surveyor coverage radius system uses a hybrid approach — cheap server-side filtering combined with real drive-time data at the point of decision.
-
-StageDetailOnboarding — postcode geocodingSurveyor enters home postcode. System calls Google Geocoding API once and converts postcode to lat/lng. Coordinates stored on surveyor profile in Supabase. Never needs repeating unless surveyor moves.Onboarding — radius settingSurveyor sets a single integer value in miles (e.g. 25). Stored on surveyor profile. Can be updated at any time.Job goes live — Haversine filterWhen Trevor approves a job, Supabase runs a Haversine distance query across all active surveyors. Any surveyor where the straight-line distance between their home lat/lng and the job's site lat/lng is within their radius sees the red dot appear on their map. Uses PostgreSQL earthdistance extension — no API call, no cost, runs in milliseconds.Surveyor taps dot — Distance MatrixOne Google Distance Matrix API call fires when the surveyor taps a red dot to preview the job. Returns actual drive time and road distance from their current location (or home if GPS unavailable) to the job site. Displayed on the preview card alongside survey type, £ value, tree count, and deadline.Supabase query (reference)SELECT s.id, s.name FROM surveyors s WHERE earth_distance(ll_to_earth(s.home_lat, s.home_lng), ll_to_earth([job_lat], [job_lng])) / 1609.34 <= s.radius_miles
-9.5 Bonus Tracker
-The system captures the following data per job per surveyor:
-• Surveyor assigned
-• Number of trees surveyed
-• Survey type
-• Whether surveyor drafted the report (Y/N)
-• Whether surveyor finished the report (Y/N)
-
-Trevor will provide the bonus calculation formula at a later date. A placeholder example formula will be built into Sprint 6 so the UI exists and Trevor can review it. The formula will be applied to the captured data without structural changes when it arrives.
-
-
-
-10. REFERENCE NUMBERS & AMENDMENTS
-
-10.1 Reference Number Format
-All jobs are assigned a sequential reference number in the format TH XXXX (e.g. TH 5291, TH 5292). The system generates this automatically on job creation.
-
-10.2 Amendments
-Amendments to existing reports are child records linked to the parent job. The reference appends a revision letter:
-• First amendment: TH XXXX Rev B
-• Second amendment: TH XXXX Rev C
-• And so on.
-
-Amendment pricing is time-and-materials at £100 + VAT per hour (minimum £25 + VAT). Admin records time taken. No automated quote is generated for amendments — they are instructed directly and billed after.
-
-10.3 Two-Stage BS5837 Reports
-Some BS5837 instructions are completed in two stages due to delays between the survey and the need for the final report (e.g. plans not yet finalised by the architect). These use staged 50/50 billing mode. The two jobs (Stage 1 survey, Stage 2 report) are linked records. Stage 2 sits in a 'waiting for plans' status until admin manually flips it to live, at which point it gets its own SLA timer and red dot on the map.
-
-
-
-11. SPRINT PLAN (V3 — CURRENT)
-
-Six sprints. Total: 174 hours. Sprint 5 (AI Mapping & QuickBooks) was removed entirely from scope — deleted and renumbered. All other sprints retained.
-
-SprintNameHoursKey DeliverablesSprint 1Foundation & Basic Web Forms33.5hSupabase setup, role-based security, Google Workspace integration. Short quote form + detailed acceptance form, iframe-embedded into trevorheaps.co.uk.Sprint 2Core Admin CRM Dashboard33.5hUrgency-tiered dashboard (red/orange/yellow/grey/green). Sub-status tracking. Invoicing workflow that drops completed jobs from the active board.Sprint 3Core Surveyor Mobile App & Map40hGoogle Maps live job dots. Claim-and-lock workflow. Surveyor onboarding portal (insurance, expiry tracking, qualifications). Site data upload (photos, notes, field data).Sprint 4Advanced Quoting Enhancements17hHardcoded pricing matrix (tree bands, urgency surcharges). Expanded detailed form fields (paying client, name on report, site access, plan uploads).Sprint 5Surveyor Portal Additions30hAvailability calendars and hand-back button. Radius input field on surveyor profile (miles from home postcode). Resource library of survey instructions.Sprint 6Admin Enhancements20hManual 'approve to map' gateway. Quote value override. Background bonus tracker. Two-stage BS report handling.TOTAL174h
-Excluded from Build
-• Remote Photo ID & Third-Party Architect Forwarding — removed from Sprint 4
-• AI Vegetation Estimation Tool — Sprint 5 deleted
-• QuickBooks API Integration — Sprint 5 deleted
-• Digital Safe / Report Paywall — removed from Sprint 6
-• Lead source field — parked for now
-
-
-
-12. OPEN ITEMS & PLACEHOLDERS
-
-The following items are unresolved at the time of writing. Each has a placeholder in the build so that development can proceed without them. They must be resolved before their relevant sprint begins.
-
-#ItemNeeded ForOwnerStatus1Survey time lookup table (hours per survey type)Sprint 3 — surveyor pay calculationTrevor to sendPENDING2Urgency surcharge uplift % — locked at 20% for nowSprint 4 — pricing matrixReview with TrevorPLACEHOLDER (20%)3Tree count pricing bands for 51-75 and 76-100Sprint 4 — pricing matrixTrevor to confirmPENDING4Bonus calculation formulaSprint 6 — bonus trackerTrevor to providePENDING5Outcode coverage UX (interactive map selection)Sprint 5 — surveyor portalResolvedCLOSED — radius-only model confirmed6Non-urgent / grey tier deadline logic (10-day fixed vs indefinite)Sprint 2 — dashboardTrevor to confirm Q3(d)PENDING7Lead source dropdown optionsParked — not in current scopeTrevor (if reinstated)PARKED
-
-
-13. DATA IMPORT
-
-Trevor's existing 1,020-row Excel spreadsheet will be imported into Supabase on go-live. Confirmed scope: Option B — live jobs plus completed/invoiced jobs. This preserves historical data for accounts purposes and enables returning-client recognition.
-
-• Live jobs (status A, B, C, D, E, G in current spreadsheet) — imported as active records
-• Sorted/invoiced jobs (status H) — imported as archived records, searchable but not on active dashboard
-• Cancelled rows — not imported
-
-A data migration script will be written in Sprint 1 to map the existing Excel columns to the new Supabase schema.
-
-THAC CRM — Project Bible  |  v1.0  |  Confidential
-
-Trevor Heaps Arboricultural Consultancy Ltd.	Page 1
-

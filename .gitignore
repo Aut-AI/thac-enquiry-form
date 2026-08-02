@@ -12,3 +12,6 @@
 *.dump
 *.dump.gpg
 *.sql.gz
+
+# Business docs — keep out of public repo
+THAC_Project_Bible*
