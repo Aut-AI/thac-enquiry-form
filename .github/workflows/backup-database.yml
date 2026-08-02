@@ -51,7 +51,9 @@ jobs:
             echo "::error::SUPABASE_DB_URL secret is not set — backup cannot run"
             exit 1
           fi
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges -Fc -f backup.dump
+          # Full path: the runner's preinstalled PG16 pg_dump shadows the v17 one
+          # on PATH, and pg_dump refuses to dump a newer server (PG17)
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges -Fc -f backup.dump
           ls -lh backup.dump
 
       - name: Encrypt dump
