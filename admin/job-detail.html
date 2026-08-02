@@ -756,6 +756,10 @@ function renderJob() {
                 <div class="field-value">${job.urgency_surcharge ? '£' + Number(job.urgency_surcharge).toLocaleString() : '—'}</div>
               </div>
               <div class="detail-field">
+                <label>Travel Cost</label>
+                <div class="field-value">${enquiry?.travel_cost ? '£' + Number(enquiry.travel_cost).toLocaleString() : '—'}</div>
+              </div>
+              <div class="detail-field">
                 <label>Surveyor Pay</label>
                 <div class="field-value">${job.surveyor_pay_amount ? '£' + Number(job.surveyor_pay_amount).toLocaleString() : '—'}</div>
               </div>

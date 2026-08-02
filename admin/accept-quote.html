@@ -183,7 +183,7 @@ async function init() {
 
   try {
     const data = await supabaseGet('enquiries',
-      `id=eq.${id}&select=id,job_number,contact_name,survey_type,site_postcode,deadline_tier,quoted_price,status&limit=1`
+      `id=eq.${id}&select=id,job_number,contact_name,survey_type,site_postcode,deadline_tier,quoted_price,travel_cost,status&limit=1`
     );
 
     if (!data || !data.length) {
@@ -240,6 +240,11 @@ function showAcceptConfirm(enq) {
         <span class="detail-label">Deadline</span>
         <span class="detail-value">${DEADLINE_LABELS[enq.deadline_tier] || enq.deadline_tier || '—'}</span>
       </div>
+      ${enq.travel_cost ? `
+      <div class="detail-row">
+        <span class="detail-label">Includes Travel</span>
+        <span class="detail-value">£${Number(enq.travel_cost).toLocaleString()}</span>
+      </div>` : ''}
       <div class="detail-row">
         <span class="detail-label">Quote</span>
         <span class="detail-value" style="color:#1a3c2e;font-size:16px;">${price}</span>
