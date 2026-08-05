@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — System Users</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+<style>
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal {
+  background: white; border-radius: 16px; padding: 32px;
+  width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-title {
+  font-size: 18px; font-weight: 700; color: var(--green-dark);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 13px; color: var(--text-muted); margin-bottom: 24px;
+}
+.modal-footer {
+  display: flex; gap: 10px; margin-top: 24px;
+}
+.user-cell {
+  display: flex; align-items: center; gap: 10px;
+}
+.user-cell-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: var(--green-pale); color: var(--green-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+}
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div class="app-layout" id="app"></div>
+
+<!-- Invite User Modal -->
+<div class="modal-overlay" id="inviteModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Invite User</div>
+    <div class="modal-sub">They'll get an email with a link to set their own password and sign in.</div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" class="form-control" id="inviteName" placeholder="e.g. Trevor Heaps">
+    </div>
+    <div class="form-group">
+      <label>Email <span class="req">*</span></label>
+      <input type="email" class="form-control" id="inviteEmail" placeholder="name@company.com">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeInviteModal()" style="flex:1;justify-content:center;">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInvite()" style="flex:2;justify-content:center;" id="inviteSubmitBtn">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Edit User</div>
+    <div class="modal-sub">Changing the email doesn't require reconfirmation &mdash; it takes effect immediately.</div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" class="form-control" id="editName">
+    </div>
+    <div class="form-group">
+      <label>Email <span class="req">*</span></label>
+      <input type="email" class="form-control" id="editEmail">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEditModal()" style="flex:1;justify-content:center;">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEdit()" style="flex:2;justify-content:center;" id="editSubmitBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+const FUNCTIONS_URL = 'https://lemppaqgpntadeylzzwn.supabase.co/functions/v1/admin-users';
+let allUsers = [];
+let editingId = null;
+
+async function init() {
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('users')}
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">System Users</div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-title">
+            <span>Admin CRM Access <span style="font-size:13px;font-weight:400;color:var(--text-muted)" id="userCount"></span></span>
+            <button class="btn btn-primary btn-sm" onclick="openInviteModal()">+ Invite User</button>
+          </div>
+          <div style="margin-bottom:16px;font-size:13px;color:var(--text-muted);">
+            Anyone listed here can sign in to this CRM with their own password. There's no separate
+            role system yet \u2014 every account has full access.
+          </div>
+          <div id="usersTable"><div class="loading"><div class="spinner"></div><br>Loading users...</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  await loadUsers();
+}
+
+async function callApi(method, { body, query } = {}) {
+  const token = getAuthToken();
+  const url = FUNCTIONS_URL + (query ? '?' + new URLSearchParams(query).toString() : '');
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+async function loadUsers() {
+  try {
+    const data = await callApi('GET');
+    allUsers = data.users || [];
+    renderTable();
+  } catch (e) {
+    document.getElementById('usersTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+function initials(user) {
+  const source = user.full_name || user.email || '?';
+  return source.trim()[0].toUpperCase();
+}
+
+function userStatusBadge(user) {
+  if (user.banned_until && new Date(user.banned_until) > new Date()) {
+    return '<span class="badge badge-low">\u23f8 Disabled</span>';
+  }
+  if (!user.email_confirmed_at) {
+    return '<span class="badge badge-elevated">\u23f3 Invited</span>';
+  }
+  return '<span class="badge badge-accepted">\u2705 Active</span>';
+}
+
+function renderTable() {
+  document.getElementById('userCount').textContent = `${allUsers.length} account${allUsers.length !== 1 ? 's' : ''}`;
+
+  if (allUsers.length === 0) {
+    document.getElementById('usersTable').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">\ud83d\udc64</div>
+        <h3>No users yet</h3>
+        <p>Invite someone to give them access to this CRM</p>
+      </div>`;
+    return;
+  }
+
+  const rows = allUsers.map(u => `
+    <tr>
+      <td>
+        <div class="user-cell">
+          <div class="user-cell-avatar">${initials(u)}</div>
+          <div>
+            <div style="font-weight:500">${u.full_name || '\u2014'}</div>
+            <div class="muted">${u.email}</div>
+          </div>
+        </div>
+      </td>
+      <td>${userStatusBadge(u)}</td>
+      <td>${u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : '\u2014'}</td>
+      <td>${formatDate(u.created_at)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${u.id}')">Edit</button>
+          ${u.banned_until && new Date(u.banned_until) > new Date()
+            ? `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', false)">Enable</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', true)">Disable</button>`
+          }
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${(u.email || '').replace(/'/g, "\\'")}')">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('usersTable').innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Status</th>
+          <th>Last Sign In</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ---- Invite ----
+
+function openInviteModal() {
+  document.getElementById('inviteName').value = '';
+  document.getElementById('inviteEmail').value = '';
+  document.getElementById('inviteModal').style.display = 'flex';
+}
+
+function closeInviteModal() {
+  document.getElementById('inviteModal').style.display = 'none';
+}
+
+async function submitInvite() {
+  const full_name = document.getElementById('inviteName').value.trim();
+  const email = document.getElementById('inviteEmail').value.trim();
+
+  if (!email) {
+    showToast('Email is required', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('inviteSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    await callApi('POST', { body: { email, full_name: full_name || undefined } });
+    showToast(`Invite sent to ${email} \u2713`);
+    closeInviteModal();
+    await loadUsers();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Invite';
+  }
+}
+
+// ---- Edit ----
+
+function openEditModal(id) {
+  const user = allUsers.find(u => u.id === id);
+  if (!user) return;
+  editingId = id;
+  document.getElementById('editName').value = user.full_name || '';
+  document.getElementById('editEmail').value = user.email || '';
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  editingId = null;
+}
+
+async function submitEdit() {
+  const full_name = document.getElementById('editName').value.trim();
+  const email = document.getElementById('editEmail').value.trim();
+
+  if (!email) {
+    showToast('Email is required', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('editSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    await callApi('PATCH', { body: { id: editingId, email, full_name } });
+    showToast('User updated \u2713');
+    closeEditModal();
+    await loadUsers();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+}
+
+// ---- Disable / Enable ----
+
+async function toggleBan(id, banned) {
+  const user = allUsers.find(u => u.id === id);
+  const verb = banned ? 'disable' : 're-enable';
+  if (!confirm(`Are you sure you want to ${verb} access for ${user?.email}?`)) return;
+
+  try {
+    await callApi('PATCH', { body: { id, banned } });
+    showToast(`${user?.email} ${banned ? 'disabled' : 're-enabled'} \u2713`);
+    await loadUsers();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ---- Delete ----
+
+async function deleteUser(id, email) {
+  if (!confirm(`Permanently delete ${email}? This can't be undone \u2014 they'll no longer be able to sign in at all.`)) return;
+
+  try {
+    await callApi('DELETE', { query: { id } });
+    showToast(`${email} deleted \u2713`);
+    await loadUsers();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

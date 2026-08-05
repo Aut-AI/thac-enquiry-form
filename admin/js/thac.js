@@ -213,6 +213,9 @@ function renderSidebar(activePage) {
         <a href="surveyor-time-off.html" class="nav-item ${activePage === 'availability' ? 'active' : ''}" data-page="availability">
           <span class="nav-icon">📅</span> Availability
         </a>
+        <a href="users.html" class="nav-item ${activePage === 'users' ? 'active' : ''}" data-page="users">
+          <span class="nav-icon">👤</span> System Users
+        </a>
         <a href="settings.html" class="nav-item ${activePage === 'settings' ? 'active' : ''}" data-page="settings">
           <span class="nav-icon">⚙️</span> Settings
         </a>

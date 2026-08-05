@@ -39,6 +39,7 @@ jobs:
           supabase functions deploy geocode-postcode --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-surveyor-approved --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy admin-users --project-ref lemppaqgpntadeylzzwn
 
       - name: Set secrets
         env:
