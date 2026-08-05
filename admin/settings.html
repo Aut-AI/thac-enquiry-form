@@ -16,6 +16,8 @@
 requireAuth();
 
 async function init() {
+  if (!(await requireAdmin())) return;
+
   document.getElementById('app').innerHTML = `
     ${renderSidebar('settings')}
     <div class="main-content">

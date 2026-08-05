@@ -56,6 +56,13 @@
       <label>Email <span class="req">*</span></label>
       <input type="email" class="form-control" id="inviteEmail" placeholder="name@company.com">
     </div>
+    <div class="form-group">
+      <label>Role <span class="req">*</span></label>
+      <select class="form-control" id="inviteRole">
+        <option value="user" selected>User &mdash; full CRM access, can't change Settings or manage users</option>
+        <option value="admin">Admin &mdash; full access including Settings and System Users</option>
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeInviteModal()" style="flex:1;justify-content:center;">Cancel</button>
       <button class="btn btn-primary" onclick="submitInvite()" style="flex:2;justify-content:center;" id="inviteSubmitBtn">Send Invite</button>
@@ -76,6 +83,14 @@
       <label>Email <span class="req">*</span></label>
       <input type="email" class="form-control" id="editEmail">
     </div>
+    <div class="form-group">
+      <label>Role <span class="req">*</span></label>
+      <select class="form-control" id="editRole">
+        <option value="none">No CRM Access &mdash; surveyor mobile-app login only</option>
+        <option value="user">User &mdash; full CRM access, can't change Settings or manage users</option>
+        <option value="admin">Admin &mdash; full access including Settings and System Users</option>
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeEditModal()" style="flex:1;justify-content:center;">Cancel</button>
       <button class="btn btn-primary" onclick="submitEdit()" style="flex:2;justify-content:center;" id="editSubmitBtn">Save Changes</button>
@@ -93,6 +108,8 @@ let allUsers = [];
 let editingId = null;
 
 async function init() {
+  if (!(await requireAdmin())) return;
+
   document.getElementById('app').innerHTML = `
     ${renderSidebar('users')}
     <div class="main-content">
@@ -106,8 +123,8 @@ async function init() {
             <button class="btn btn-primary btn-sm" onclick="openInviteModal()">+ Invite User</button>
           </div>
           <div style="margin-bottom:16px;font-size:13px;color:var(--text-muted);">
-            Anyone listed here can sign in to this CRM with their own password. There's no separate
-            role system yet \u2014 every account has full access.
+            Admins can change Settings and manage other users here; Users have full CRM access otherwise.
+            Accounts with no role (grey) are surveyor mobile-app logins only, with no CRM access.
           </div>
           <div id="usersTable"><div class="loading"><div class="spinner"></div><br>Loading users...</div></div>
         </div>
@@ -159,6 +176,12 @@ function userStatusBadge(user) {
   return '<span class="badge badge-accepted">\u2705 Active</span>';
 }
 
+function roleBadge(user) {
+  if (user.role === 'admin') return '<span class="badge badge-accepted">Admin</span>';
+  if (user.role === 'user') return '<span class="badge badge-standard">User</span>';
+  return '<span class="badge badge-low">No CRM Access</span>';
+}
+
 function renderTable() {
   document.getElementById('userCount').textContent = `${allUsers.length} account${allUsers.length !== 1 ? 's' : ''}`;
 
@@ -183,6 +206,7 @@ function renderTable() {
           </div>
         </div>
       </td>
+      <td>${roleBadge(u)}</td>
       <td>${userStatusBadge(u)}</td>
       <td>${u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : '\u2014'}</td>
       <td>${formatDate(u.created_at)}</td>
@@ -204,6 +228,7 @@ function renderTable() {
       <thead>
         <tr>
           <th>User</th>
+          <th>Role</th>
           <th>Status</th>
           <th>Last Sign In</th>
           <th>Created</th>
@@ -219,6 +244,7 @@ function renderTable() {
 function openInviteModal() {
   document.getElementById('inviteName').value = '';
   document.getElementById('inviteEmail').value = '';
+  document.getElementById('inviteRole').value = 'user';
   document.getElementById('inviteModal').style.display = 'flex';
 }
 
@@ -229,6 +255,7 @@ function closeInviteModal() {
 async function submitInvite() {
   const full_name = document.getElementById('inviteName').value.trim();
   const email = document.getElementById('inviteEmail').value.trim();
+  const role = document.getElementById('inviteRole').value;
 
   if (!email) {
     showToast('Email is required', 'error');
@@ -240,7 +267,7 @@ async function submitInvite() {
   btn.textContent = 'Sending...';
 
   try {
-    await callApi('POST', { body: { email, full_name: full_name || undefined } });
+    await callApi('POST', { body: { email, full_name: full_name || undefined, role } });
     showToast(`Invite sent to ${email} \u2713`);
     closeInviteModal();
     await loadUsers();
@@ -260,6 +287,7 @@ function openEditModal(id) {
   editingId = id;
   document.getElementById('editName').value = user.full_name || '';
   document.getElementById('editEmail').value = user.email || '';
+  document.getElementById('editRole').value = user.role === 'admin' ? 'admin' : user.role === 'user' ? 'user' : 'none';
   document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -271,6 +299,7 @@ function closeEditModal() {
 async function submitEdit() {
   const full_name = document.getElementById('editName').value.trim();
   const email = document.getElementById('editEmail').value.trim();
+  const role = document.getElementById('editRole').value;
 
   if (!email) {
     showToast('Email is required', 'error');
@@ -282,7 +311,7 @@ async function submitEdit() {
   btn.textContent = 'Saving...';
 
   try {
-    await callApi('PATCH', { body: { id: editingId, email, full_name } });
+    await callApi('PATCH', { body: { id: editingId, email, full_name, role } });
     showToast('User updated \u2713');
     closeEditModal();
     await loadUsers();

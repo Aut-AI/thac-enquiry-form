@@ -175,6 +175,7 @@ function renderSidebar(activePage) {
       btn.setAttribute('aria-label', 'Open menu');
       topbar.insertBefore(btn, topbar.firstChild);
     }
+    refreshSidebarUser();
   }, 0);
 
   return `
@@ -213,25 +214,87 @@ function renderSidebar(activePage) {
         <a href="surveyor-time-off.html" class="nav-item ${activePage === 'availability' ? 'active' : ''}" data-page="availability">
           <span class="nav-icon">📅</span> Availability
         </a>
-        <a href="users.html" class="nav-item ${activePage === 'users' ? 'active' : ''}" data-page="users">
+        <a href="users.html" class="nav-item nav-admin-only ${activePage === 'users' ? 'active' : ''}" data-page="users">
           <span class="nav-icon">👤</span> System Users
         </a>
-        <a href="settings.html" class="nav-item ${activePage === 'settings' ? 'active' : ''}" data-page="settings">
+        <a href="settings.html" class="nav-item nav-admin-only ${activePage === 'settings' ? 'active' : ''}" data-page="settings">
           <span class="nav-icon">⚙️</span> Settings
         </a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">${initials}</div>
+          <div class="user-avatar" id="sidebarAvatar">${initials}</div>
           <div>
-            <div class="user-name">Trevor</div>
-            <div class="user-role">Admin</div>
+            <div class="user-name" id="sidebarUserName">${user?.email || ''}</div>
+            <div class="user-role" id="sidebarUserRole">&nbsp;</div>
           </div>
         </div>
         <button class="btn-logout" onclick="logout()">Sign Out</button>
       </div>
     </aside>
   `;
+}
+
+// Fetches the signed-in user's own public.users row fresh on every page
+// load (rather than trusting whatever was cached in thac_session at login
+// time) so the sidebar name/role and the nav-admin-only items reflect the
+// current DB state, not stale data from whenever they last logged in.
+let currentUserRole = null;
+
+async function refreshSidebarUser() {
+  const user = getUser();
+  if (!user) return;
+
+  const nameEl = document.getElementById('sidebarUserName');
+  const roleEl = document.getElementById('sidebarUserRole');
+  const avatarEl = document.getElementById('sidebarAvatar');
+
+  try {
+    const rows = await dbGet('users', { select: 'full_name,role,is_active', id: `eq.${user.id}` });
+    const me = rows?.[0];
+
+    if (me && me.is_active) {
+      currentUserRole = me.role;
+      if (nameEl) nameEl.textContent = me.full_name || user.email;
+      if (roleEl) roleEl.textContent = me.role.charAt(0).toUpperCase() + me.role.slice(1);
+      if (avatarEl) avatarEl.textContent = (me.full_name || user.email)[0].toUpperCase();
+    } else {
+      // No public.users row (or deactivated) -- not CRM staff, e.g. a
+      // surveyor-only login. They have no RLS access to anything admin-only
+      // regardless of what this page shows, but hide the links too.
+      currentUserRole = null;
+      if (roleEl) roleEl.textContent = me ? 'Disabled' : 'No CRM Access';
+    }
+
+    if (currentUserRole !== 'admin') {
+      document.querySelectorAll('.nav-admin-only').forEach(el => el.style.display = 'none');
+    }
+  } catch (e) {
+    console.error('Failed to load current user:', e);
+  }
+}
+
+// Guard for admin-only pages (Settings, System Users). Mirrors requireAuth()'s
+// redirect-based pattern. Always re-checks against the DB -- never trusts a
+// role cached from login time.
+async function requireAdmin() {
+  const user = getUser();
+  if (!user) {
+    window.location.href = 'index.html';
+    return false;
+  }
+  try {
+    const rows = await dbGet('users', { select: 'role,is_active', id: `eq.${user.id}` });
+    const me = rows?.[0];
+    if (!me || me.role !== 'admin' || !me.is_active) {
+      window.location.href = 'dashboard.html';
+      return false;
+    }
+    return true;
+  } catch (e) {
+    window.location.href = 'dashboard.html';
+    return false;
+  }
 }
 
 function toggleSidebar() {
