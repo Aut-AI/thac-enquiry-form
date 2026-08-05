@@ -30,39 +30,27 @@ export async function pickCertificate(): Promise<PickedCertificate | null> {
   return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null };
 }
 
-// Uploads a file to Supabase storage using REST API with explicit auth
+// Uploads a previously-picked file to the surveyor-documents bucket under the given
+// surveyor's folder, and returns the storage path to persist on the surveyors row.
 export async function uploadCertificate(
   surveyorId: string,
   type: CertificateType,
   file: PickedCertificate
 ): Promise<string> {
-  const path = `${surveyorId}/${type}_certificate_${Date.now()}_${file.name}`;
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
   const response = await fetch(file.uri);
   const blob = await response.blob();
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const { error } = await supabase.storage
+    .from('surveyor-documents')
+    .upload(path, blob, {
+      contentType: file.mimeType || 'application/octet-stream',
+      upsert: false,
+    });
 
-  if (!token) throw new Error('Not authenticated');
-
-  const uploadResponse = await fetch(
-    `http://192.168.1.91:8084/storage/v1/object/surveyor-documents/${path}`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': file.mimeType || 'application/octet-stream',
-      },
-      body: blob,
-    }
-  );
-
-  if (!uploadResponse.ok) {
-    const error = await uploadResponse.text();
-    throw new Error(`Upload failed: ${uploadResponse.status} - ${error}`);
-  }
-
+  if (error) throw error;
   return path;
 }
 
