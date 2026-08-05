@@ -318,7 +318,11 @@ async function deleteUser(id, email) {
   try {
     await callApi('DELETE', { query: { id } });
     showToast(`${email} deleted \u2713`);
-    await loadUsers();
+    // listUsers() can lag a moment behind a delete that just succeeded, so
+    // remove it from the in-memory list rather than trusting an immediate
+    // refetch to reflect it.
+    allUsers = allUsers.filter(u => u.id !== id);
+    renderTable();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
