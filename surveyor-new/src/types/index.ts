@@ -58,6 +58,9 @@ export interface Job {
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
+  PendingApproval: undefined;
+  CompleteProfile: undefined;
   Main: undefined;
   JobDetail: { jobId: string };
 };

@@ -13,6 +13,7 @@ import { RootStackParamList, BottomTabParamList } from './src/types';
 import LoginScreen           from './src/screens/LoginScreen';
 import { RegisterScreen }   from './src/screens/RegisterScreen';
 import { PendingApprovalScreen } from './src/screens/PendingApprovalScreen';
+import { CompleteProfileScreen } from './src/screens/CompleteProfileScreen';
 import JobListScreen        from './src/screens/JobListScreen';
 import JobDetailScreen      from './src/screens/JobDetailScreen';
 import JobMapScreen         from './src/screens/JobMapScreen';
@@ -162,7 +163,15 @@ export default function App() {
               <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
               <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: 'Job Detail' }} />
             </>
-          : <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+          // Session exists but no linked surveyors row was found. This is
+          // never a case for RegisterScreen -- it calls auth.signUp(), which
+          // always fails with Supabase's "email already registered" response
+          // for a session that's already authenticated, discarding whatever
+          // the user just typed. Collect the profile directly against the
+          // existing session instead.
+          : <Stack.Screen name="CompleteProfile" options={{ headerShown: false }}>
+              {() => <CompleteProfileScreen session={session} onComplete={() => setSurveyorStatus('pending')} />}
+            </Stack.Screen>
         }
       </Stack.Navigator>
     </NavigationContainer>
