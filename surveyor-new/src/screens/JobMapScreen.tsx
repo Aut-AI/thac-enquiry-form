@@ -16,6 +16,10 @@ const SURVEY_LABELS: Record<string, string> = {
   mortgage: 'Mortgage', amendment: 'Amendment', other: 'Other',
 };
 
+const URGENCY_LABELS: Record<string, string> = {
+  red: 'Urgent', orange: 'Elevated', yellow: 'Standard', grey: 'Low', green: 'On Track',
+};
+
 export default function JobMapScreen() {
   const [jobs,    setJobs]    = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,10 +102,21 @@ export default function JobMapScreen() {
 
       <Modal transparent visible={!!preview} animationType="fade" onRequestClose={() => setPreview(null)}>
         <TouchableOpacity style={s.modalOverlay} onPress={() => setPreview(null)} activeOpacity={1}>
-          <View style={s.previewCard} onStartShouldSetResponder={() => true}>
+          <View
+            style={[
+              s.previewCard,
+              preview && { borderLeftWidth: 6, borderLeftColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
             {preview && (
               <>
-                <Text style={s.previewRef}>{preview.reference || 'No reference'}</Text>
+                <View style={s.previewHeaderRow}>
+                  <Text style={s.previewRef}>{preview.reference || 'No reference'}</Text>
+                  <View style={[s.statusBadge, { backgroundColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' }]}>
+                    <Text style={s.statusBadgeText}>{URGENCY_LABELS[preview.urgency_state] || preview.urgency_state}</Text>
+                  </View>
+                </View>
                 <Text style={s.previewType}>{SURVEY_LABELS[preview.survey_type] || preview.survey_type}</Text>
                 <View style={s.previewDivider} />
                 <Text style={s.previewLabel}>Postcode</Text>
@@ -154,7 +169,10 @@ const s = StyleSheet.create({
   refreshText: { color: '#fff', fontSize: 22 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   previewCard: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '85%', maxWidth: 320, elevation: 8 },
+  previewHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   previewRef: { fontSize: 18, fontWeight: '700', color: '#1a3c2e' },
+  statusBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  statusBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   previewType: { fontSize: 14, color: '#6b7280', marginTop: 4 },
   previewDivider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 12 },
   previewLabel: { fontSize: 11, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', marginTop: 8 },
