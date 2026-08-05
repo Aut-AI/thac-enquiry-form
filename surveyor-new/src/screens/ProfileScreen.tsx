@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { isValidDate } from '../lib/date';
 import { Surveyor } from '../types';
 import { pickCertificate, uploadCertificate, openCertificate, CertificateType, certificateLabel } from '../lib/certificateUpload';
+import { AvailabilityCalendar } from '../components/AvailabilityCalendar';
 
 interface ComputedOutcode {
   outcode: string;
@@ -107,24 +108,31 @@ export default function ProfileScreen() {
     if (requestId === loadRequestId.current) setLoading(false);
   }
 
-  async function toggleAvailability(date: string) {
-    if (!surveyor) return;
+  // Called once per drag gesture (a plain tap is a one-day drag) with every
+  // date touched during it, so a whole range saves as a single request the
+  // moment the finger lifts -- nothing is left unsaved to lose by
+  // navigating away.
+  async function commitAvailabilityDays(dates: string[], isAvailable: boolean) {
+    if (!surveyor || dates.length === 0) return;
     setSavingAvail(true);
 
-    const newAvail = !availability[date];
-    setAvailability(prev => ({ ...prev, [date]: newAvail }));
+    const previous = availability;
+    setAvailability(prev => {
+      const next = { ...prev };
+      for (const date of dates) next[date] = isAvailable;
+      return next;
+    });
 
     try {
-      const { error } = await supabase.from('surveyor_availability').upsert({
-        surveyor_id: surveyor.id,
-        date,
-        is_available: newAvail,
-      }, { onConflict: 'surveyor_id,date' });
+      const { error } = await supabase.from('surveyor_availability').upsert(
+        dates.map(date => ({ surveyor_id: surveyor.id, date, is_available: isAvailable })),
+        { onConflict: 'surveyor_id,date' }
+      );
 
       if (error) throw error;
     } catch (e: any) {
       Alert.alert('Error', e.message);
-      setAvailability(prev => ({ ...prev, [date]: !newAvail }));
+      setAvailability(previous);
     } finally {
       setSavingAvail(false);
     }
@@ -412,8 +420,12 @@ export default function ProfileScreen() {
       {/* Availability Calendar */}
       <View style={s.card}>
         <Text style={s.sectionTitle}>Availability Calendar</Text>
-        <Text style={s.calendarHint}>🟢 Available · 🔘 Unavailable</Text>
-        {renderCalendar()}
+        <Text style={s.calendarHint}>🟢 Available · ⬜ Unavailable · Drag across days to set a range at once</Text>
+        <AvailabilityCalendar
+          availability={availability}
+          onCommitDays={commitAvailabilityDays}
+          disabled={savingAvail}
+        />
       </View>
 
       <TouchableOpacity style={s.signOutBtn} onPress={signOut}>
@@ -422,47 +434,6 @@ export default function ProfileScreen() {
 
     </ScrollView>
   );
-
-  function renderCalendar() {
-    const months: React.ReactNode[] = [];
-    const today = new Date();
-
-    for (let m = 0; m < 12; m++) {
-      const monthDate = new Date(today.getFullYear(), today.getMonth() + m, 1);
-      const monthName = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-      const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-      const firstDay = monthDate.getDay();
-
-      const days: React.ReactNode[] = [];
-      for (let i = 0; i < firstDay; i++) days.push(<View key={`empty-${i}`} style={s.dayEmpty} />);
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const d = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
-        const dateStr = d.toISOString().split('T')[0];
-        const isAvail = availability[dateStr] !== false;
-
-        days.push(
-          <TouchableOpacity
-            key={dateStr}
-            style={[s.dayBtn, isAvail ? s.dayAvailable : s.dayUnavailable]}
-            onPress={() => toggleAvailability(dateStr)}
-            disabled={savingAvail}
-          >
-            <Text style={s.dayText}>{day}</Text>
-          </TouchableOpacity>
-        );
-      }
-
-      months.push(
-        <View key={`month-${m}`} style={s.monthContainer}>
-          <Text style={s.monthName}>{monthName}</Text>
-          <View style={s.monthGrid}>{days}</View>
-        </View>
-      );
-    }
-
-    return <View>{months}</View>;
-  }
 }
 
 const GREEN = '#1a3c2e';
@@ -492,14 +463,6 @@ const s = StyleSheet.create({
   signOutBtn:    { backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
   signOutText:   { color: '#dc2626', fontWeight: '700', fontSize: 15 },
   calendarHint:  { fontSize: 12, color: '#6b7280', marginBottom: 12 },
-  monthContainer:{ marginBottom: 20 },
-  monthName:     { fontSize: 14, fontWeight: '700', color: GREEN, marginBottom: 8 },
-  monthGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  dayBtn:        { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 6 },
-  dayAvailable:  { backgroundColor: '#bbf7d0' },
-  dayUnavailable:{ backgroundColor: '#f3f4f6' },
-  dayEmpty:      { width: '14.28%', aspectRatio: 1 },
-  dayText:       { fontSize: 12, fontWeight: '600', color: '#1a1a1a' },
   locationFormGroup:{ marginBottom: 12 },
   outcodeHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, marginTop: 4 },
   outcodeHeaderLeft:{ flexDirection: 'row', alignItems: 'center', gap: 12 },

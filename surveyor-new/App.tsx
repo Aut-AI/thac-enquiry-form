@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Session } from '@supabase/supabase-js';
 import { ActivityIndicator, View, Text } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { supabase } from './src/lib/supabase';
 import { RootStackParamList, BottomTabParamList } from './src/types';
@@ -143,6 +144,7 @@ export default function App() {
   );
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
@@ -175,5 +177,6 @@ export default function App() {
         }
       </Stack.Navigator>
     </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
