@@ -31,11 +31,17 @@ function MonthGrid({ monthDate, availability, onCommitDays, disabled }: MonthGri
   const cellSize = useRef(0);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
 
+  // Builds the "YYYY-MM-DD" string directly from the known local
+  // year/month/day rather than going via Date.toISOString(), which
+  // converts to UTC and rolls the date back a day for any positive UTC
+  // offset (BST included) -- every date in the grid was landing one day
+  // early for exactly that reason.
   const dateForIndex = useCallback((dayIndex: number): string | null => {
     const day = dayIndex - firstDayOffset + 1;
     if (day < 1 || day > daysInMonth) return null;
-    const d = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
-    return d.toISOString().split('T')[0];
+    const mm = String(monthDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return `${monthDate.getFullYear()}-${mm}-${dd}`;
   }, [monthDate, firstDayOffset, daysInMonth]);
 
   // e.x/e.y from the gesture are already relative to the grid View the
