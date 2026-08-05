@@ -63,6 +63,9 @@ export type RootStackParamList = {
   CompleteProfile: undefined;
   Main: undefined;
   JobDetail: { jobId: string };
+  CoverageArea: undefined;
+  Insurance: undefined;
+  Availability: undefined;
 };
 
 export type BottomTabParamList = {

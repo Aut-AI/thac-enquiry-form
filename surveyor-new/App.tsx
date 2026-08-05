@@ -19,6 +19,9 @@ import JobListScreen        from './src/screens/JobListScreen';
 import JobDetailScreen      from './src/screens/JobDetailScreen';
 import JobMapScreen         from './src/screens/JobMapScreen';
 import ProfileScreen        from './src/screens/ProfileScreen';
+import CoverageAreaScreen   from './src/screens/CoverageAreaScreen';
+import InsuranceScreen      from './src/screens/InsuranceScreen';
+import AvailabilityScreen   from './src/screens/AvailabilityScreen';
 import TimeOffScreen        from './src/screens/TimeOffScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -164,6 +167,9 @@ export default function App() {
           ? <>
               <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
               <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: 'Job Detail' }} />
+              <Stack.Screen name="CoverageArea" component={CoverageAreaScreen} options={{ title: 'Coverage Area' }} />
+              <Stack.Screen name="Insurance" component={InsuranceScreen} options={{ title: 'Insurance & Compliance' }} />
+              <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
             </>
           // Session exists but no linked surveyors row was found. This is
           // never a case for RegisterScreen -- it calls auth.signUp(), which
