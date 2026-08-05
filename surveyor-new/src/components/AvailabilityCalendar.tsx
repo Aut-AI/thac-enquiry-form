@@ -50,18 +50,30 @@ function MonthGrid({ monthDate, availability, onCommitDays, disabled }: MonthGri
     return dateForIndex(row * 7 + col);
   }, [dateForIndex, rows]);
 
+  // Mirrors dragPreview so onFinalize can read the final selection without
+  // reaching into it from inside a setState updater -- calling the parent's
+  // onCommitDays (a different component's state setter) from inside
+  // setDragPreview's updater is exactly what React's "Cannot update a
+  // component while rendering a different component" guards against.
+  const dragPreviewRef = useRef<DragPreview | null>(null);
+
   const extendDrag = useCallback((x: number, y: number) => {
     const date = cellAtPoint(x, y);
     if (!date) return;
     setDragPreview(prev => {
+      let next: DragPreview;
       if (!prev) {
         const startValue = availability[date] === false ? true : false;
-        return { dates: new Set([date]), value: startValue };
+        next = { dates: new Set([date]), value: startValue };
+      } else if (prev.dates.has(date)) {
+        next = prev;
+      } else {
+        const dates = new Set(prev.dates);
+        dates.add(date);
+        next = { dates, value: prev.value };
       }
-      if (prev.dates.has(date)) return prev;
-      const next = new Set(prev.dates);
-      next.add(date);
-      return { dates: next, value: prev.value };
+      dragPreviewRef.current = next;
+      return next;
     });
   }, [cellAtPoint, availability]);
 
@@ -75,12 +87,12 @@ function MonthGrid({ monthDate, availability, onCommitDays, disabled }: MonthGri
       extendDrag(e.x, e.y);
     })
     .onFinalize(() => {
-      setDragPreview(current => {
-        if (current && current.dates.size > 0) {
-          onCommitDays(Array.from(current.dates), current.value);
-        }
-        return null;
-      });
+      const finished = dragPreviewRef.current;
+      dragPreviewRef.current = null;
+      setDragPreview(null);
+      if (finished && finished.dates.size > 0) {
+        onCommitDays(Array.from(finished.dates), finished.value);
+      }
     });
 
   const onGridLayout = (e: LayoutChangeEvent) => {
