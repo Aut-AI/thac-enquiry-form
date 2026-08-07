@@ -359,10 +359,14 @@
         const cell = document.createElement('div');
         cell.className = 'day-cell';
 
-        // Only "available" gets a colour -- unavailable and no-data both
-        // read the same to the admin (this surveyor isn't a pick for that
-        // day), so there's nothing useful a second colour would distinguish.
-        if (availMap[`${surveyor.id}_${dateStr}`] === true) {
+        // Matches the mobile calendar's own default (AvailabilityCalendar.tsx:
+        // `availability[date] !== false`) -- a day with no row at all is
+        // treated as available, same as a day explicitly marked true. Only
+        // an explicit false (marked unavailable) is left blank. Without this,
+        // admin and mobile show contradictory pictures for the same data:
+        // mobile defaults every untouched day to green, so a desktop that
+        // only colours explicit `true` rows looks mostly empty by comparison.
+        if (availMap[`${surveyor.id}_${dateStr}`] !== false) {
           cell.className += ' day-available';
         }
         cell.innerHTML = `<span class="day-number">${d}</span>`;
