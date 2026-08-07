@@ -710,22 +710,15 @@
         <label class="service-option" onclick="selectService(this, 'planning_stage1')">
           <input type="radio" name="surveyType" value="planning_stage1">
           <div>
-            <div class="service-option-label">Planning Application — Stage 1</div>
-            <div class="service-option-desc">Tree Survey, Tree Constraints Plan & Tree Constraints Report. Suitable for planning your proposals or validating your application.</div>
+            <div class="service-option-label">Stage 1</div>
+            <div class="service-option-desc">BS 5837 Tree Survey, Tree Constraints Plan and Tree Constraints Report - This should be enough for you to plan your proposals and/or to validate your application.</div>
           </div>
         </label>
         <label class="service-option" onclick="selectService(this, 'planning_stage2')">
           <input type="radio" name="surveyType" value="planning_stage2">
           <div>
-            <div class="service-option-label">Planning Application — Stage 2</div>
-            <div class="service-option-desc">Full BS5837 suite: AIA, AMS & TPP. Required if you already have proposals drawn up.</div>
-          </div>
-        </label>
-        <label class="service-option" onclick="selectService(this, 'bs_survey')">
-          <input type="radio" name="surveyType" value="bs_survey">
-          <div>
-            <div class="service-option-label">BS Survey</div>
-            <div class="service-option-desc">BS5837 tree survey with constraints plan and report.</div>
+            <div class="service-option-label">Stage 2</div>
+            <div class="service-option-desc">BS 5837 Tree Survey, Arboricultural Impact Assessment (AIA), Arboricultural Method Statement (AMS) and Tree Protection Plan (TPP) (you'll need this if you already have proposals drawn up)</div>
           </div>
         </label>
         <label class="service-option" onclick="selectService(this, 'health_safety')">
@@ -1148,8 +1141,6 @@ function bandIndex(band) {
 // "Planning — Stage 1" here). Editing a card's visible label is now the
 // only place that needs to change; this map, used on the quote review
 // screen and in emails, always matches exactly what the customer picked.
-// TODO: swap in Trevor's exact BS-survey wording on the cards (search
-// `.service-option-label` below) once he sends it -- not guessed here.
 const SURVEY_TYPE_LABELS = {};
 document.querySelectorAll('.service-option').forEach(opt => {
   const input = opt.querySelector('input[type="radio"]');
