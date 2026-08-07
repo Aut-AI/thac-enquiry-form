@@ -52,13 +52,21 @@
       font-size: 16px;
       font-weight: 700;
       color: #1a3c2e;
-      margin-bottom: 16px;
       text-align: center;
+    }
+    .row-count {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 16px;
     }
     .calendar-container {
       display: flex;
       gap: 0;
       background: white;
+      /* Header row + 6 data rows @ 54px each -- the rest scroll into view. */
+      max-height: 378px;
+      overflow-y: auto;
     }
     .surveyor-names-column {
       display: flex;
@@ -96,6 +104,9 @@
       background: #f3f4f6;
       font-weight: 700;
       border-bottom: none;
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
     .calendar {
       display: grid;
@@ -105,6 +116,7 @@
       background: #e5e7eb;
       padding: 0 1px;
       overflow-x: auto;
+      overflow-y: visible;
     }
     .day-header {
       box-sizing: border-box;
@@ -120,6 +132,9 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
     .day-header .weekday-initial {
       font-weight: 500;
@@ -203,6 +218,7 @@
               <div class="months-stack">
                 <div class="calendar-wrapper">
                   <div class="month-header" id="monthHeader0"></div>
+                  <div class="row-count" id="rowCount0"></div>
                   <div class="calendar-container">
                     <div class="surveyor-names-column" id="namesColumn0"></div>
                     <div class="calendar" id="calendar0"></div>
@@ -210,6 +226,7 @@
                 </div>
                 <div class="calendar-wrapper">
                   <div class="month-header" id="monthHeader1"></div>
+                  <div class="row-count" id="rowCount1"></div>
                   <div class="calendar-container">
                     <div class="surveyor-names-column" id="namesColumn1"></div>
                     <div class="calendar" id="calendar1"></div>
@@ -217,6 +234,7 @@
                 </div>
                 <div class="calendar-wrapper">
                   <div class="month-header" id="monthHeader2"></div>
+                  <div class="row-count" id="rowCount2"></div>
                   <div class="calendar-container">
                     <div class="surveyor-names-column" id="namesColumn2"></div>
                     <div class="calendar" id="calendar2"></div>
@@ -314,11 +332,25 @@
     return `${date.getFullYear()}-${mm}-${dd}`;
   }
 
+  // Same !== false default as the cell colouring below -- a day with no
+  // row at all counts as available, matching mobile's default.
+  function countAvailableDays(surveyorId, year, month, daysInMonth, availMap) {
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = ymd(new Date(year, month, d));
+      if (availMap[`${surveyorId}_${dateStr}`] !== false) count++;
+    }
+    return count;
+  }
+
   function renderMonthCard(index, year, month, activeSurveyors, availMap) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthName = new Date(year, month).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
 
     document.getElementById(`monthHeader${index}`).textContent = monthName;
+    document.getElementById(`rowCount${index}`).textContent =
+      `${activeSurveyors.length} surveyor${activeSurveyors.length !== 1 ? 's' : ''}` +
+      (activeSurveyors.length > 6 ? ' — sorted by availability, scroll for more' : ' — sorted by availability');
 
     const calendar = document.getElementById(`calendar${index}`);
     const namesColumn = document.getElementById(`namesColumn${index}`);
@@ -326,6 +358,12 @@
     namesColumn.innerHTML = '';
 
     calendar.style.gridTemplateColumns = `repeat(${daysInMonth}, 30px)`;
+
+    // Most available days this month first.
+    const sortedSurveyors = [...activeSurveyors].sort((a, b) =>
+      countAvailableDays(b.id, year, month, daysInMonth, availMap) -
+      countAvailableDays(a.id, year, month, daysInMonth, availMap)
+    );
 
     const headerName = document.createElement('div');
     headerName.className = 'surveyor-name header';
@@ -340,7 +378,7 @@
       calendar.appendChild(cell);
     }
 
-    activeSurveyors.forEach(surveyor => {
+    sortedSurveyors.forEach(surveyor => {
       const nameCell = document.createElement('div');
       nameCell.className = 'surveyor-name';
       const nameLine = document.createElement('span');
