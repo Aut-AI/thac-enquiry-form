@@ -36,6 +36,17 @@
       min-width: 220px;
       text-align: center;
     }
+    .surveyor-filter {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1a3c2e;
+      background: white;
+      cursor: pointer;
+      min-width: 200px;
+    }
     .months-stack {
       display: flex;
       flex-direction: column;
@@ -212,6 +223,11 @@
               <div class="range-label" id="rangeLabel"></div>
               <button class="nav-arrow" id="downArrow" onclick="shiftWindow(1)" title="Later month">▼</button>
             </div>
+            <div class="controls" style="margin-bottom:20px;">
+              <select class="surveyor-filter" id="surveyorFilter" onchange="applySurveyorFilter()">
+                <option value="">All surveyors</option>
+              </select>
+            </div>
             <div id="error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:16px;border-radius:6px;margin-bottom:16px;"></div>
             <div id="loading" class="loading">Loading...</div>
             <div id="content" style="display:none;">
@@ -261,6 +277,57 @@
     loadCalendars();
   }
 
+  // Cached from the last fetch so the surveyor filter can re-render
+  // instantly (no refetch) when changed.
+  let currentSurveyors = [];
+  let currentAvailMap = {};
+  let selectedSurveyorId = '';
+
+  function currentMonthDates() {
+    return [0, 1, 2].map(i => new Date(windowStart.getFullYear(), windowStart.getMonth() + i, 1));
+  }
+
+  function populateSurveyorFilter(surveyors) {
+    const select = document.getElementById('surveyorFilter');
+    const previousValue = select.value;
+
+    select.innerHTML = '';
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All surveyors';
+    select.appendChild(allOption);
+
+    surveyors.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.full_name;
+      select.appendChild(opt);
+    });
+
+    // Keep the current selection across month navigation reloads, as long
+    // as that surveyor is still in the (active) list.
+    if (surveyors.some(s => s.id === previousValue)) {
+      select.value = previousValue;
+    } else {
+      select.value = '';
+      selectedSurveyorId = '';
+    }
+  }
+
+  function applySurveyorFilter() {
+    selectedSurveyorId = document.getElementById('surveyorFilter').value;
+    renderAllMonths();
+  }
+
+  function renderAllMonths() {
+    const filtered = selectedSurveyorId
+      ? currentSurveyors.filter(s => s.id === selectedSurveyorId)
+      : currentSurveyors;
+    currentMonthDates().forEach((monthDate, i) => {
+      renderMonthCard(i, monthDate.getFullYear(), monthDate.getMonth(), filtered, currentAvailMap);
+    });
+  }
+
   async function loadCalendars() {
     document.getElementById('loading').style.display = 'block';
     document.getElementById('content').style.display = 'none';
@@ -302,11 +369,11 @@
         availMap[`${row.surveyor_id}_${row.date}`] = row.is_available;
       });
 
-      const activeSurveyors = surveyors.filter(s => s.is_active);
+      currentSurveyors = surveyors.filter(s => s.is_active);
+      currentAvailMap = availMap;
 
-      monthDates.forEach((monthDate, i) => {
-        renderMonthCard(i, monthDate.getFullYear(), monthDate.getMonth(), activeSurveyors, availMap);
-      });
+      populateSurveyorFilter(currentSurveyors);
+      renderAllMonths();
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
@@ -332,13 +399,14 @@
     return `${date.getFullYear()}-${mm}-${dd}`;
   }
 
-  // Same !== false default as the cell colouring below -- a day with no
-  // row at all counts as available, matching mobile's default.
+  // Same === true default as the cell colouring below -- a day with no row
+  // at all counts as NOT available, matching mobile's default: surveyors
+  // start unavailable everywhere until they actively mark days available.
   function countAvailableDays(surveyorId, year, month, daysInMonth, availMap) {
     let count = 0;
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = ymd(new Date(year, month, d));
-      if (availMap[`${surveyorId}_${dateStr}`] !== false) count++;
+      if (availMap[`${surveyorId}_${dateStr}`] === true) count++;
     }
     return count;
   }
@@ -398,13 +466,11 @@
         cell.className = 'day-cell';
 
         // Matches the mobile calendar's own default (AvailabilityCalendar.tsx:
-        // `availability[date] !== false`) -- a day with no row at all is
-        // treated as available, same as a day explicitly marked true. Only
-        // an explicit false (marked unavailable) is left blank. Without this,
-        // admin and mobile show contradictory pictures for the same data:
-        // mobile defaults every untouched day to green, so a desktop that
-        // only colours explicit `true` rows looks mostly empty by comparison.
-        if (availMap[`${surveyor.id}_${dateStr}`] !== false) {
+        // `availability[date] === true`) -- a day with no row at all is
+        // treated as NOT available, same as a day explicitly marked false.
+        // Surveyors start unavailable everywhere and only show green once
+        // they've actively marked a day, on both mobile and here.
+        if (availMap[`${surveyor.id}_${dateStr}`] === true) {
           cell.className += ' day-available';
         }
         cell.innerHTML = `<span class="day-number">${d}</span>`;

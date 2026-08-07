@@ -69,7 +69,12 @@ function MonthGrid({ monthDate, availability, onCommitDays, disabled }: MonthGri
     setDragPreview(prev => {
       let next: DragPreview;
       if (!prev) {
-        const startValue = availability[date] === false ? true : false;
+        // Anything not explicitly marked available -- whether it's an
+        // explicit false or a day never touched at all -- paints to
+        // available first; only a day already marked available toggles
+        // off. Matches the calendar defaulting every untouched day to
+        // unavailable (see isAvail below).
+        const startValue = availability[date] === true ? false : true;
         next = { dates: new Set([date]), value: startValue };
       } else if (prev.dates.has(date)) {
         next = prev;
@@ -113,7 +118,11 @@ function MonthGrid({ monthDate, availability, onCommitDays, disabled }: MonthGri
       continue;
     }
     const isPreviewed = dragPreview?.dates.has(date);
-    const isAvail = isPreviewed ? dragPreview!.value : availability[date] !== false;
+    // Defaults to unavailable -- a day only shows green once the surveyor
+    // has actively marked it available. Previously defaulted the other way
+    // (anything not explicitly false read as available), which meant an
+    // untouched calendar looked fully open rather than needing input.
+    const isAvail = isPreviewed ? dragPreview!.value : availability[date] === true;
     const day = Number(date.split('-')[2]);
     cells.push(
       <View key={date} style={styles.dayCell}>

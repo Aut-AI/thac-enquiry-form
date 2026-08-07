@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useSurveyorProfile } from '../lib/useSurveyorProfile';
@@ -28,9 +28,10 @@ export default function AvailabilityScreen() {
     if (requestId !== loadRequestId.current) return; // a newer load() call has since started
 
     if (error) {
-      // Don't silently fall back to an empty map here -- that renders as
-      // if every day is available (AvailabilityCalendar treats a missing
-      // key as available), hiding whatever the surveyor actually saved.
+      // Don't silently fall back to an empty map here -- on a real fetch
+      // failure that would render as if nothing has ever been set, wiping
+      // out the fact that some of these days may already be marked
+      // available, rather than surfacing that the load itself failed.
       setLoadError(true);
       setLoadingAvail(false);
       return;
@@ -96,7 +97,14 @@ export default function AvailabilityScreen() {
     <ScrollView style={s.container} contentContainerStyle={s.content}>
       <View style={s.card}>
         <Text style={s.sectionTitle}>Availability Calendar</Text>
-        <Text style={s.hint}>🟢 Available · ⬜ Unavailable · Drag across days to set a range at once</Text>
+        <View style={noticeStyles.notice}>
+          <Text style={noticeStyles.noticeText}>
+            Days now default to <Text style={noticeStyles.noticeBold}>unavailable</Text> until you mark
+            them yourself. If a day looks grey below, it means we don't have an answer from
+            you yet — tap or drag to mark it available.
+          </Text>
+        </View>
+        <Text style={s.hint}>🟢 Available · ⬜ Unavailable (or not yet updated) · Drag across days to set a range at once</Text>
         <AvailabilityCalendar
           availability={availability}
           onCommitDays={commitAvailabilityDays}
@@ -106,3 +114,22 @@ export default function AvailabilityScreen() {
     </ScrollView>
   );
 }
+
+const noticeStyles = StyleSheet.create({
+  notice: {
+    backgroundColor: '#fff8e1',
+    borderWidth: 1,
+    borderColor: '#f0e0a0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  noticeText: {
+    fontSize: 13,
+    color: '#5c4a00',
+    lineHeight: 18,
+  },
+  noticeBold: {
+    fontWeight: '700',
+  },
+});
