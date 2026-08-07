@@ -104,6 +104,10 @@
 requireAuth();
 
 const FUNCTIONS_URL = 'https://lemppaqgpntadeylzzwn.supabase.co/functions/v1/admin-users';
+// Same landing page the invite email links to (admin-users edge function's
+// SET_PASSWORD_URL) -- it reads the token Supabase puts in the URL and
+// lets the user choose a new password.
+const SET_PASSWORD_URL = 'https://ciaran-aut-ai.github.io/thac-admin/set-password.html';
 let allUsers = [];
 let editingId = null;
 
@@ -213,6 +217,7 @@ function renderTable() {
       <td>
         <div class="row-actions">
           <button class="btn btn-secondary btn-sm" onclick="openEditModal('${u.id}')">Edit</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetPassword('${u.id}', '${(u.email || '').replace(/'/g, "\\'")}')">Reset Password</button>
           ${u.banned_until && new Date(u.banned_until) > new Date()
             ? `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', false)">Enable</button>`
             : `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', true)">Disable</button>`
@@ -320,6 +325,33 @@ async function submitEdit() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save Changes';
+  }
+}
+
+// ---- Reset Password ----
+
+async function resetPassword(id, email) {
+  if (!confirm(`Send a password reset email to ${email}?`)) return;
+
+  try {
+    // Public GoTrue endpoint -- no service role needed, same anon-key
+    // pattern login() uses. Always "succeeds" without confirming whether
+    // the email exists (standard behaviour, avoids leaking which emails
+    // have accounts), so there's no separate success/failure branch to
+    // handle here beyond the request itself failing outright.
+    const res = await fetch(
+      `${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(SET_PASSWORD_URL)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ email }),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.msg || data.error_description || 'Request failed');
+    showToast(`Password reset email sent to ${email} ✓`);
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
   }
 }
 

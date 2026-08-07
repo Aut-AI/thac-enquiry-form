@@ -798,10 +798,6 @@
             <span class="deadline-option-label">Within 5 working days</span>
             <span class="deadline-option-price">+£100</span>
           </button>
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('7days', this)">
-            <span class="deadline-option-label">Within 7 working days</span>
-            <span class="deadline-option-price">+£50</span>
-          </button>
           <button type="button" class="deadline-option" onclick="selectAmendDeadline('10days', this)">
             <span class="deadline-option-label">Within 10 working days / No rush</span>
             <span class="deadline-option-price">As quoted</span>
@@ -871,10 +867,6 @@
           <button type="button" class="deadline-option" onclick="selectDeadline('5days', this)">
             <span class="deadline-option-label">Within 5 working days</span>
             <span class="deadline-option-price">+£100</span>
-          </button>
-          <button type="button" class="deadline-option" onclick="selectDeadline('7days', this)">
-            <span class="deadline-option-label">Within 7 working days</span>
-            <span class="deadline-option-price">+£50</span>
           </button>
           <button type="button" class="deadline-option" onclick="selectDeadline('10days', this)">
             <span class="deadline-option-label">Within 10 working days / No rush</span>
@@ -1140,7 +1132,6 @@ const hoursPerBand = {}; // Fetched from survey_types: { survey_type -> hours_pe
 const SURCHARGES = {
   '3days': 200,
   '5days': 100,
-  '7days': 50,
   '10days': 0
 };
 
@@ -1150,21 +1141,25 @@ function bandIndex(band) {
   return bandMap[band] || null;
 }
 
-const SURVEY_TYPE_LABELS = {
-  bs_survey:        'BS Survey',
-  planning_stage1:  'Planning — Stage 1',
-  planning_stage2:  'Planning — Stage 2',
-  health_safety:    'Tree Condition / Risk Survey',
-  insurer_mortgage: 'Insurer / Mortgage Lender',
-  subsidence:       'Building Damage / Subsidence',
-  nhbc:             'Foundation Depths (NHBC)',
-  site_visit:       'Site Visit & Advice'
-};
+// Built from the survey-type option cards themselves (below in the DOM,
+// already parsed by the time this script runs) rather than duplicated here
+// by hand -- the cards and this map used to drift out of sync (e.g. "BS
+// Survey" here vs "Planning Application — Stage 1" on the card but
+// "Planning — Stage 1" here). Editing a card's visible label is now the
+// only place that needs to change; this map, used on the quote review
+// screen and in emails, always matches exactly what the customer picked.
+// TODO: swap in Trevor's exact BS-survey wording on the cards (search
+// `.service-option-label` below) once he sends it -- not guessed here.
+const SURVEY_TYPE_LABELS = {};
+document.querySelectorAll('.service-option').forEach(opt => {
+  const input = opt.querySelector('input[type="radio"]');
+  const labelEl = opt.querySelector('.service-option-label');
+  if (input && labelEl) SURVEY_TYPE_LABELS[input.value] = labelEl.textContent.trim();
+});
 
 const DEADLINE_LABELS = {
   '3days':  'Within 3 working days',
   '5days':  'Within 5 working days',
-  '7days':  'Within 7 working days',
   '10days': 'Within 10 working days / No rush'
 };
 

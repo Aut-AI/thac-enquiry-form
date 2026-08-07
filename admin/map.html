@@ -90,7 +90,6 @@ let infoWindow  = null;
 let mapJobs     = [];
 
 const DOT_COLORS = {
-  pending_approval: '#6b7280',
   red:      '#ef4444',
   orange:   '#f97316',
   yellow:   '#eab308',
@@ -99,7 +98,6 @@ const DOT_COLORS = {
 };
 
 const DOT_LABELS = {
-  pending_approval: 'Pending Approval',
   red:      'Unallocated',
   orange:   'Claimed',
   yellow:   'Attended',
@@ -190,6 +188,7 @@ async function fetchAndPlot() {
     const jobs = await dbGet('jobs', {
       'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount',
       'is_archived': 'not.eq.true',
+      'dispatch_state': 'not.eq.pending_approval',
       'order': 'created_at.desc',
       'limit': 200
     });

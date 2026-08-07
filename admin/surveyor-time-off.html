@@ -9,24 +9,38 @@
   <style>
     .controls {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
       margin-bottom: 24px;
     }
-    select, button {
-      padding: 10px 16px;
+    .nav-arrow {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      font-family: inherit;
-      cursor: pointer;
       background: white;
+      color: #1a3c2e;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    button {
-      background: #1a3c2e;
-      color: white;
-      border: none;
+    .nav-arrow:hover { background: #f3f4f6; }
+    .nav-arrow:disabled { opacity: 0.4; cursor: default; background: white; }
+    .range-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a3c2e;
+      min-width: 220px;
+      text-align: center;
     }
-    button:hover { opacity: 0.9; }
+    .months-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
     .calendar-wrapper {
       background: white;
       border-radius: 12px;
@@ -51,6 +65,7 @@
       flex-direction: column;
       background: #f9fafb;
       border-right: 2px solid #d1d5db;
+      flex-shrink: 0;
     }
     .surveyor-name {
       background: #f9fafb;
@@ -58,11 +73,20 @@
       font-weight: 600;
       font-size: 13px;
       color: #1a3c2e;
-      min-height: 40px;
+      min-height: 48px;
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      justify-content: center;
       width: 150px;
       border-bottom: 1px solid #e5e7eb;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .surveyor-name .email {
+      font-weight: 400;
+      font-size: 11px;
+      color: #6b7280;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -74,7 +98,7 @@
     }
     .calendar {
       display: grid;
-      grid-auto-rows: 40px;
+      grid-auto-rows: 48px;
       gap: 1px;
       background: #e5e7eb;
       padding: 1px;
@@ -87,7 +111,7 @@
       font-weight: 600;
       font-size: 12px;
       color: #6b7280;
-      min-height: 40px;
+      min-height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -95,13 +119,17 @@
     .day-cell {
       background: #fff;
       padding: 4px;
-      min-height: 40px;
+      min-height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 11px;
     }
-    .day-off {
+    .day-available {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+    }
+    .day-unavailable {
       background: #fee2e2;
       border: 1px solid #fca5a5;
     }
@@ -140,7 +168,11 @@
 <script src="js/thac.js"></script>
 <script>
   requireAuth();
-  const today = new Date();
+
+  // First of the three months currently shown. Starts on the current month;
+  // shiftWindow() slides it earlier/later one month at a time.
+  let windowStart = new Date();
+  windowStart.setDate(1);
 
   async function initPage() {
     document.getElementById('app').innerHTML = `
@@ -151,39 +183,50 @@
         </div>
         <div class="page-body">
           <div class="card">
-            <div class="card-title">Surveyor Time Off Calendar</div>
+            <div class="card-title">Surveyor Availability Calendar</div>
             <div class="controls">
-              <select id="monthSelect">
-                <option value="0">January</option>
-                <option value="1">February</option>
-                <option value="2">March</option>
-                <option value="3">April</option>
-                <option value="4">May</option>
-                <option value="5">June</option>
-                <option value="6">July</option>
-                <option value="7">August</option>
-                <option value="8">September</option>
-                <option value="9">October</option>
-                <option value="10">November</option>
-                <option value="11">December</option>
-              </select>
-              <select id="yearSelect"></select>
-              <button onclick="loadCalendar()">Load</button>
+              <button class="nav-arrow" id="upArrow" onclick="shiftWindow(-1)" title="Earlier month">▲</button>
+              <div class="range-label" id="rangeLabel"></div>
+              <button class="nav-arrow" id="downArrow" onclick="shiftWindow(1)" title="Later month">▼</button>
             </div>
             <div id="error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:16px;border-radius:6px;margin-bottom:16px;"></div>
             <div id="loading" class="loading">Loading...</div>
             <div id="content" style="display:none;">
-              <div class="calendar-wrapper">
-                <div class="month-header" id="monthHeader"></div>
-                <div class="calendar-container">
-                  <div class="surveyor-names-column" id="namesColumn"></div>
-                  <div class="calendar" id="calendar"></div>
+              <div class="months-stack">
+                <div class="calendar-wrapper">
+                  <div class="month-header" id="monthHeader0"></div>
+                  <div class="calendar-container">
+                    <div class="surveyor-names-column" id="namesColumn0"></div>
+                    <div class="calendar" id="calendar0"></div>
+                  </div>
+                </div>
+                <div class="calendar-wrapper">
+                  <div class="month-header" id="monthHeader1"></div>
+                  <div class="calendar-container">
+                    <div class="surveyor-names-column" id="namesColumn1"></div>
+                    <div class="calendar" id="calendar1"></div>
+                  </div>
+                </div>
+                <div class="calendar-wrapper">
+                  <div class="month-header" id="monthHeader2"></div>
+                  <div class="calendar-container">
+                    <div class="surveyor-names-column" id="namesColumn2"></div>
+                    <div class="calendar" id="calendar2"></div>
+                  </div>
                 </div>
               </div>
               <div class="legend">
                 <div class="legend-item">
+                  <div class="legend-color" style="background: #dcfce7;"></div>
+                  <span>Available</span>
+                </div>
+                <div class="legend-item">
                   <div class="legend-color" style="background: #fee2e2;"></div>
-                  <span>Time Off</span>
+                  <span>Unavailable</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #fff;border:1px solid #e5e7eb;"></div>
+                  <span>No data</span>
                 </div>
               </div>
             </div>
@@ -192,106 +235,59 @@
       </div>
     `;
 
-    document.getElementById('monthSelect').value = today.getMonth();
-
-    // Populate year select
-    for (let y = today.getFullYear() - 1; y <= today.getFullYear() + 2; y++) {
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = y;
-      if (y === today.getFullYear()) opt.selected = true;
-      document.getElementById('yearSelect').appendChild(opt);
-    }
-
-    loadCalendar();
+    loadCalendars();
   }
 
-  async function loadCalendar() {
-    const month = parseInt(document.getElementById('monthSelect').value);
-    const year = parseInt(document.getElementById('yearSelect').value);
+  function shiftWindow(deltaMonths) {
+    windowStart = new Date(windowStart.getFullYear(), windowStart.getMonth() + deltaMonths, 1);
+    loadCalendars();
+  }
 
+  async function loadCalendars() {
     document.getElementById('loading').style.display = 'block';
     document.getElementById('content').style.display = 'none';
     document.getElementById('error').style.display = 'none';
+    document.getElementById('upArrow').disabled = true;
+    document.getElementById('downArrow').disabled = true;
+
+    // The three months currently on screen: windowStart, +1, +2.
+    const monthDates = [0, 1, 2].map(i =>
+      new Date(windowStart.getFullYear(), windowStart.getMonth() + i, 1)
+    );
+    const rangeStart = monthDates[0];
+    const rangeEnd = new Date(monthDates[2].getFullYear(), monthDates[2].getMonth() + 1, 0); // last day of 3rd month
+
+    document.getElementById('rangeLabel').textContent =
+      `${rangeStart.toLocaleString('en-GB', { month: 'long' })} – ` +
+      `${rangeEnd.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}`;
 
     try {
-      // Load surveyors
       const surveyors = await dbGet('surveyors', {
-        'select': 'id,full_name,is_active',
+        'select': 'id,full_name,email,is_active',
         'order': 'full_name.asc'
-      });
-
-      // Load time off for this month
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 1);
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
-
-      const timeOff = await dbGet('surveyor_time_off', {
-        'select': 'surveyor_id,start_date,end_date'
       });
 
       if (!surveyors || !Array.isArray(surveyors)) {
         throw new Error('Failed to load surveyors');
       }
 
-      // Build calendar
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const monthName = new Date(year, month).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+      const startStr = ymd(rangeStart);
+      const endStr = ymd(rangeEnd);
+      const availability = await dbGet('surveyor_availability', {
+        'select': 'surveyor_id,date,is_available',
+        'and': `(date.gte.${startStr},date.lte.${endStr})`
+      });
 
-      document.getElementById('monthHeader').textContent = monthName;
+      // Map of "surveyorId_YYYY-MM-DD" -> is_available
+      const availMap = {};
+      (availability || []).forEach(row => {
+        availMap[`${row.surveyor_id}_${row.date}`] = row.is_available;
+      });
 
-      const calendar = document.getElementById('calendar');
-      const namesColumn = document.getElementById('namesColumn');
-      calendar.innerHTML = '';
-      namesColumn.innerHTML = '';
+      const activeSurveyors = surveyors.filter(s => s.is_active);
 
-      // Set grid columns dynamically based on days in month
-      calendar.style.gridTemplateColumns = `repeat(${daysInMonth}, 30px)`;
-
-      // Add header to names column
-      const headerName = document.createElement('div');
-      headerName.className = 'surveyor-name header';
-      headerName.textContent = 'Surveyor';
-      namesColumn.appendChild(headerName);
-
-      // Add day headers to calendar
-      for (let d = 1; d <= daysInMonth; d++) {
-        const cell = document.createElement('div');
-        cell.className = 'day-header';
-        cell.textContent = d;
-        calendar.appendChild(cell);
-      }
-
-      // Add surveyor rows (filter active only)
-      const activeSurveyors = (surveyors || []).filter(s => s.is_active);
-
-      activeSurveyors.forEach(surveyor => {
-        // Add name to names column
-        const nameCell = document.createElement('div');
-        nameCell.className = 'surveyor-name';
-        nameCell.textContent = surveyor.full_name;
-        namesColumn.appendChild(nameCell);
-
-        // Add day cells to calendar
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dateStr = new Date(year, month, d).toISOString().split('T')[0];
-          const cell = document.createElement('div');
-          cell.className = 'day-cell';
-
-          const hasTimeOff = (timeOff || []).some(to => {
-            const start = new Date(to.start_date);
-            const end = new Date(to.end_date);
-            const current = new Date(year, month, d);
-            return current >= start && current <= end;
-          });
-
-          if (hasTimeOff) {
-            cell.className += ' day-off';
-          }
-          cell.innerHTML = `<span class="day-number">${d}</span>`;
-          calendar.appendChild(cell);
-        }
+      monthDates.forEach((monthDate, i) => {
+        renderMonthCard(i, monthDate.getFullYear(), monthDate.getMonth(), activeSurveyors, availMap);
       });
 
       document.getElementById('loading').style.display = 'none';
@@ -301,7 +297,76 @@
       document.getElementById('loading').style.display = 'none';
       document.getElementById('error').style.display = 'block';
       document.getElementById('error').textContent = err.message || 'Error loading calendar';
+    } finally {
+      document.getElementById('upArrow').disabled = false;
+      document.getElementById('downArrow').disabled = false;
     }
+  }
+
+  // Builds a "YYYY-MM-DD" string from local y/m/d components directly --
+  // going via Date.toISOString() converts to UTC and can roll the date
+  // back a day during BST, the same bug fixed on mobile.
+  function ymd(date) {
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${mm}-${dd}`;
+  }
+
+  function renderMonthCard(index, year, month, activeSurveyors, availMap) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthName = new Date(year, month).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+
+    document.getElementById(`monthHeader${index}`).textContent = monthName;
+
+    const calendar = document.getElementById(`calendar${index}`);
+    const namesColumn = document.getElementById(`namesColumn${index}`);
+    calendar.innerHTML = '';
+    namesColumn.innerHTML = '';
+
+    calendar.style.gridTemplateColumns = `repeat(${daysInMonth}, 30px)`;
+
+    const headerName = document.createElement('div');
+    headerName.className = 'surveyor-name header';
+    headerName.textContent = 'Surveyor';
+    namesColumn.appendChild(headerName);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'day-header';
+      cell.textContent = d;
+      calendar.appendChild(cell);
+    }
+
+    activeSurveyors.forEach(surveyor => {
+      const nameCell = document.createElement('div');
+      nameCell.className = 'surveyor-name';
+      const nameLine = document.createElement('span');
+      nameLine.textContent = surveyor.full_name;
+      nameCell.appendChild(nameLine);
+      if (surveyor.email) {
+        const emailLine = document.createElement('span');
+        emailLine.className = 'email';
+        emailLine.textContent = surveyor.email;
+        nameCell.appendChild(emailLine);
+      }
+      namesColumn.appendChild(nameCell);
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = ymd(new Date(year, month, d));
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+
+        const isAvailable = availMap[`${surveyor.id}_${dateStr}`];
+
+        if (isAvailable === true) {
+          cell.className += ' day-available';
+        } else if (isAvailable === false) {
+          cell.className += ' day-unavailable';
+        }
+        cell.innerHTML = `<span class="day-number">${d}</span>`;
+        calendar.appendChild(cell);
+      }
+    });
   }
 
   initPage();

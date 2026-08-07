@@ -306,3 +306,34 @@ function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('active');
 }
+
+// ============================================================
+// CLIENTS
+// ============================================================
+
+// Looks up an existing client by email (case-insensitive) so repeat
+// customers don't get duplicate rows; creates one if none exists. Used to
+// link jobs to clients at approval time, since nothing else in the app
+// currently creates a `clients` row.
+async function findOrCreateClient({ full_name, email, phone, address }) {
+  if (email) {
+    const existing = await dbGet('clients', {
+      'select': 'id',
+      'email': `ilike.${email}`,
+      'limit': 1,
+    });
+    if (existing?.[0]) return existing[0].id;
+  }
+
+  const user = getUser();
+  const inserted = await dbInsert('clients', {
+    client_type: 'individual',
+    client_category: 'other',
+    full_name: full_name || null,
+    email: email || null,
+    phone: phone || null,
+    address_line_1: address || null,
+    created_by_user_id: user?.id || null,
+  });
+  return inserted?.[0]?.id || null;
+}

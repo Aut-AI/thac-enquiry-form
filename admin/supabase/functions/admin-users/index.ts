@@ -16,7 +16,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ADMIN_LOGIN_URL = "https://ciaran-aut-ai.github.io/thac-admin/index.html";
+// Where invite/recovery email links land -- set-password.html reads the
+// session token Supabase puts in the URL fragment and lets the user choose
+// a password, since inviteUserByEmail() deliberately never generates one.
+const SET_PASSWORD_URL = "https://ciaran-aut-ai.github.io/thac-admin/set-password.html";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +117,7 @@ serve(async (req) => {
       // avoids ever handling or transmitting a temporary password ourselves.
       const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
         data: full_name ? { full_name } : undefined,
-        redirectTo: ADMIN_LOGIN_URL,
+        redirectTo: SET_PASSWORD_URL,
       });
       if (error) throw error;
 

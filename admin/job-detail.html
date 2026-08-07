@@ -1678,12 +1678,42 @@ async function approveToMap() {
       }
     }
 
+    // Link a client if this job doesn't have one yet. Nothing else in the
+    // app creates `clients` rows today, so approval is the point at which
+    // we know a job is real and has billing contact details to work from.
+    const clientUpdates = {};
+    if (!job.arranging_client_id && (job.billing_contact_name || job.billing_contact_email)) {
+      const arrangingId = await findOrCreateClient({
+        full_name: job.billing_contact_name,
+        email: job.billing_contact_email,
+        address: job.billing_address,
+      });
+      if (arrangingId) {
+        clientUpdates.arranging_client_id = arrangingId;
+        clientUpdates.paying_client_id = arrangingId;
+        clientUpdates.report_client_id = arrangingId;
+
+        // The end client (who the report is for) can be a different party
+        // to whoever's arranging/paying -- e.g. an architect arranges and
+        // pays, but the report is addressed to the homeowner.
+        if (job.end_client_email && job.end_client_email !== job.billing_contact_email) {
+          const reportId = await findOrCreateClient({
+            full_name: job.end_client_name,
+            email: job.end_client_email,
+          });
+          if (reportId) clientUpdates.report_client_id = reportId;
+        }
+      }
+    }
+
     await dbUpdate('jobs', `id=eq.${jobId}`, {
       dispatch_state: 'red',
-      ...(surveyor_pay_amount && { surveyor_pay_amount })
+      ...(surveyor_pay_amount && { surveyor_pay_amount }),
+      ...clientUpdates,
     });
     job.dispatch_state = 'red';
     if (surveyor_pay_amount) job.surveyor_pay_amount = surveyor_pay_amount;
+    Object.assign(job, clientUpdates);
     showToast('Job approved — live on map 🔴');
     renderJob();
   } catch (e) {
