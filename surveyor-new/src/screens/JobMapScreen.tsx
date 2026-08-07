@@ -20,6 +20,13 @@ const URGENCY_LABELS: Record<string, string> = {
   red: 'Urgent', orange: 'Elevated', yellow: 'Standard', grey: 'Low', green: 'On Track',
 };
 
+// Distinct from the urgency palette above so a surveyor's own committed
+// jobs read as clearly different from available (red) ones at a glance --
+// urgency doesn't matter once a job's already claimed, so these don't
+// share that colour vocabulary.
+const MINE_COLOR = '#2563eb';
+const MINE_STATE_LABELS: Record<string, string> = { orange: 'Claimed', yellow: 'Attended' };
+
 export default function JobMapScreen() {
   const [jobs,    setJobs]    = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,23 +53,46 @@ export default function JobMapScreen() {
     const surveyorId = surveyorData?.id;
     const serviceOutcodes = surveyorId ? await fetchServiceOutcodes(surveyorId) : new Set<string>();
 
-    // Fetch all available jobs
-    const { data, error } = await supabase
+    const JOB_FIELDS = 'id,reference,survey_type,site_postcode,site_lat,site_lng,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,enquiry_id,enquiries(tree_count_band)';
+
+    // Available jobs (unclaimed, within this surveyor's coverage area) and
+    // this surveyor's own already-committed jobs (claimed/attended, no
+    // coverage filter needed -- they're already assigned regardless of
+    // current coverage) load together, so a surveyor can see how new
+    // available work sits relative to jobs they're already committed to.
+    const availableQuery = supabase
       .from('jobs')
-      .select('id,reference,survey_type,site_postcode,site_lat,site_lng,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,enquiry_id,enquiries(tree_count_band)')
+      .select(JOB_FIELDS)
       .eq('dispatch_state', 'red')
       .not('site_lat', 'is', null)
       .not('site_lng', 'is', null);
 
-    if (error) Alert.alert('Error', error.message);
+    const mineQuery = surveyorId
+      ? supabase
+          .from('jobs')
+          .select(JOB_FIELDS)
+          .eq('surveyor_id', surveyorId)
+          .in('dispatch_state', ['orange', 'yellow'])
+          .not('site_lat', 'is', null)
+          .not('site_lng', 'is', null)
+      : null;
+
+    const [availableResult, mineResult] = await Promise.all([
+      availableQuery,
+      mineQuery ?? Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (availableResult.error) Alert.alert('Error', availableResult.error.message);
+    else if (mineResult.error) Alert.alert('Error', mineResult.error.message);
     else {
-      // Filter jobs: only show those within surveyor's service area
-      const filtered = (data || []).filter(job => {
+      // Filter available jobs: only show those within surveyor's service area
+      const filteredAvailable = (availableResult.data || []).filter(job => {
         const jobOutcode = extractOutcode(job.site_postcode);
         return serviceOutcodes.has(jobOutcode);
       });
 
-      const jobsWithTreeCount = filtered.map((job: any) => ({
+      const combined = [...filteredAvailable, ...(mineResult.data || [])];
+      const jobsWithTreeCount = combined.map((job: any) => ({
         ...job,
         tree_count_band: job.enquiries?.tree_count_band || null,
       }));
@@ -75,6 +105,9 @@ export default function JobMapScreen() {
     return <View style={s.center}><ActivityIndicator size="large" color="#1a3c2e" /></View>;
   }
 
+  const availableCount = jobs.filter(j => j.dispatch_state === 'red').length;
+  const mineCount = jobs.length - availableCount;
+
   return (
     <View style={s.container}>
       <MapView
@@ -86,14 +119,21 @@ export default function JobMapScreen() {
           <Marker
             key={job.id}
             coordinate={{ latitude: job.site_lat!, longitude: job.site_lng! }}
-            pinColor={URGENCY_COLORS[job.urgency_state] || '#9ca3af'}
+            pinColor={job.dispatch_state === 'red' ? (URGENCY_COLORS[job.urgency_state] || '#9ca3af') : MINE_COLOR}
             onPress={() => setPreview(job)}
           />
         ))}
       </MapView>
 
-      <View style={s.badge}>
-        <Text style={s.badgeText}>{jobs.length} available job{jobs.length !== 1 ? 's' : ''}</Text>
+      <View style={s.badgeStack}>
+        <View style={s.badge}>
+          <Text style={s.badgeText}>{availableCount} available job{availableCount !== 1 ? 's' : ''}</Text>
+        </View>
+        {mineCount > 0 && (
+          <View style={[s.badge, s.badgeMine]}>
+            <Text style={s.badgeText}>{mineCount} of yours</Text>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity style={s.refresh} onPress={loadJobs}>
@@ -105,7 +145,12 @@ export default function JobMapScreen() {
           <View
             style={[
               s.previewCard,
-              preview && { borderLeftWidth: 6, borderLeftColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' },
+              preview && {
+                borderLeftWidth: 6,
+                borderLeftColor: preview.dispatch_state === 'red'
+                  ? (URGENCY_COLORS[preview.urgency_state] || '#9ca3af')
+                  : MINE_COLOR,
+              },
             ]}
             onStartShouldSetResponder={() => true}
           >
@@ -113,9 +158,15 @@ export default function JobMapScreen() {
               <>
                 <View style={s.previewHeaderRow}>
                   <Text style={s.previewRef}>{preview.reference || 'No reference'}</Text>
-                  <View style={[s.statusBadge, { backgroundColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' }]}>
-                    <Text style={s.statusBadgeText}>{URGENCY_LABELS[preview.urgency_state] || preview.urgency_state}</Text>
-                  </View>
+                  {preview.dispatch_state === 'red' ? (
+                    <View style={[s.statusBadge, { backgroundColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' }]}>
+                      <Text style={s.statusBadgeText}>{URGENCY_LABELS[preview.urgency_state] || preview.urgency_state}</Text>
+                    </View>
+                  ) : (
+                    <View style={[s.statusBadge, { backgroundColor: MINE_COLOR }]}>
+                      <Text style={s.statusBadgeText}>{MINE_STATE_LABELS[preview.dispatch_state] || 'Yours'}</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={s.previewType}>{SURVEY_LABELS[preview.survey_type] || preview.survey_type}</Text>
                 <View style={s.previewDivider} />
@@ -156,9 +207,15 @@ const s = StyleSheet.create({
   calloutPostcode: { fontSize: 13, color: '#6b7280' },
   calloutPay:      { fontSize: 13, fontWeight: '600', color: '#16a34a', marginTop: 6 },
   calloutTap:      { fontSize: 12, color: '#9ca3af', marginTop: 8, fontWeight: '500' },
+  badgeStack: {
+    position: 'absolute', top: 16, left: 16, gap: 8,
+  },
   badge: {
-    position: 'absolute', top: 16, left: 16,
     backgroundColor: '#1a3c2e', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  badgeMine: {
+    backgroundColor: MINE_COLOR,
   },
   badgeText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   refresh: {
