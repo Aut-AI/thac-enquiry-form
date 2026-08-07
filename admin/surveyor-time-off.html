@@ -68,12 +68,13 @@
       flex-shrink: 0;
     }
     .surveyor-name {
+      box-sizing: border-box;
       background: #f9fafb;
-      padding: 10px;
+      padding: 6px 10px;
       font-weight: 600;
       font-size: 13px;
       color: #1a3c2e;
-      min-height: 48px;
+      height: 54px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -98,40 +99,47 @@
     }
     .calendar {
       display: grid;
-      grid-auto-rows: 48px;
-      gap: 1px;
+      grid-auto-rows: 54px;
+      column-gap: 1px;
+      row-gap: 0;
       background: #e5e7eb;
-      padding: 1px;
+      padding: 0 1px;
       overflow-x: auto;
     }
     .day-header {
+      box-sizing: border-box;
       background: #f3f4f6;
-      padding: 8px;
+      padding: 8px 4px;
       text-align: center;
       font-weight: 600;
       font-size: 12px;
       color: #6b7280;
-      min-height: 48px;
+      height: 54px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 2px;
+    }
+    .day-header .weekday-initial {
+      font-weight: 500;
+      font-size: 10px;
+      color: #9ca3af;
     }
     .day-cell {
+      box-sizing: border-box;
       background: #fff;
       padding: 4px;
-      min-height: 48px;
+      height: 54px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 11px;
+      border-bottom: 1px solid #e5e7eb;
     }
     .day-available {
       background: #dcfce7;
       border: 1px solid #86efac;
-    }
-    .day-unavailable {
-      background: #fee2e2;
-      border: 1px solid #fca5a5;
     }
     .day-number {
       font-size: 10px;
@@ -217,16 +225,8 @@
               </div>
               <div class="legend">
                 <div class="legend-item">
-                  <div class="legend-color" style="background: #dcfce7;"></div>
+                  <div class="legend-color" style="background: #dcfce7;border:1px solid #86efac;"></div>
                   <span>Available</span>
-                </div>
-                <div class="legend-item">
-                  <div class="legend-color" style="background: #fee2e2;"></div>
-                  <span>Unavailable</span>
-                </div>
-                <div class="legend-item">
-                  <div class="legend-color" style="background: #fff;border:1px solid #e5e7eb;"></div>
-                  <span>No data</span>
                 </div>
               </div>
             </div>
@@ -303,6 +303,8 @@
     }
   }
 
+  const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Sun-first, matches Date#getDay()
+
   // Builds a "YYYY-MM-DD" string from local y/m/d components directly --
   // going via Date.toISOString() converts to UTC and can roll the date
   // back a day during BST, the same bug fixed on mobile.
@@ -333,7 +335,8 @@
     for (let d = 1; d <= daysInMonth; d++) {
       const cell = document.createElement('div');
       cell.className = 'day-header';
-      cell.textContent = d;
+      const weekday = new Date(year, month, d).getDay();
+      cell.innerHTML = `<span>${d}</span><span class="weekday-initial">${WEEKDAY_INITIALS[weekday]}</span>`;
       calendar.appendChild(cell);
     }
 
@@ -356,12 +359,11 @@
         const cell = document.createElement('div');
         cell.className = 'day-cell';
 
-        const isAvailable = availMap[`${surveyor.id}_${dateStr}`];
-
-        if (isAvailable === true) {
+        // Only "available" gets a colour -- unavailable and no-data both
+        // read the same to the admin (this surveyor isn't a pick for that
+        // day), so there's nothing useful a second colour would distinguish.
+        if (availMap[`${surveyor.id}_${dateStr}`] === true) {
           cell.className += ' day-available';
-        } else if (isAvailable === false) {
-          cell.className += ' day-unavailable';
         }
         cell.innerHTML = `<span class="day-number">${d}</span>`;
         calendar.appendChild(cell);
