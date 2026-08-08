@@ -105,6 +105,13 @@ const DOT_LABELS = {
 };
 
 let surveyorNameById = {};
+let allSurveyors = [];       // full records with home_lat/home_lng/radius_miles, fetched once
+let surveyorOverridesById = {}; // surveyor_id -> [{outcode, override_type, lat, lng}]
+let coverageOverlays = [];   // circles + markers currently drawn, cleared on every redraw
+
+// Distinct from DOT_COLORS (job dispatch states) so a surveyor's coverage
+// circle is never confused with an unallocated/claimed/attended/sent pin.
+const COVERAGE_COLORS = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#6366f1', '#d946ef', '#84cc16', '#0ea5e9', '#14b8a6', '#f43f5e'];
 
 // First + last initial where available (e.g. "Bob Example" -> "BE"), so
 // pins for different surveyors are distinguishable at a glance without
@@ -125,6 +132,10 @@ async function init() {
       <div class="topbar" style="flex-shrink:0;">
         <div class="topbar-title">Live Map</div>
         <button class="btn btn-secondary btn-sm" onclick="refreshMap()">↻ Refresh</button>
+        <select id="coverageFilter" onchange="applyCoverageFilter()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;background:white;">
+          <option value="">Coverage: Off</option>
+          <option value="all">Coverage: All surveyors</option>
+        </select>
         <span style="font-size:13px;color:var(--text-muted)" id="mapStatus">Loading jobs…</span>
       </div>
       <div id="mapCanvas"></div>
@@ -213,6 +224,31 @@ async function fetchAndPlot() {
     if (Object.keys(surveyorNameById).length === 0) {
       const surveyors = await dbGet('surveyors', { 'select': 'id,full_name' });
       (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
+    }
+
+    if (allSurveyors.length === 0) {
+      allSurveyors = await dbGet('surveyors', {
+        'select': 'id,full_name,home_postcode,home_lat,home_lng,radius_miles',
+        'is_active': 'eq.true',
+        'order': 'full_name.asc'
+      }) || [];
+
+      const overrides = await dbGet('surveyor_outcode_overrides', {
+        'select': 'surveyor_id,outcode,override_type,uk_outcodes(latitude,longitude)'
+      }) || [];
+      surveyorOverridesById = {};
+      overrides.forEach(ov => {
+        if (!ov.uk_outcodes) return; // outcode with no matching centroid, skip
+        if (!surveyorOverridesById[ov.surveyor_id]) surveyorOverridesById[ov.surveyor_id] = [];
+        surveyorOverridesById[ov.surveyor_id].push({
+          outcode: ov.outcode,
+          override_type: ov.override_type,
+          lat: Number(ov.uk_outcodes.latitude),
+          lng: Number(ov.uk_outcodes.longitude),
+        });
+      });
+
+      populateCoverageFilter();
     }
 
     mapJobs = jobs || [];
@@ -305,6 +341,99 @@ async function refreshMap() {
   if (!mapInstance) return;
   infoWindow.close();
   await fetchAndPlot();
+}
+
+function populateCoverageFilter() {
+  const select = document.getElementById('coverageFilter');
+  allSurveyors.forEach(s => {
+    if (!s.home_lat) return; // no home location geocoded yet, can't draw a circle
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.full_name;
+    select.appendChild(opt);
+  });
+}
+
+function applyCoverageFilter() {
+  const value = document.getElementById('coverageFilter').value;
+
+  coverageOverlays.forEach(o => o.setMap(null));
+  coverageOverlays = [];
+
+  if (!value) return; // "Off"
+
+  const surveyorsToShow = value === 'all' ? allSurveyors : allSurveyors.filter(s => s.id === value);
+  surveyorsToShow.forEach((s, i) => {
+    if (!s.home_lat) return;
+    drawSurveyorCoverage(s, COVERAGE_COLORS[i % COVERAGE_COLORS.length]);
+  });
+}
+
+function drawSurveyorCoverage(surveyor, color) {
+  const center = { lat: Number(surveyor.home_lat), lng: Number(surveyor.home_lng) };
+
+  const circle = new google.maps.Circle({
+    map: mapInstance,
+    center,
+    radius: (surveyor.radius_miles || 0) * 1609.34, // miles -> metres
+    strokeColor: color,
+    strokeOpacity: 0.6,
+    strokeWeight: 2,
+    fillColor: color,
+    fillOpacity: 0.08,
+  });
+  coverageOverlays.push(circle);
+
+  const homeMarker = new google.maps.Marker({
+    map: mapInstance,
+    position: center,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: '#fff',
+      strokeWeight: 2,
+    },
+    label: { text: surveyorInitials(surveyor.full_name), color: '#fff', fontSize: '9px', fontWeight: '700' },
+    title: surveyor.full_name,
+  });
+  homeMarker.addListener('click', () => {
+    infoWindow.setContent(`
+      <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:180px;">
+        <div style="font-weight:700;font-size:14px;color:#1a3d2b;">${surveyor.full_name}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px;">📍 ${surveyor.home_postcode || '—'}</div>
+        <div style="font-size:12px;color:#666;">${surveyor.radius_miles || '?'} mile radius</div>
+        <a href="surveyor-detail.html?id=${surveyor.id}" style="display:block;margin-top:8px;font-size:12px;color:${color};font-weight:600;">View surveyor →</a>
+      </div>`);
+    infoWindow.open(mapInstance, homeMarker);
+  });
+  coverageOverlays.push(homeMarker);
+
+  // Manual overrides drawn on top: a small filled dot for an extra included
+  // area outside the radius, a small X for an area excluded despite being
+  // inside it -- both in the same surveyor colour so they read as "theirs".
+  (surveyorOverridesById[surveyor.id] || []).forEach(ov => {
+    const marker = new google.maps.Marker({
+      map: mapInstance,
+      position: { lat: ov.lat, lng: ov.lng },
+      icon: ov.override_type === 'include' ? {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 6,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 1.5,
+      } : {
+        path: 'M -4,-4 4,4 M -4,4 4,-4', // X shape
+        scale: 1.5,
+        strokeColor: color,
+        strokeWeight: 3,
+      },
+      title: `${ov.outcode} — manually ${ov.override_type === 'include' ? 'included' : 'excluded'} (${surveyor.full_name})`,
+    });
+    coverageOverlays.push(marker);
+  });
 }
 
 init();

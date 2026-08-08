@@ -21,6 +21,7 @@ const isNew      = params.get('new') === '1';
 let surveyor     = null;
 let surveyorJobs = [];
 let surveyorOutcodes = [];
+let surveyorOverrides = [];
 
 if (!surveyorId && !isNew) window.location.href = 'surveyors.html';
 
@@ -48,7 +49,7 @@ async function init() {
 
 async function loadSurveyor() {
   try {
-    const [sData, jData, oData] = await Promise.all([
+    const [sData, jData, oData, ovData] = await Promise.all([
       dbGet('surveyors', { 'id': `eq.${surveyorId}`, 'limit': 1, 'select': 'id,user_id,hourly_rate,home_postcode,home_lat,home_lng,radius_miles,pi_policy_number,pi_expiry_date,pl_policy_number,pl_expiry_date,dbs_number,dbs_expiry_date,qualifications,is_paused,created_at,full_name,email,phone,notes,is_active,status' }),
       dbGet('jobs', {
         'surveyor_id': `eq.${surveyorId}`,
@@ -59,8 +60,14 @@ async function loadSurveyor() {
       // Matched outcodes for this surveyor's home postcode + radius, same
       // source of truth mobile's CoverageAreaScreen shows the surveyor
       // themselves -- auto-computed server-side via a Haversine trigger on
-      // surveyors.home_lat/home_lng/radius_miles, not editable directly here.
-      fetchAllServiceOutcodes(surveyorId)
+      // surveyors.home_lat/home_lng/radius_miles, then merged with any
+      // manual overrides below (also server-side, same trigger chain).
+      fetchAllServiceOutcodes(surveyorId),
+      dbGet('surveyor_outcode_overrides', {
+        'surveyor_id': `eq.${surveyorId}`,
+        'select': 'id,outcode,override_type,note',
+        'order': 'outcode.asc'
+      })
     ]);
 
     if (!sData || sData.length === 0) {
@@ -71,6 +78,7 @@ async function loadSurveyor() {
     surveyor     = sData[0];
     surveyorJobs = jData || [];
     surveyorOutcodes = oData || [];
+    surveyorOverrides = ovData || [];
     document.getElementById('pageTitle').textContent = surveyor.full_name || 'Surveyor Detail';
     renderView();
   } catch (e) {
@@ -103,6 +111,22 @@ async function fetchAllServiceOutcodes(id) {
     offset += pageSize;
   }
   return all;
+}
+
+// Groups individual outcodes (e.g. "PO31", "PO32") up one level to their
+// 2-letter area code ("PO") -- a 200-mile radius resolves to ~2000
+// individual outcodes, which is unreadable as a flat list; the area-code
+// level (~15-20 groups for the same surveyor) is what's actually useful
+// to scan at a glance. Sorted by each area's closest outcode.
+function groupOutcodesByArea(outcodes) {
+  const byArea = {};
+  outcodes.forEach(o => {
+    const area = (o.outcode.match(/^[A-Z]{1,2}/) || [o.outcode])[0];
+    if (!byArea[area]) byArea[area] = { area, count: 0, minDistance: Infinity };
+    byArea[area].count += 1;
+    byArea[area].minDistance = Math.min(byArea[area].minDistance, Number(o.distance_miles));
+  });
+  return Object.values(byArea).sort((a, b) => a.minDistance - b.minDistance);
 }
 
 function expiryStatus(dateStr) {
@@ -197,21 +221,55 @@ function renderView() {
         </div>
 
         <div class="card">
-          <div class="card-title">Coverage Area (${surveyorOutcodes.length} postcode${surveyorOutcodes.length !== 1 ? 's' : ''})</div>
+          ${(() => { const areas = groupOutcodesByArea(surveyorOutcodes); return `
+          <div class="card-title">Coverage Area (${areas.length} area${areas.length !== 1 ? 's' : ''}, ${surveyorOutcodes.length} postcode${surveyorOutcodes.length !== 1 ? 's' : ''})</div>
           ${!surveyor.home_lat ? `
             <p class="muted">No home postcode set yet — coverage can't be computed until one is.</p>
-          ` : surveyorOutcodes.length === 0 ? `
+          ` : areas.length === 0 ? `
             <p class="muted">No outcodes within ${surveyor.radius_miles || '?'} miles of ${surveyor.home_postcode || 'their postcode'}.</p>
           ` : `
             <div style="max-height:220px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;">
               <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                ${surveyorOutcodes.map(o => `
+                ${areas.map(a => `
                   <span style="background:#f3f4f6;border-radius:6px;padding:4px 8px;font-size:12px;color:#374151;white-space:nowrap;">
-                    ${o.outcode} <span style="color:#9ca3af;">${Number(o.distance_miles).toFixed(1)}mi</span>
+                    ${a.area} <span style="color:#9ca3af;">${a.count} · from ${a.minDistance.toFixed(1)}mi</span>
                   </span>`).join('')}
               </div>
             </div>
-          `}
+          `}`; })()}
+
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
+            <label style="display:block;margin-bottom:8px;font-weight:600;color:#666;text-transform:uppercase;font-size:12px;">
+              Manual Overrides
+            </label>
+            <div class="field-hint" style="margin-bottom:10px;">
+              Add or remove specific outcodes on top of the radius above (e.g. covers an area just outside it, or won't travel to one within it). Survives postcode/radius changes.
+            </div>
+            ${surveyorOverrides.length === 0 ? '' : `
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+                ${surveyorOverrides.map(ov => `
+                  <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                    <span class="badge ${ov.override_type === 'include' ? 'badge-accepted' : 'badge-urgent'}" style="min-width:70px;text-align:center;">
+                      ${ov.override_type === 'include' ? '+ Include' : '− Exclude'}
+                    </span>
+                    <strong>${ov.outcode}</strong>
+                    ${ov.note ? `<span class="muted">${ov.note}</span>` : ''}
+                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="removeOutcodeOverride(${ov.id})">Remove</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="overrideOutcode" placeholder="e.g. SP1" maxlength="4"
+                style="width:90px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-transform:uppercase;"
+                oninput="this.value = this.value.toUpperCase()">
+              <select id="overrideType" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                <option value="include">Include</option>
+                <option value="exclude">Exclude</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="addOutcodeOverride()">Add</button>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -491,6 +549,46 @@ async function unlinkUserId() {
     showToast('App access removed');
     renderView();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// COVERAGE OVERRIDES
+// ============================================================
+
+async function addOutcodeOverride() {
+  const outcodeInput = document.getElementById('overrideOutcode');
+  const outcode = outcodeInput.value.trim().toUpperCase();
+  const overrideType = document.getElementById('overrideType').value;
+
+  if (!outcode) {
+    showToast('Enter an outcode first', 'error');
+    return;
+  }
+
+  try {
+    await dbInsert('surveyor_outcode_overrides', {
+      surveyor_id: surveyorId,
+      outcode,
+      override_type: overrideType,
+    });
+    showToast(`${outcode} ${overrideType === 'include' ? 'added to' : 'excluded from'} coverage ✓`);
+    outcodeInput.value = '';
+    await loadSurveyor();
+  } catch (e) {
+    // Most likely cause: outcode doesn't exist (FK to uk_outcodes) or is
+    // already overridden for this surveyor (unique constraint).
+    showToast('Error: ' + (e.message.includes('foreign key') ? `"${outcode}" isn't a recognised outcode` : e.message), 'error');
+  }
+}
+
+async function removeOutcodeOverride(id) {
+  try {
+    await dbDelete('surveyor_outcode_overrides', `id=eq.${id}`);
+    showToast('Override removed ✓');
+    await loadSurveyor();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 async function toggleActive() {
