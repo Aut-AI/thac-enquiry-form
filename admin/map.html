@@ -104,6 +104,20 @@ const DOT_LABELS = {
   green:    'Report Sent',
 };
 
+let surveyorNameById = {};
+
+// First + last initial where available (e.g. "Bob Example" -> "BE"), so
+// pins for different surveyors are distinguishable at a glance without
+// having to open each one -- a single initial collides too often across
+// a small team.
+function surveyorInitials(name) {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}
+
 async function init() {
   document.getElementById('app').innerHTML = `
     ${renderSidebar('map')}
@@ -123,6 +137,9 @@ async function init() {
             <div class="legend-dot" style="background:${DOT_COLORS[state]};"></div>
             ${label}
           </div>`).join('')}
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+          Letters on a pin are the claiming surveyor's initials
+        </div>
       </div>
 
       <!-- Stats overlay -->
@@ -186,12 +203,17 @@ async function fetchAndPlot() {
   document.getElementById('mapStatus').textContent = 'Loading jobs…';
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount',
+      'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount,surveyor_id',
       'is_archived': 'not.eq.true',
       'dispatch_state': 'not.eq.pending_approval',
       'order': 'created_at.desc',
       'limit': 200
     });
+
+    if (Object.keys(surveyorNameById).length === 0) {
+      const surveyors = await dbGet('surveyors', { 'select': 'id,full_name' });
+      (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
+    }
 
     mapJobs = jobs || [];
     plotJobs(mapJobs);
@@ -227,6 +249,9 @@ function plotJobs(jobs) {
       <circle cx="11" cy="11" r="9" fill="${color}" stroke="white" stroke-width="2.5"/>
     </svg>`;
 
+    const surveyorName = job.surveyor_id ? (surveyorNameById[job.surveyor_id] || 'Unknown surveyor') : null;
+    const initials = surveyorInitials(surveyorName);
+
     const marker = new google.maps.Marker({
       position: pos,
       map: mapInstance,
@@ -235,6 +260,10 @@ function plotJobs(jobs) {
         scaledSize: new google.maps.Size(22, 22),
         anchor: new google.maps.Point(11, 11),
       },
+      // Surveyor initials on the pin itself so who's claimed a job is
+      // visible without opening it -- only unclaimed (no surveyor_id)
+      // pins go without a label.
+      label: initials ? { text: initials, color: '#fff', fontSize: '9px', fontWeight: '700' } : null,
       title: job.reference || job.id,
     });
 
@@ -249,6 +278,7 @@ function plotJobs(jobs) {
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px;vertical-align:middle;"></span>
             ${dispatchLabel}
           </div>
+          <div style="font-size:13px;margin-bottom:3px;">👤 ${surveyorName || 'Unclaimed'}</div>
           ${job.agreed_amount ? `<div style="font-size:13px;margin-bottom:10px;">💰 £${Number(job.agreed_amount).toLocaleString()}</div>` : '<div style="margin-bottom:10px;"></div>'}
           <a href="job-detail.html?id=${job.id}"
              style="display:block;background:#1a3d2b;color:white;padding:7px 12px;border-radius:7px;

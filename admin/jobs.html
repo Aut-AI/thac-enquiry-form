@@ -76,22 +76,13 @@ async function loadJobs() {
       'limit': 100
     });
 
-    // Fetch NDA acceptances for all jobs
-    const ndaData = await dbGet('job_nda_acceptance', {
-      'select': 'job_id,surveyor_id,accepted_at'
-    });
+    const surveyors = await dbGet('surveyors', { 'select': 'id,full_name' });
+    const surveyorNameById = {};
+    (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
 
-    const ndaMap = {};
-    (ndaData || []).forEach(nda => {
-      if (!ndaMap[nda.job_id]) ndaMap[nda.job_id] = [];
-      ndaMap[nda.job_id].push(nda);
-    });
-
-    // Attach NDA info to jobs
     allJobs = (jobsData || []).map(job => ({
       ...job,
-      nda_accepted: ndaMap[job.id] && ndaMap[job.id].length > 0,
-      nda_accepted_at: ndaMap[job.id]?.[0]?.accepted_at
+      surveyor_name: job.surveyor_id ? (surveyorNameById[job.surveyor_id] || 'Unknown surveyor') : null,
     }));
 
     renderTable();
@@ -164,7 +155,9 @@ function renderTable() {
   const rows = filtered.map(j => {
     const dispatch = getDispatchLabel(j.dispatch_state);
     const urgency = getUrgencyLabel(j.urgency_state);
-    const ndaStatus = j.surveyor_id ? '<span class="badge badge-accepted">✅ Accepted</span>' : '<span class="muted">—</span>';
+    const surveyorCell = j.surveyor_name
+      ? `<span class="badge badge-accepted">${j.surveyor_name}</span>`
+      : '<span class="badge badge-low">Unclaimed</span>';
     const infoStatus = j.extended_info_received ? '<span class="badge badge-accepted">✅ Received</span>' : '<span class="badge badge-low">⏳ Pending</span>';
     return `
     <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
@@ -177,7 +170,7 @@ function renderTable() {
       <td><span class="badge ${urgency.class}">${urgency.label}</span></td>
       <td><span class="badge ${dispatch.class}">${dispatch.label}</span></td>
       <td>${infoStatus}</td>
-      <td>${ndaStatus}</td>
+      <td>${surveyorCell}</td>
       <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '<span class="muted">—</span>'}</td>
     </tr>`;
   }).join('');
@@ -195,7 +188,7 @@ function renderTable() {
           <th>Urgency</th>
           <th>Dispatch</th>
           <th>Info</th>
-          <th>NDA</th>
+          <th>Surveyor</th>
           <th>Value</th>
         </tr>
       </thead>
