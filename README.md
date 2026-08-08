@@ -119,6 +119,17 @@ Navigate to `enquiry-form/` and open `index.html` in a browser.
 
 GitHub Actions workflows are configured in `.github/workflows/` for automated deployments.
 
+- **`enquiry-form/`** deploys straight to GitHub Pages from this repo (`deploy-pages.yml`) on every push to `main`.
+- **`admin/`** is *not* served from this repo. The live CRM at `ciaran-aut-ai.github.io/thac-admin` is GitHub Pages on a separate repo, `Ciaran-aut-ai/thac-admin`. `sync-admin.yml` mirrors the Pages-served part of `admin/` (`*.html`, `css/`, `js/`) into that repo on every push to `main` that touches `admin/`.
+- **Edge Functions** (`admin/supabase/functions/`) deploy from this repo directly to Supabase (`deploy-functions.yml`) — unrelated to which repo serves the admin pages.
+
+`sync-admin.yml` needs a `THAC_ADMIN_SYNC_TOKEN` repo secret: a token with `contents: write` on `Ciaran-aut-ai/thac-admin` (this repo's own `GITHUB_TOKEN` has no access to a different repo). To set it up:
+
+1. Someone with write access to `Ciaran-aut-ai/thac-admin` generates a token scoped to that repo only (GitHub → Settings → Developer settings → Fine-grained tokens → Repository access: `Ciaran-aut-ai/thac-admin` → Permissions: Contents: Read and write).
+2. Set it as a secret on *this* repo (not the target repo): `gh secret set THAC_ADMIN_SYNC_TOKEN --repo Aut-AI/thac-enquiry-form`, or via GitHub → this repo → Settings → Secrets and variables → Actions.
+
+Until that secret exists, `sync-admin.yml` runs on every relevant push but fails at the "Checkout target" step — admin/ changes still need a manual copy-and-push to `Ciaran-aut-ai/thac-admin` in the meantime.
+
 ## Contributing
 
 1. Create a feature branch
