@@ -157,7 +157,6 @@ export default function JobMapScreen() {
             {preview && (
               <>
                 <View style={s.previewHeaderRow}>
-                  <Text style={s.previewRef}>{preview.reference || 'No reference'}</Text>
                   {preview.dispatch_state === 'red' ? (
                     <View style={[s.statusBadge, { backgroundColor: URGENCY_COLORS[preview.urgency_state] || '#9ca3af' }]}>
                       <Text style={s.statusBadgeText}>{URGENCY_LABELS[preview.urgency_state] || preview.urgency_state}</Text>
@@ -226,8 +225,7 @@ const s = StyleSheet.create({
   refreshText: { color: '#fff', fontSize: 22 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   previewCard: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '85%', maxWidth: 320, elevation: 8 },
-  previewHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  previewRef: { fontSize: 18, fontWeight: '700', color: '#1a3c2e' },
+  previewHeaderRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', gap: 8 },
   statusBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   statusBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   previewType: { fontSize: 14, color: '#6b7280', marginTop: 4 },
