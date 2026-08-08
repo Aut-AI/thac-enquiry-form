@@ -6,6 +6,16 @@
 <title>THAC CRM — Settings</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/thac.css">
+<style>
+  .pricing-input {
+    padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 14px; font-family: inherit; width: 100%; box-sizing: border-box;
+  }
+  .pricing-table-wrapper { max-height: 460px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+  .pricing-table-wrapper .data-table { margin: 0; }
+  .pricing-table-wrapper thead th { position: sticky; top: 0; background: #f9fafb; z-index: 1; }
+  .field-hint { font-size: 12px; color: #999; margin-top: 6px; }
+</style>
 </head>
 <body>
 <div class="app-layout" id="app"></div>
@@ -14,6 +24,10 @@
 <script src="js/thac.js"></script>
 <script>
 requireAuth();
+
+let surveyTypesData = [];
+let surchargesData = [];
+let travelAreasData = [];
 
 async function init() {
   if (!(await requireAdmin())) return;
@@ -36,11 +50,44 @@ async function init() {
               <input type="number" id="thacRate" step="0.01" min="0" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
               <span style="font-size: 14px; color: #666;">/hour</span>
             </div>
-            <div style="font-size: 12px; color: #999; margin-top: 6px;">Used to calculate customer quotes in the public enquiry form (hours_per_band × band × £/hour). Each surveyor's individual hourly rate is set on their profile.</div>
+            <div class="field-hint">Used to calculate customer quotes in the public enquiry form. Each surveyor's individual hourly rate is set on their profile.</div>
           </div>
 
           <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 12px;">
             Save Settings
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Survey Type Hours</div>
+          <div class="field-hint" style="margin-bottom: 16px;">
+            A quote's hours = Report Hours (flat, per survey type) + On-Site Hours × tree-count band (1–5).
+            Both multiply by the hourly rate above.
+          </div>
+          <div id="surveyTypesTable"></div>
+          <button class="btn btn-primary" onclick="saveSurveyTypes()" style="margin-top: 16px;">
+            Save Survey Type Hours
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Deadline Surcharges</div>
+          <div class="field-hint" style="margin-bottom: 16px;">Added on top of the base quote for faster turnaround, shown as options on the public form.</div>
+          <div id="surchargesTable"></div>
+          <button class="btn btn-primary" onclick="saveSurcharges()" style="margin-top: 16px;">
+            Save Surcharges
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Travel Cost Areas</div>
+          <div class="field-hint" style="margin-bottom: 16px;">
+            Postcode-area travel costs and the customer-facing note shown for £400/£500 areas (e.g. "consider a local consultant").
+            This is the live gate for who can submit an enquiry — an area not listed here is out of area.
+          </div>
+          <div id="travelAreasTable"></div>
+          <button class="btn btn-primary" onclick="saveTravelAreas()" style="margin-top: 16px;">
+            Save Travel Cost Areas
           </button>
         </div>
       </div>
@@ -48,7 +95,12 @@ async function init() {
   `;
 
   await loadSettings();
+  await loadSurveyTypes();
+  await loadSurcharges();
+  await loadTravelAreas();
 }
+
+// ---- Hourly rate (existing) ----
 
 async function loadSettings() {
   try {
@@ -76,6 +128,179 @@ async function saveSettings() {
     showToast('Settings saved ✓');
   } catch (e) {
     showToast('Error saving settings: ' + e.message, 'error');
+  }
+}
+
+// ---- Survey type hours ----
+
+async function loadSurveyTypes() {
+  try {
+    surveyTypesData = await dbGet('survey_types', {
+      'select': 'id,survey_type,label,report_hours,hours_per_band',
+      'order': 'survey_type.asc'
+    }) || [];
+    renderSurveyTypesTable();
+  } catch (e) {
+    document.getElementById('surveyTypesTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
+  }
+}
+
+function renderSurveyTypesTable() {
+  const rows = surveyTypesData.map(st => `
+    <tr>
+      <td>${st.label || st.survey_type}</td>
+      <td><input class="pricing-input" type="number" step="0.25" min="0" data-id="${st.id}" data-field="report_hours" value="${st.report_hours}"></td>
+      <td><input class="pricing-input" type="number" step="0.25" min="0" data-id="${st.id}" data-field="hours_per_band" value="${st.hours_per_band}"></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('surveyTypesTable').innerHTML = `
+    <div class="pricing-table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Survey Type</th><th>Report Hours</th><th>On-Site Hours / Band</th></tr></thead>
+        <tbody id="surveyTypesBody">${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function saveSurveyTypes() {
+  const inputs = document.querySelectorAll('#surveyTypesBody input');
+  const byId = {};
+  inputs.forEach(input => {
+    const id = input.dataset.id;
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0) return;
+    byId[id] = byId[id] || {};
+    byId[id][input.dataset.field] = val;
+  });
+
+  try {
+    await Promise.all(
+      Object.entries(byId).map(([id, data]) => dbUpdate('survey_types', `id=eq.${id}`, data))
+    );
+    showToast('Survey type hours saved ✓');
+    await loadSurveyTypes();
+  } catch (e) {
+    showToast('Error saving: ' + e.message, 'error');
+  }
+}
+
+// ---- Deadline surcharges ----
+
+async function loadSurcharges() {
+  try {
+    surchargesData = await dbGet('deadline_surcharges', { 'select': 'tier,label,surcharge', 'order': 'surcharge.desc' }) || [];
+    renderSurchargesTable();
+  } catch (e) {
+    document.getElementById('surchargesTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
+  }
+}
+
+function renderSurchargesTable() {
+  const rows = surchargesData.map(s => `
+    <tr>
+      <td>${s.label}</td>
+      <td style="max-width:140px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span>£</span>
+          <input class="pricing-input" type="number" step="1" min="0" data-tier="${s.tier}" value="${s.surcharge}">
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('surchargesTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Deadline</th><th>Surcharge</th></tr></thead>
+      <tbody id="surchargesBody">${rows}</tbody>
+    </table>`;
+}
+
+async function saveSurcharges() {
+  const inputs = document.querySelectorAll('#surchargesBody input');
+  const updates = [];
+  inputs.forEach(input => {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0) return;
+    updates.push({ tier: input.dataset.tier, surcharge: val });
+  });
+
+  try {
+    await Promise.all(
+      updates.map(u => dbUpdate('deadline_surcharges', `tier=eq.${u.tier}`, { surcharge: u.surcharge }))
+    );
+    showToast('Surcharges saved ✓');
+    await loadSurcharges();
+  } catch (e) {
+    showToast('Error saving: ' + e.message, 'error');
+  }
+}
+
+// ---- Travel cost areas ----
+
+async function loadTravelAreas() {
+  try {
+    travelAreasData = await dbGet('travel_cost_areas', {
+      'select': 'area_code,area_name,travel_cost,note',
+      'order': 'area_code.asc'
+    }) || [];
+    renderTravelAreasTable();
+  } catch (e) {
+    document.getElementById('travelAreasTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
+  }
+}
+
+function escapeAttr(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function renderTravelAreasTable() {
+  const rows = travelAreasData.map(a => `
+    <tr>
+      <td><strong>${a.area_code}</strong></td>
+      <td>${a.area_name || '<span class="muted">—</span>'}</td>
+      <td style="max-width:120px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span>£</span>
+          <input class="pricing-input" type="number" step="1" min="0" data-area="${a.area_code}" data-field="travel_cost" value="${a.travel_cost}">
+        </div>
+      </td>
+      <td>
+        <input class="pricing-input" type="text" data-area="${a.area_code}" data-field="note" value="${escapeAttr(a.note)}" placeholder="No note (shown for £300 areas)">
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('travelAreasTable').innerHTML = `
+    <div class="pricing-table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Area</th><th>Region</th><th>Travel Cost</th><th>Customer-facing note</th></tr></thead>
+        <tbody id="travelAreasBody">${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function saveTravelAreas() {
+  const byArea = {};
+  document.querySelectorAll('#travelAreasBody input').forEach(input => {
+    const area = input.dataset.area;
+    byArea[area] = byArea[area] || {};
+    if (input.dataset.field === 'travel_cost') {
+      const val = parseFloat(input.value);
+      if (!isNaN(val) && val >= 0) byArea[area].travel_cost = val;
+    } else {
+      byArea[area].note = input.value.trim() || null;
+    }
+  });
+
+  try {
+    await Promise.all(
+      Object.entries(byArea).map(([area, data]) => dbUpdate('travel_cost_areas', `area_code=eq.${area}`, data))
+    );
+    showToast('Travel cost areas saved ✓');
+    await loadTravelAreas();
+  } catch (e) {
+    showToast('Error saving: ' + e.message, 'error');
   }
 }
 

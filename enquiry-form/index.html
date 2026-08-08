@@ -1100,27 +1100,50 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   }
 
-  // Fetch survey types with hours_per_band
+  // Fetch survey types with hours_per_band (on-site survey time) and
+  // report_hours (flat report-writing time, e.g. Stage 2's larger AIA/AMS/TPP
+  // report vs Stage 1's single Tree Constraints Report) -- both combine in
+  // calcBasePrice() below.
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_types?select=survey_type,hours_per_band`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_types?select=survey_type,hours_per_band,report_hours`, {
       headers: { 'apikey': SUPABASE_ANON_KEY }
     });
     if (res.ok) {
       const rows = await res.json();
       rows.forEach(row => {
         hoursPerBand[row.survey_type] = row.hours_per_band;
+        reportHours[row.survey_type] = row.report_hours;
       });
-      console.log('Loaded survey hours per band:', hoursPerBand);
+      console.log('Loaded survey hours per band:', hoursPerBand, 'report hours:', reportHours);
     }
   } catch (e) {
     console.warn('Failed to load survey types, pricing may not calculate correctly:', e);
+  }
+
+  // Fetch deadline surcharges (falls back to the hardcoded defaults above if
+  // this fails or the table doesn't exist yet, e.g. before this migration
+  // has run -- same defensive pattern as pricing_settings above)
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/deadline_surcharges?select=tier,surcharge`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows?.length > 0) {
+        rows.forEach(row => { SURCHARGES[row.tier] = Number(row.surcharge); });
+        console.log('Loaded deadline surcharges:', SURCHARGES);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load deadline surcharges, using defaults:', e);
   }
 })();
 
 // Pricing data
 // Hours per band (from treatment matrix) — fetched from pricing_settings and survey_types on page load
 let thacHourlyRate = 100; // Fetched from pricing_settings
-const hoursPerBand = {}; // Fetched from survey_types: { survey_type -> hours_per_band }
+const hoursPerBand = {}; // Fetched from survey_types: { survey_type -> hours_per_band } (on-site survey time)
+const reportHours  = {}; // Fetched from survey_types: { survey_type -> report_hours } (flat report-writing time)
 
 const SURCHARGES = {
   '3days': 200,
@@ -1132,6 +1155,21 @@ const SURCHARGES = {
 function bandIndex(band) {
   const bandMap = { '1-20': 1, '21-40': 2, '41-60': 3, '61-80': 4, '81-100': 5 };
   return bandMap[band] || null;
+}
+
+// Single source of truth for the base price, used by every place that shows
+// or submits a quote. Report-writing time is flat per survey type (e.g.
+// Stage 2's larger report vs Stage 1); on-site survey time scales with tree
+// count band. Both must be present to price a job -- previously only the
+// on-site component was charged at all, so e.g. Stage 1 and Stage 2 quoted
+// identically despite very different report scopes. Returns null for the
+// 100+ trees custom-quote case, same as before.
+function calcBasePrice(surveyType, treeCountBand) {
+  if (treeCountBand === '100+') return null;
+  const band = bandIndex(treeCountBand);
+  if (!band) return null;
+  const hours = (reportHours[surveyType] || 0) + (hoursPerBand[surveyType] || 0) * band;
+  return Math.round(hours * thacHourlyRate);
 }
 
 // Built from the survey-type option cards themselves (below in the DOM,
@@ -1370,9 +1408,7 @@ function goToQuote() {
     document.getElementById('standardQuote').style.display = 'block';
     document.getElementById('customQuote').style.display = 'none';
 
-    // Calculate base price: hours_per_band × band_index × thac_hourly_rate
-    const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
-    const base = Math.round(hours * thacHourlyRate);
+    const base = calcBasePrice(selectedSurveyType, treeCount);
     const travel = appliedTravel ? appliedTravel.cost : 0;
 
     document.getElementById('qSurveyType').textContent = SURVEY_TYPE_LABELS[selectedSurveyType] || '—';
@@ -1408,9 +1444,7 @@ function updateDeadlineSurcharge() {
   if (treeCount !== '100+') {
     const travel = appliedTravel ? appliedTravel.cost : 0;
     if (deadline) {
-      // Calculate base price: hours_per_band × band_index × thac_hourly_rate
-      const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
-      const base = Math.round(hours * thacHourlyRate);
+      const base = calcBasePrice(selectedSurveyType, treeCount);
       const surcharge = SURCHARGES[deadline] || 0;
       const total = base + travel + surcharge;
 
@@ -1427,8 +1461,7 @@ function updateDeadlineSurcharge() {
     } else {
       document.getElementById('qDeadline').textContent = '—';
       document.getElementById('qSurchargeRow').style.display = 'none';
-      const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
-      const base = Math.round(hours * thacHourlyRate);
+      const base = calcBasePrice(selectedSurveyType, treeCount);
       document.getElementById('qTotal').textContent = '£' + (base + travel);
     }
   }
@@ -1503,12 +1536,7 @@ async function submitNewEnquiry() {
   const treeCount   = document.getElementById('treeCount').value;
   const deadlineTier = document.getElementById('deadline').value;
 
-  // Calculate base price: hours_per_band × band_index × thac_hourly_rate
-  let base = null;
-  if (treeCount !== '100+') {
-    const hours = (hoursPerBand[selectedSurveyType] || 1) * bandIndex(treeCount);
-    base = Math.round(hours * thacHourlyRate);
-  }
+  const base = calcBasePrice(selectedSurveyType, treeCount);
 
   const surcharge   = SURCHARGES[deadlineTier] || 0;
   const travel      = appliedTravel ? appliedTravel.cost : 0;
