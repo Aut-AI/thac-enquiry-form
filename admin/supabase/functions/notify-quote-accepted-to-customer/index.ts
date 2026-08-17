@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-
-const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')
-const ADMIN_EMAIL = 'nick@aut-ai.com'
+import { sendEmail } from '../_shared/email-templates.ts'
 
 serve(async (req) => {
   const { record } = await req.json()
@@ -36,25 +34,7 @@ serve(async (req) => {
   `
 
   try {
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: record.contact_email }] }],
-        from: { email: 'ciaran@aut-ai.com' },
-        subject: `Confirm Your Quote Details — Reference ${record.job_number}`,
-        content: [{ type: 'text/html', value: emailHtml }],
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`SendGrid API error: ${error}`)
-    }
-
+    await sendEmail(record.contact_email, `Confirm Your Quote Details — Reference ${record.job_number}`, emailHtml)
     return new Response('Email sent', { status: 200 })
   } catch (error) {
     console.error('Email error:', error)

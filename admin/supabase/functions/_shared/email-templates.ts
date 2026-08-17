@@ -4,7 +4,7 @@
 // ============================================================
 
 export const ADMIN_EMAIL = 'nick@aut-ai.com';
-export const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')!;
+export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 export const FROM_ADDRESS = 'THAC <ciaran@aut-ai.com>'; // ← verified sender
 
 // ── Base wrapper ────────────────────────────────────────────
@@ -54,25 +54,25 @@ export function emailWrapper(content: string): string {
 </html>`;
 }
 
-// ── Send via SendGrid ───────────────────────────────────────
+// ── Send via Resend ─────────────────────────────────────────
 export async function sendEmail(to: string, subject: string, html: string) {
-  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: FROM_ADDRESS },
+      from: FROM_ADDRESS,
+      to: [to],
       subject,
-      content: [{ type: 'text/html', value: html }],
+      html,
     }),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`SendGrid error: ${error}`);
+    throw new Error(`Resend error: ${error}`);
   }
   return { success: true };
 }
