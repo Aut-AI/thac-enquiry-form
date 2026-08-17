@@ -71,39 +71,63 @@
       text-align: center;
       margin-bottom: 16px;
     }
+    /* One real <table> per month -- surveyor name/email is the sticky first
+       column of each row, day cells are the rest of that same row, so name
+       and availability scroll together as a single table instead of two
+       independently-scrolling panes sitting next to each other. */
     .calendar-container {
-      display: flex;
-      gap: 0;
       background: white;
       /* Header row + 6 data rows @ 54px each -- the rest scroll into view. */
       max-height: 378px;
-      overflow-y: auto;
+      overflow: auto;
     }
-    .surveyor-names-column {
-      display: flex;
-      flex-direction: column;
+    .avail-table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .avail-table th,
+    .avail-table td {
+      box-sizing: border-box;
+      height: 54px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .avail-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f3f4f6;
+    }
+    .name-header,
+    .name-cell {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      width: 150px;
+      min-width: 150px;
+      max-width: 150px;
+      padding: 6px 10px;
+      text-align: left;
       background: #f9fafb;
       border-right: 2px solid #d1d5db;
-      flex-shrink: 0;
+      overflow: hidden;
     }
-    .surveyor-name {
-      box-sizing: border-box;
-      background: #f9fafb;
-      padding: 6px 10px;
+    .name-header {
+      z-index: 3;
+      font-weight: 700;
+      font-size: 13px;
+      color: #1a3c2e;
+    }
+    .name-cell .name-line {
+      display: block;
       font-weight: 600;
       font-size: 13px;
       color: #1a3c2e;
-      height: 54px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      width: 150px;
-      border-bottom: 1px solid #e5e7eb;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .surveyor-name .email {
+    .name-cell .email {
+      display: block;
       font-weight: 400;
       font-size: 11px;
       color: #6b7280;
@@ -111,61 +135,31 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .surveyor-name.header {
-      background: #f3f4f6;
-      font-weight: 700;
-      border-bottom: none;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-    .calendar {
-      display: grid;
-      grid-auto-rows: 54px;
-      column-gap: 1px;
-      row-gap: 0;
-      background: #e5e7eb;
-      padding: 0 1px;
-      overflow-x: auto;
-      overflow-y: visible;
-    }
     .day-header {
-      box-sizing: border-box;
-      background: #f3f4f6;
+      width: 30px;
+      min-width: 30px;
       padding: 8px 4px;
       text-align: center;
       font-weight: 600;
       font-size: 12px;
       color: #6b7280;
-      height: 54px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      position: sticky;
-      top: 0;
-      z-index: 1;
     }
     .day-header .weekday-initial {
+      display: block;
       font-weight: 500;
       font-size: 10px;
       color: #9ca3af;
     }
     .day-cell {
-      box-sizing: border-box;
-      background: #fff;
+      width: 30px;
+      min-width: 30px;
       padding: 4px;
-      height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      text-align: center;
       font-size: 11px;
-      border-bottom: 1px solid #e5e7eb;
+      background: #fff;
     }
-    .day-available {
+    .day-cell.day-available {
       background: #dcfce7;
-      border: 1px solid #86efac;
     }
     .day-number {
       font-size: 10px;
@@ -236,24 +230,21 @@
                   <div class="month-header" id="monthHeader0"></div>
                   <div class="row-count" id="rowCount0"></div>
                   <div class="calendar-container">
-                    <div class="surveyor-names-column" id="namesColumn0"></div>
-                    <div class="calendar" id="calendar0"></div>
+                    <table class="avail-table" id="availTable0"></table>
                   </div>
                 </div>
                 <div class="calendar-wrapper">
                   <div class="month-header" id="monthHeader1"></div>
                   <div class="row-count" id="rowCount1"></div>
                   <div class="calendar-container">
-                    <div class="surveyor-names-column" id="namesColumn1"></div>
-                    <div class="calendar" id="calendar1"></div>
+                    <table class="avail-table" id="availTable1"></table>
                   </div>
                 </div>
                 <div class="calendar-wrapper">
                   <div class="month-header" id="monthHeader2"></div>
                   <div class="row-count" id="rowCount2"></div>
                   <div class="calendar-container">
-                    <div class="surveyor-names-column" id="namesColumn2"></div>
-                    <div class="calendar" id="calendar2"></div>
+                    <table class="avail-table" id="availTable2"></table>
                   </div>
                 </div>
               </div>
@@ -411,6 +402,11 @@
     return count;
   }
 
+  function esc(val) {
+    if (!val) return '';
+    return String(val).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   function renderMonthCard(index, year, month, activeSurveyors, availMap) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthName = new Date(year, month).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
@@ -420,63 +416,35 @@
       `${activeSurveyors.length} surveyor${activeSurveyors.length !== 1 ? 's' : ''}` +
       (activeSurveyors.length > 6 ? ' — sorted by availability, scroll for more' : ' — sorted by availability');
 
-    const calendar = document.getElementById(`calendar${index}`);
-    const namesColumn = document.getElementById(`namesColumn${index}`);
-    calendar.innerHTML = '';
-    namesColumn.innerHTML = '';
-
-    calendar.style.gridTemplateColumns = `repeat(${daysInMonth}, 30px)`;
-
     // Most available days this month first.
     const sortedSurveyors = [...activeSurveyors].sort((a, b) =>
       countAvailableDays(b.id, year, month, daysInMonth, availMap) -
       countAvailableDays(a.id, year, month, daysInMonth, availMap)
     );
 
-    const headerName = document.createElement('div');
-    headerName.className = 'surveyor-name header';
-    headerName.textContent = 'Surveyor';
-    namesColumn.appendChild(headerName);
-
+    let headerCells = '<th class="name-header">Surveyor</th>';
     for (let d = 1; d <= daysInMonth; d++) {
-      const cell = document.createElement('div');
-      cell.className = 'day-header';
       const weekday = new Date(year, month, d).getDay();
-      cell.innerHTML = `<span>${d}</span><span class="weekday-initial">${WEEKDAY_INITIALS[weekday]}</span>`;
-      calendar.appendChild(cell);
+      headerCells += `<th class="day-header"><span>${d}</span><span class="weekday-initial">${WEEKDAY_INITIALS[weekday]}</span></th>`;
     }
 
-    sortedSurveyors.forEach(surveyor => {
-      const nameCell = document.createElement('div');
-      nameCell.className = 'surveyor-name';
-      const nameLine = document.createElement('span');
-      nameLine.textContent = surveyor.full_name;
-      nameCell.appendChild(nameLine);
-      if (surveyor.email) {
-        const emailLine = document.createElement('span');
-        emailLine.className = 'email';
-        emailLine.textContent = surveyor.email;
-        nameCell.appendChild(emailLine);
-      }
-      namesColumn.appendChild(nameCell);
-
+    const bodyRows = sortedSurveyors.map(surveyor => {
+      let cells = `<td class="name-cell"><span class="name-line">${esc(surveyor.full_name)}</span>${surveyor.email ? `<span class="email">${esc(surveyor.email)}</span>` : ''}</td>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = ymd(new Date(year, month, d));
-        const cell = document.createElement('div');
-        cell.className = 'day-cell';
-
         // Matches the mobile calendar's own default (AvailabilityCalendar.tsx:
         // `availability[date] === true`) -- a day with no row at all is
         // treated as NOT available, same as a day explicitly marked false.
         // Surveyors start unavailable everywhere and only show green once
         // they've actively marked a day, on both mobile and here.
-        if (availMap[`${surveyor.id}_${dateStr}`] === true) {
-          cell.className += ' day-available';
-        }
-        cell.innerHTML = `<span class="day-number">${d}</span>`;
-        calendar.appendChild(cell);
+        const available = availMap[`${surveyor.id}_${dateStr}`] === true;
+        cells += `<td class="day-cell${available ? ' day-available' : ''}"><span class="day-number">${d}</span></td>`;
       }
-    });
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    document.getElementById(`availTable${index}`).innerHTML =
+      `<thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody>`;
   }
 
   initPage();
