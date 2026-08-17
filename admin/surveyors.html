@@ -18,6 +18,7 @@ requireAuth();
 let allSurveyors = [];
 let activeFilter = 'all';
 let searchQuery  = '';
+const ADMIN_USERS_FUNCTIONS_URL = 'https://lemppaqgpntadeylzzwn.supabase.co/functions/v1/admin-users';
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -57,9 +58,28 @@ async function init() {
 async function loadSurveyors() {
   try {
     const surveyors = await dbGet('surveyors', {
-      'select': 'id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,status,created_at',
+      'select': 'id,user_id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,status,created_at',
       'order': 'full_name.asc'
     });
+
+    // Login/account info lives in Supabase Auth, not the surveyors table --
+    // pull it in and join by user_id so the list shows one row per surveyor
+    // with their account status right alongside their business info, rather
+    // than making admins cross-reference the separate System Users page.
+    // admin-users is admin-gated server-side, so a non-admin viewer just
+    // gets an empty map here and the account column falls back to "—".
+    let authUsersById = new Map();
+    try {
+      const res = await fetch(ADMIN_USERS_FUNCTIONS_URL, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'apikey': SUPABASE_ANON_KEY },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        authUsersById = new Map((data.users || []).map(u => [u.id, u]));
+      }
+    } catch (e) {
+      console.warn('Could not load account info (likely non-admin viewer):', e);
+    }
 
     // Load all invoiced jobs for current year to calculate earnings
     const currentYear = new Date().getFullYear();
@@ -84,16 +104,29 @@ async function loadSurveyors() {
       }
     });
 
-    // Attach earnings to each surveyor
+    // Attach earnings and linked login account to each surveyor
     allSurveyors = (surveyors || []).map(s => ({
       ...s,
-      earnings: earningsBysSurveyor[s.id] || { jobs: 0, total: 0 }
+      earnings: earningsBysSurveyor[s.id] || { jobs: 0, total: 0 },
+      account: s.user_id ? authUsersById.get(s.user_id) || null : null
     }));
 
     renderTable();
   } catch (e) {
     document.getElementById('surveyorsTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
   }
+}
+
+// Login/account status badge for the linked Supabase Auth user, if any
+function accountStatusBadge(account) {
+  if (!account) return '<span class="badge badge-low">No login</span>';
+  if (account.banned_until && new Date(account.banned_until) > new Date()) {
+    return '<span class="badge badge-low">⏸ Disabled</span>';
+  }
+  if (!account.email_confirmed_at) {
+    return '<span class="badge badge-elevated">⏳ Invited</span>';
+  }
+  return '<span class="badge badge-accepted">✅ Active</span>';
 }
 
 // Traffic-light status for an expiry date
@@ -306,7 +339,9 @@ async function renderTable() {
       <td>
         <div style="font-weight:600;font-size:14px;">${s.full_name || '—'}</div>
         <div class="muted">${s.email || ''}</div>
+        <div style="margin-top:4px;">${accountStatusBadge(s.account)}</div>
       </td>
+      <td>${s.account?.last_sign_in_at ? timeAgo(s.account.last_sign_in_at) : '—'}</td>
       <td>${postcodeDisplay}</td>
       <td>${s.hourly_rate ? '£' + Number(s.hourly_rate).toFixed(2) + '/hr' : '—'}</td>
       <td>${s.radius_miles ? s.radius_miles + ' miles' : '—'}</td>
@@ -323,7 +358,8 @@ async function renderTable() {
     <table class="data-table">
       <thead>
         <tr>
-          <th>Name</th>
+          <th>Name / Login</th>
+          <th>Last Sign In</th>
           <th>Postcode</th>
           <th>Rate</th>
           <th>Radius</th>

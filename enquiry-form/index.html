@@ -350,6 +350,68 @@
     color: var(--green-mid);
   }
 
+  /* Price option rows (new-survey quote step) */
+  .price-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .price-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(245, 242, 235, 0.7);
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .price-option:hover {
+    border-color: var(--green-light);
+    background: var(--green-pale);
+  }
+
+  .price-option.selected {
+    border-color: var(--green-mid);
+    background: var(--green-pale);
+    box-shadow: 0 0 0 1.5px var(--green-mid);
+  }
+
+  .price-option-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--green-dark);
+  }
+
+  .price-option.selected .price-option-label::before {
+    content: '✓ ';
+    color: var(--green-mid);
+    font-weight: 700;
+  }
+
+  .price-option-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--green-mid);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .price-option-vat {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    color: #000000;
+  }
+
   /* Branch selector */
   .branch-cards {
     display: grid;
@@ -851,54 +913,36 @@
 
     <!-- STEP 3: Quote Preview (New) -->
     <div class="step-panel" id="step-3-new">
-      <div class="card-title">Your Estimated Quote</div>
-      <div class="card-subtitle">Based on what you've told us. Prices shown exclude VAT.</div>
+      <div class="card-title">Your Quote</div>
+      <div class="card-subtitle">We've provided several quotes below, depending on how quickly you need your report. Prices exclude VAT.</div>
 
       <div class="field-group">
-        <label>Required Deadline <span class="required">*</span></label>
-        <div class="deadline-options" id="deadlineOptions">
-          <button type="button" class="deadline-option" onclick="selectDeadline('3days', this)">
-            <span class="deadline-option-label">Within 3 working days</span>
-            <span class="deadline-option-price">+£200</span>
+        <label>Choose Your Quote <span class="required">*</span></label>
+        <div class="price-options" id="priceOptions">
+          <button type="button" class="price-option" onclick="selectDeadline('no_rush', this)">
+            <span class="price-option-label">No rush</span>
+            <span class="price-option-amount"><span id="priceAmount_no_rush">—</span><span class="price-option-vat" id="priceVat_no_rush"> + VAT</span></span>
           </button>
-          <button type="button" class="deadline-option" onclick="selectDeadline('5days', this)">
-            <span class="deadline-option-label">Within 5 working days</span>
-            <span class="deadline-option-price">+£150</span>
+          <button type="button" class="price-option" onclick="selectDeadline('10days', this)">
+            <span class="price-option-label">Within 10 working days</span>
+            <span class="price-option-amount"><span id="priceAmount_10days">—</span><span class="price-option-vat" id="priceVat_10days"> + VAT</span></span>
           </button>
-          <button type="button" class="deadline-option" onclick="selectDeadline('10days', this)">
-            <span class="deadline-option-label">Within 10 working days</span>
-            <span class="deadline-option-price">+£75</span>
+          <button type="button" class="price-option" onclick="selectDeadline('5days', this)">
+            <span class="price-option-label">Within 5 working days</span>
+            <span class="price-option-amount"><span id="priceAmount_5days">—</span><span class="price-option-vat" id="priceVat_5days"> + VAT</span></span>
           </button>
-          <button type="button" class="deadline-option" onclick="selectDeadline('no_rush', this)">
-            <span class="deadline-option-label">No rush (just looking)</span>
-            <span class="deadline-option-price">+£0</span>
+          <button type="button" class="price-option" onclick="selectDeadline('3days', this)">
+            <span class="price-option-label">Within 3 working days</span>
+            <span class="price-option-amount"><span id="priceAmount_3days">—</span><span class="price-option-vat" id="priceVat_3days"> + VAT</span></span>
           </button>
         </div>
         <input type="hidden" id="deadline" value="">
-        <div class="field-hint">Select when you need the work completed — this affects the price below.</div>
-        <div class="field-error" id="deadlineError">Please select a deadline.</div>
+        <div class="field-hint">Select the option that best suits your timeline.</div>
+        <div class="field-error" id="deadlineError">Please select a quote option.</div>
       </div>
 
       <!-- Standard quote -->
       <div id="standardQuote">
-        <div class="quote-preview">
-          <h3>Quote Summary</h3>
-          <div class="quote-line"><span class="label">Survey type</span><span class="value" id="qSurveyType">—</span></div>
-          <div class="quote-line"><span class="label">Tree count</span><span class="value" id="qTreeCount">—</span></div>
-          <div class="quote-line"><span class="label">Deadline</span><span class="value" id="qDeadline">—</span></div>
-          <div class="quote-line"><span class="label">Base price</span><span class="value" id="qBasePrice">—</span></div>
-          <div class="quote-line" id="qTravelRow" style="display:none"><span class="label">Travel</span><span class="value" id="qTravelCost">—</span></div>
-          <div class="quote-line" id="qSurchargeRow" style="display:none"><span class="label">Urgency surcharge</span><span class="value" id="qSurcharge">—</span></div>
-          <div class="quote-total">
-            <div>
-              <div class="label">Estimated Total</div>
-            </div>
-            <div style="text-align:right">
-              <div class="amount" id="qTotal">—</div>
-              <div class="vat-note">+ VAT (20%)</div>
-            </div>
-          </div>
-        </div>
         <div id="qTravelNote" style="display:none;font-size:13px;color:#5c4a00;background:#fff8e1;border:1px solid #f0e0a0;border-radius:8px;padding:12px 14px;margin-bottom:16px;line-height:1.5;"></div>
         <p style="font-size:12px;color:#000000;margin-bottom:24px;line-height:1.5;">This is an estimate based on the information provided. The final quote may vary slightly following site assessment. To proceed, please provide your contact details below.</p>
       </div>
@@ -1369,10 +1413,9 @@ function goToStep2New() {
 
 function selectDeadline(value, el) {
   document.getElementById('deadline').value = value;
-  document.querySelectorAll('#deadlineOptions .deadline-option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('#priceOptions .price-option').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
   hideError('deadlineError', 'deadline');
-  updateDeadlineSurcharge();
 }
 
 function selectAmendDeadline(value, el) {
@@ -1405,15 +1448,23 @@ function goToQuote() {
 
   if (!valid) return;
 
-  // Reset deadline on entry to step-3
+  // Reset deadline/price selection on entry to step-3
   document.getElementById('deadline').value = '';
   hideError('deadlineError', 'deadline');
-  document.getElementById('qSurchargeRow').style.display = 'none';
+  document.querySelectorAll('#priceOptions .price-option').forEach(o => o.classList.remove('selected'));
+
+  const DEADLINE_TIERS = ['no_rush', '10days', '5days', '3days'];
 
   // Build quote preview
   if (treeCount === '100+') {
     document.getElementById('standardQuote').style.display = 'none';
     document.getElementById('customQuote').style.display = 'block';
+
+    // No computed price for 100+ trees — Trevor quotes these manually.
+    DEADLINE_TIERS.forEach(tier => {
+      document.getElementById('priceAmount_' + tier).textContent = 'Custom quote';
+      document.getElementById('priceVat_' + tier).style.display = 'none';
+    });
   } else {
     document.getElementById('standardQuote').style.display = 'block';
     document.getElementById('customQuote').style.display = 'none';
@@ -1421,17 +1472,11 @@ function goToQuote() {
     const base = calcBasePrice(selectedSurveyType, treeCount);
     const travel = appliedTravel ? appliedTravel.cost : 0;
 
-    document.getElementById('qSurveyType').textContent = SURVEY_TYPE_LABELS[selectedSurveyType] || '—';
-    document.getElementById('qTreeCount').textContent = treeCount + ' trees';
-    document.getElementById('qDeadline').textContent = '—';
-    document.getElementById('qBasePrice').textContent = '£' + base;
-
-    if (travel > 0) {
-      document.getElementById('qTravelRow').style.display = 'flex';
-      document.getElementById('qTravelCost').textContent = '+£' + travel;
-    } else {
-      document.getElementById('qTravelRow').style.display = 'none';
-    }
+    DEADLINE_TIERS.forEach(tier => {
+      const total = base + travel + (SURCHARGES[tier] || 0);
+      document.getElementById('priceAmount_' + tier).textContent = '£' + total;
+      document.getElementById('priceVat_' + tier).style.display = '';
+    });
 
     const noteEl = document.getElementById('qTravelNote');
     if (appliedTravel?.note) {
@@ -1440,41 +1485,9 @@ function goToQuote() {
     } else {
       noteEl.style.display = 'none';
     }
-
-    document.getElementById('qTotal').textContent = '£' + (base + travel);
   }
 
   goTo('step-3-new');
-}
-
-function updateDeadlineSurcharge() {
-  const treeCount = document.getElementById('treeCount').value;
-  const deadline = document.getElementById('deadline').value;
-
-  if (treeCount !== '100+') {
-    const travel = appliedTravel ? appliedTravel.cost : 0;
-    if (deadline) {
-      const base = calcBasePrice(selectedSurveyType, treeCount);
-      const surcharge = SURCHARGES[deadline] || 0;
-      const total = base + travel + surcharge;
-
-      document.getElementById('qDeadline').textContent = DEADLINE_LABELS[deadline] || '—';
-
-      if (surcharge > 0) {
-        document.getElementById('qSurchargeRow').style.display = 'flex';
-        document.getElementById('qSurcharge').textContent = '+£' + surcharge;
-      } else {
-        document.getElementById('qSurchargeRow').style.display = 'none';
-      }
-
-      document.getElementById('qTotal').textContent = '£' + total;
-    } else {
-      document.getElementById('qDeadline').textContent = '—';
-      document.getElementById('qSurchargeRow').style.display = 'none';
-      const base = calcBasePrice(selectedSurveyType, treeCount);
-      document.getElementById('qTotal').textContent = '£' + (base + travel);
-    }
-  }
 }
 
 function proceedFromQuote() {
