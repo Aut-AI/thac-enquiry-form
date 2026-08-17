@@ -789,11 +789,15 @@
           </button>
           <button type="button" class="deadline-option" onclick="selectAmendDeadline('5days', this)">
             <span class="deadline-option-label">Within 5 working days</span>
-            <span class="deadline-option-price">+£100</span>
+            <span class="deadline-option-price">+£150</span>
           </button>
           <button type="button" class="deadline-option" onclick="selectAmendDeadline('10days', this)">
-            <span class="deadline-option-label">Within 10 working days / No rush</span>
-            <span class="deadline-option-price">As quoted</span>
+            <span class="deadline-option-label">Within 10 working days</span>
+            <span class="deadline-option-price">+£75</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('no_rush', this)">
+            <span class="deadline-option-label">No rush (just looking)</span>
+            <span class="deadline-option-price">+£0</span>
           </button>
         </div>
         <input type="hidden" id="amendDeadline" value="">
@@ -859,11 +863,15 @@
           </button>
           <button type="button" class="deadline-option" onclick="selectDeadline('5days', this)">
             <span class="deadline-option-label">Within 5 working days</span>
-            <span class="deadline-option-price">+£100</span>
+            <span class="deadline-option-price">+£150</span>
           </button>
           <button type="button" class="deadline-option" onclick="selectDeadline('10days', this)">
-            <span class="deadline-option-label">Within 10 working days / No rush</span>
-            <span class="deadline-option-price">As quoted</span>
+            <span class="deadline-option-label">Within 10 working days</span>
+            <span class="deadline-option-price">+£75</span>
+          </button>
+          <button type="button" class="deadline-option" onclick="selectDeadline('no_rush', this)">
+            <span class="deadline-option-label">No rush (just looking)</span>
+            <span class="deadline-option-price">+£0</span>
           </button>
         </div>
         <input type="hidden" id="deadline" value="">
@@ -1147,8 +1155,9 @@ const reportHours  = {}; // Fetched from survey_types: { survey_type -> report_h
 
 const SURCHARGES = {
   '3days': 200,
-  '5days': 100,
-  '10days': 0
+  '5days': 150,
+  '10days': 75,
+  'no_rush': 0
 };
 
 // Band index: maps tree_count_band to multiplier (1-5)
@@ -1187,9 +1196,10 @@ document.querySelectorAll('.service-option').forEach(opt => {
 });
 
 const DEADLINE_LABELS = {
-  '3days':  'Within 3 working days',
-  '5days':  'Within 5 working days',
-  '10days': 'Within 10 working days / No rush'
+  '3days':   'Within 3 working days',
+  '5days':   'Within 5 working days',
+  '10days':  'Within 10 working days',
+  'no_rush': 'No rush (just looking)'
 };
 
 // ============================================================
@@ -1663,8 +1673,9 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
       const now = new Date();
       const daysToAdd = enquiry.deadline_tier === '3days' ? 3 :
                         enquiry.deadline_tier === '5days' ? 5 :
-                        enquiry.deadline_tier === '7days' ? 7 : 10;
-      const slaDeadline = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
+                        enquiry.deadline_tier === '7days' ? 7 :
+                        enquiry.deadline_tier === 'no_rush' ? null : 10;
+      const slaDeadline = daysToAdd ? new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString() : null;
 
       jobData = {
         enquiry_id: enquiry.id,

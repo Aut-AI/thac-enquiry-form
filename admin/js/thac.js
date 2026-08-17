@@ -65,21 +65,23 @@ function timeAgo(dateStr) {
 
 function getUrgencyTier(deadlineTier) {
   switch (deadlineTier) {
-    case '3days':  return { tier: 'urgent',   label: 'Urgent',    class: 'badge-urgent' };
-    case '5days':  return { tier: 'elevated', label: 'Elevated',  class: 'badge-elevated' };
-    case '7days':  return { tier: 'standard', label: 'Standard',  class: 'badge-standard' };
-    case '10days': return { tier: 'low',      label: 'Low',       class: 'badge-low' };
-    default:       return { tier: 'low',      label: 'Low',       class: 'badge-low' };
+    case '3days':   return { tier: 'urgent',   label: 'Urgent',    class: 'badge-urgent' };
+    case '5days':   return { tier: 'elevated', label: 'Elevated',  class: 'badge-elevated' };
+    case '7days':   return { tier: 'standard', label: 'Standard',  class: 'badge-standard' };
+    case '10days':  return { tier: 'low',      label: 'Low',       class: 'badge-low' };
+    case 'no_rush': return { tier: 'low',      label: 'Low',       class: 'badge-low' };
+    default:        return { tier: 'low',      label: 'Low',       class: 'badge-low' };
   }
 }
 
 function getUrgencyRowClass(deadlineTier) {
   switch (deadlineTier) {
-    case '3days':  return 'urgency-urgent';
-    case '5days':  return 'urgency-elevated';
-    case '7days':  return 'urgency-standard';
-    case '10days': return 'urgency-low';
-    default:       return 'urgency-low';
+    case '3days':   return 'urgency-urgent';
+    case '5days':   return 'urgency-elevated';
+    case '7days':   return 'urgency-standard';
+    case '10days':  return 'urgency-low';
+    case 'no_rush': return 'urgency-low';
+    default:        return 'urgency-low';
   }
 }
 
@@ -121,10 +123,11 @@ function getSurveyLabel(type) {
 // ============================================================
 
 const DEADLINE_LABELS = {
-  '3days':  'Within 3 working days',
-  '5days':  'Within 5 working days',
-  '7days':  'Within 7 working days',
-  '10days': 'Within 10 working days / No rush',
+  '3days':   'Within 3 working days',
+  '5days':   'Within 5 working days',
+  '7days':   'Within 7 working days',
+  '10days':  'Within 10 working days',
+  'no_rush': 'No rush (just looking)',
 };
 
 function getDeadlineLabel(tier) {
