@@ -5,7 +5,10 @@
 
 export const ADMIN_EMAIL = 'nick@aut-ai.com';
 export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-export const FROM_ADDRESS = 'THAC <ciaran@aut-ai.com>'; // ← verified sender
+// aut-ai.com isn't verified in Resend (sending from it 403s), so this uses
+// Resend's shared, always-verified test domain for now. Swap to a real
+// verified custom domain once one's set up in the Resend dashboard.
+export const FROM_ADDRESS = 'THAC <onboarding@resend.dev>';
 
 // ── Base wrapper ────────────────────────────────────────────
 export function emailWrapper(content: string): string {
