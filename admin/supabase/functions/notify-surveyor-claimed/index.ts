@@ -99,7 +99,7 @@ serve(async (req) => {
         The surveyor now has access to full site details, client address, parking/access notes, and uploaded plans.
       </p>
 
-      <a href="https://ciaran-aut-ai.github.io/thac-admin/job-detail.html?id=${record.id}" class="cta-button">
+      <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">
         View Job in CRM →
       </a>
     `);

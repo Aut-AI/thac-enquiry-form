@@ -88,7 +88,7 @@ serve(async (req) => {
         3. Mark job as invoiced — it will drop off the active dashboard
       </p>
 
-      <a href="https://ciaran-aut-ai.github.io/thac-admin/job-detail.html?id=${record.id}" class="cta-button">
+      <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">
         Record Invoice in CRM →
       </a>
     `);

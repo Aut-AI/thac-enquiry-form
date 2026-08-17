@@ -8,7 +8,7 @@ serve(async (req) => {
 
   if (record.status !== 'accepted') return new Response('Not an acceptance', { status: 200 })
 
-  const confirmLink = `https://ciaran-aut-ai.github.io/thac-enquiry-form/enquiry-form/confirm-quote.html?id=${record.id}`
+  const confirmLink = `https://aut-ai.github.io/thac-enquiry-form/confirm-quote.html?id=${record.id}`
 
   const emailHtml = `
     <h2>Your Quote Has Been Accepted</h2>

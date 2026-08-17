@@ -112,7 +112,7 @@ serve(async (req) => {
         </div>
       </div>
 
-      <a href="https://ciaran-aut-ai.github.io/thac-admin/enquiry-detail.html?id=${record.id}" class="cta-button">
+      <a href="https://thac-enquiry-form-production.up.railway.app/admin/enquiry-detail.html?id=${record.id}" class="cta-button">
         View Enquiry in CRM →
       </a>
     `);

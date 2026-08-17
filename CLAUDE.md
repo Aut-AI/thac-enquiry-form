@@ -9,7 +9,7 @@ THAC (Trevor Heaps Arboricultural Consultancy) is a monorepo with two sub-projec
 - **`enquiry-form/`** — Public-facing multi-step quote form (`index.html`), self-contained
 - **`admin/`** — Internal CRM dashboard (multi-page vanilla JS app backed by Supabase)
 
-There is no build step, no bundler, and no package manager. Everything runs as static HTML opened directly in a browser or served from GitHub Pages.
+There is no build step, no bundler, and no package manager. Everything runs as static HTML opened directly in a browser. In production, the whole repo is served as static files by nginx inside a Docker container on Railway (`Dockerfile`, `nginx.conf`, `railway.toml`) — auto-deployed on every push to `main`. `enquiry-form/` is additionally deployed to GitHub Pages (`aut-ai.github.io/thac-enquiry-form/`) via `deploy-pages.yml`, but `admin/` is Railway-only; there is no separate admin repo or mirror.
 
 ## Running Locally
 
@@ -67,7 +67,7 @@ Enquiry (public form) → `enquiries` table (statuses: `new` → `reviewed` → 
 ### Key Production Values
 
 - Supabase project ref: `lemppaqgpntadeylzzwn`
-- Admin CRM URL: `https://ciaran-aut-ai.github.io/thac-admin/`
+- Admin CRM URL: `https://thac-enquiry-form-production.up.railway.app/admin/`
 - Email sending: Resend API via `_shared/email-templates.ts`
 - `ADMIN_EMAIL` in `email-templates.ts` is currently a test address — swap to Trevor's when going live
 - `FROM_ADDRESS` uses Resend's shared onboarding domain — swap to a verified custom domain for production

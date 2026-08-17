@@ -19,7 +19,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Where invite/recovery email links land -- set-password.html reads the
 // session token Supabase puts in the URL fragment and lets the user choose
 // a password, since inviteUserByEmail() deliberately never generates one.
-const SET_PASSWORD_URL = "https://ciaran-aut-ai.github.io/thac-admin/set-password.html";
+const SET_PASSWORD_URL = "https://thac-enquiry-form-production.up.railway.app/admin/set-password.html";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

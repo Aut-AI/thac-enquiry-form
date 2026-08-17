@@ -45,7 +45,7 @@ Public-facing enquiry form for submitting THAC requests.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Ciaran-aut-ai/thac-enquiry-form.git
+   git clone https://github.com/Aut-AI/thac-enquiry-form.git
    cd thac-enquiry-form
    ```
 
@@ -117,18 +117,11 @@ Navigate to `enquiry-form/` and open `index.html` in a browser.
 
 ## Deployment
 
-GitHub Actions workflows are configured in `.github/workflows/` for automated deployments.
+- **`enquiry-form/`** deploys straight to GitHub Pages from this repo (`deploy-pages.yml`, in `.github/workflows/`) on every push to `main` — live at `aut-ai.github.io/thac-enquiry-form/`.
+- **`admin/`** is served by Railway, not GitHub Pages. `Dockerfile` builds an nginx image that serves the entire repo as static files (`railway.toml` points Railway at that Dockerfile); Railway is connected directly to this repo (`Aut-AI/thac-enquiry-form`) and redeploys automatically on every push to `main`. Live at `thac-enquiry-form-production.up.railway.app/admin/`. There is no separate admin repo and nothing to keep in sync — this repo is the only source.
+- **Edge Functions** (`admin/supabase/functions/`) deploy from this repo directly to Supabase (`deploy-functions.yml`).
 
-- **`enquiry-form/`** deploys straight to GitHub Pages from this repo (`deploy-pages.yml`) on every push to `main`.
-- **`admin/`** is *not* served from this repo. The live CRM at `ciaran-aut-ai.github.io/thac-admin` is GitHub Pages on a separate repo, `Ciaran-aut-ai/thac-admin`. `sync-admin.yml` mirrors the Pages-served part of `admin/` (`*.html`, `css/`, `js/`) into that repo on every push to `main` that touches `admin/`.
-- **Edge Functions** (`admin/supabase/functions/`) deploy from this repo directly to Supabase (`deploy-functions.yml`) — unrelated to which repo serves the admin pages.
-
-`sync-admin.yml` needs a `THAC_ADMIN_SYNC_TOKEN` repo secret: a token with `contents: write` on `Ciaran-aut-ai/thac-admin` (this repo's own `GITHUB_TOKEN` has no access to a different repo). To set it up:
-
-1. Someone with write access to `Ciaran-aut-ai/thac-admin` generates a token scoped to that repo only (GitHub → Settings → Developer settings → Fine-grained tokens → Repository access: `Ciaran-aut-ai/thac-admin` → Permissions: Contents: Read and write).
-2. Set it as a secret on *this* repo (not the target repo): `gh secret set THAC_ADMIN_SYNC_TOKEN --repo Aut-AI/thac-enquiry-form`, or via GitHub → this repo → Settings → Secrets and variables → Actions.
-
-Until that secret exists, `sync-admin.yml` runs on every relevant push but fails at the "Checkout target" step — admin/ changes still need a manual copy-and-push to `Ciaran-aut-ai/thac-admin` in the meantime.
+Note: because the Dockerfile copies the whole repo (`COPY . /usr/share/nginx/html`) with no `.dockerignore`, everything in the repo is publicly reachable over HTTP at its file path on the Railway domain — including `admin/supabase/migrations/*.sql` and the edge function source under `admin/supabase/functions/`. Nothing secret is committed (Supabase creds are the public anon key by design), but this is more surface area than intended and worth tightening with a `.dockerignore` at some point.
 
 ## Contributing
 

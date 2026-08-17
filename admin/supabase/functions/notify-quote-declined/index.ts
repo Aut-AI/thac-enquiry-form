@@ -9,7 +9,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
-const CRM_URL = 'https://ciaran-aut-ai.github.io/thac-admin';
+const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
 
 serve(async (req) => {
   try {
