@@ -55,7 +55,10 @@ function MainTabs() {
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [surveyorStatus, setSurveyorStatus] = useState<'pending' | 'active' | null>(null);
+  // null means "not checked yet for the current session" (still fetching);
+  // 'none' means "checked, no surveyors row found" -- these used to share
+  // the same null value, which is what caused the CompleteProfile flash.
+  const [surveyorStatus, setSurveyorStatus] = useState<'pending' | 'active' | 'none' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -113,6 +116,12 @@ export default function App() {
       return;
     }
 
+    // Reset to "checking" for the new session rather than leaving whatever
+    // status the previous session resolved to -- otherwise a stale 'active'
+    // could briefly gate the loading check below on a session that hasn't
+    // actually been checked yet.
+    setSurveyorStatus(null);
+
     const fetchSurveyorStatus = async () => {
       try {
         const { data, error } = await supabase
@@ -123,21 +132,29 @@ export default function App() {
 
         if (error) {
           console.log('No surveyor profile found:', error.message);
-          setSurveyorStatus(null);
+          setSurveyorStatus('none');
           return;
         }
 
         setSurveyorStatus(data?.status as 'pending' | 'active');
       } catch (err) {
         console.error('Error fetching surveyor status:', err);
-        setSurveyorStatus(null);
+        setSurveyorStatus('none');
       }
     };
 
     fetchSurveyorStatus();
   }, [session]);
 
-  if (loading) return (
+  // While a session exists but its surveyor status hasn't been fetched yet
+  // (right after login, or on launch with a restored session), surveyorStatus
+  // is still null -- the same value it holds when there's genuinely no
+  // surveyor profile. Without this check that ambiguity fell through to the
+  // CompleteProfile screen for a frame before the real status arrived and
+  // flipped it to Main, which looked like a flash to the profile screen
+  // before landing on Jobs. Keep showing the loading spinner instead until
+  // the fetch actually resolves.
+  if (loading || (session && surveyorStatus === null)) return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
       <ActivityIndicator size="large" color="#1a3c2e" />
     </View>
@@ -168,12 +185,12 @@ export default function App() {
               <Stack.Screen name="Insurance" component={InsuranceScreen} options={{ title: 'Insurance & Compliance' }} />
               <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
             </>
-          // Session exists but no linked surveyors row was found. This is
-          // never a case for RegisterScreen -- it calls auth.signUp(), which
-          // always fails with Supabase's "email already registered" response
-          // for a session that's already authenticated, discarding whatever
-          // the user just typed. Collect the profile directly against the
-          // existing session instead.
+          // surveyorStatus === 'none': session exists but no linked surveyors
+          // row was found. This is never a case for RegisterScreen -- it
+          // calls auth.signUp(), which always fails with Supabase's "email
+          // already registered" response for a session that's already
+          // authenticated, discarding whatever the user just typed. Collect
+          // the profile directly against the existing session instead.
           : <Stack.Screen name="CompleteProfile" options={{ headerShown: false }}>
               {() => <CompleteProfileScreen session={session} onComplete={() => setSurveyorStatus('pending')} />}
             </Stack.Screen>
