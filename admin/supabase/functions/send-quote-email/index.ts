@@ -20,7 +20,7 @@ serve(async (req) => {
     })
   }
 
-  const { enquiry_id, contact_email, contact_name, on_behalf_of_client_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode } = await req.json()
+  const { enquiry_id, contact_email, contact_name, introducer_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode } = await req.json()
 
   if (!contact_email || !quoted_price) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -72,9 +72,9 @@ serve(async (req) => {
     </p>
   `
 
-  // Submitted on behalf of someone else -- the client gets a copy of the
-  // same quote alongside the rep, per contact_email above.
-  const recipients = [...new Set([contact_email, on_behalf_of_client_email].filter(Boolean))]
+  // contact_email is always the client. When an introducer (rep/broker/
+  // agent) submitted on their behalf, they get a copy of the same quote too.
+  const recipients = [...new Set([contact_email, introducer_email].filter(Boolean))]
 
   try {
     await sendEmail(recipients, `Your Tree Survey Quote — ${job_number || 'THAC'} | ${price}`, emailHtml)

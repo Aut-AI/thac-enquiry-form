@@ -442,11 +442,11 @@ function renderContactDetails() {
 
   const reportAddresseeName = job?.report_addressee_name;
 
-  const onBehalfOfName  = enquiry?.on_behalf_of_client_name;
-  const onBehalfOfEmail = enquiry?.on_behalf_of_client_email;
-  const onBehalfOfPhone = enquiry?.on_behalf_of_client_phone;
+  const introducerName    = enquiry?.introducer_name;
+  const introducerEmail   = enquiry?.introducer_email;
+  const introducerCompany = enquiry?.introducer_company;
 
-  if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !onBehalfOfName) return '';
+  if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName) return '';
 
   return `
     <div class="card">
@@ -478,24 +478,24 @@ function renderContactDetails() {
         ` : ''}
       </div>
 
-      ${onBehalfOfName ? `
+      ${introducerName ? `
         <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Submitted On Behalf Of</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Introduced By</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Client Name</div>
-              <div style="font-size:13px;color:var(--text);">${onBehalfOfName}</div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Name</div>
+              <div style="font-size:13px;color:var(--text);">${introducerName}</div>
             </div>
-            ${onBehalfOfEmail ? `
+            ${introducerEmail ? `
               <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Client Email</div>
-                <div style="font-size:13px;"><a href="mailto:${onBehalfOfEmail}">${onBehalfOfEmail}</a></div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
+                <div style="font-size:13px;"><a href="mailto:${introducerEmail}">${introducerEmail}</a></div>
               </div>
             ` : ''}
-            ${onBehalfOfPhone ? `
+            ${introducerCompany ? `
               <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Client Phone</div>
-                <div style="font-size:13px;"><a href="tel:${onBehalfOfPhone}">${onBehalfOfPhone}</a></div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Company</div>
+                <div style="font-size:13px;color:var(--text);">${introducerCompany}</div>
               </div>
             ` : ''}
           </div>

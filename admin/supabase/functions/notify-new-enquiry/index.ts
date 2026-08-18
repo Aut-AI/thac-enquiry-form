@@ -55,7 +55,7 @@ serve(async (req) => {
           <span class="detail-value">${record.job_number || 'Pending assignment'}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">${record.on_behalf_of_client_name ? 'Submitted By' : 'Contact Name'}</span>
+          <span class="detail-label">Contact Name</span>
           <span class="detail-value">${record.contact_name}</span>
         </div>
         <div class="detail-row">
@@ -72,20 +72,20 @@ serve(async (req) => {
           <span class="detail-label">Company</span>
           <span class="detail-value">${record.company}</span>
         </div>` : ''}
-        ${record.on_behalf_of_client_name ? `
+        ${record.introducer_name ? `
         <div class="detail-row">
-          <span class="detail-label">For (Client)</span>
-          <span class="detail-value">${record.on_behalf_of_client_name}</span>
+          <span class="detail-label">Introduced By</span>
+          <span class="detail-value">${record.introducer_name}</span>
         </div>` : ''}
-        ${record.on_behalf_of_client_email ? `
+        ${record.introducer_email ? `
         <div class="detail-row">
-          <span class="detail-label">Client Email</span>
-          <span class="detail-value">${record.on_behalf_of_client_email}</span>
+          <span class="detail-label">Introducer Email</span>
+          <span class="detail-value">${record.introducer_email}</span>
         </div>` : ''}
-        ${record.on_behalf_of_client_phone ? `
+        ${record.introducer_company ? `
         <div class="detail-row">
-          <span class="detail-label">Client Phone</span>
-          <span class="detail-value">${record.on_behalf_of_client_phone}</span>
+          <span class="detail-label">Introducer Company</span>
+          <span class="detail-value">${record.introducer_company}</span>
         </div>` : ''}
         <div class="detail-row">
           <span class="detail-label">Type</span>
