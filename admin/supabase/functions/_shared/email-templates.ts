@@ -7,6 +7,10 @@ export const ADMIN_EMAIL = 'nick@aut-ai.com';
 export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 // sends.aut-ai.com is verified in Resend (SPF/DKIM added via Squarespace DNS).
 export const FROM_ADDRESS = 'THAC <quotes@sends.aut-ai.com>';
+// sends.aut-ai.com is a send-only subdomain with no real mailbox behind it --
+// this is where a customer's "Reply" actually goes instead, so replies land
+// somewhere real rather than bouncing or vanishing.
+export const REPLY_TO_ADDRESS = 'nick@aut-ai.com';
 
 // ── Base wrapper ────────────────────────────────────────────
 export function emailWrapper(content: string): string {
@@ -66,6 +70,7 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     body: JSON.stringify({
       from: FROM_ADDRESS,
       to: Array.isArray(to) ? to : [to],
+      reply_to: REPLY_TO_ADDRESS,
       subject,
       html,
     }),
