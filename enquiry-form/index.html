@@ -212,6 +212,30 @@
     margin-left: 2px;
   }
 
+  .on-behalf-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    margin-bottom: 0;
+    font-weight: 400;
+  }
+
+  .on-behalf-toggle input[type="checkbox"] {
+    margin-top: 2px;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    accent-color: var(--green-mid);
+    cursor: pointer;
+  }
+
+  .on-behalf-toggle span {
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
   input[type="text"],
   input[type="email"],
   input[type="tel"],
@@ -1001,6 +1025,34 @@
         <input type="text" id="newCompany" placeholder="Optional">
       </div>
 
+      <div class="field-group">
+        <label class="on-behalf-toggle">
+          <input type="checkbox" id="onBehalfOfToggle" onchange="toggleOnBehalfOf()">
+          <span>I'm submitting this on behalf of someone else (e.g. as an agent, broker, or representative)</span>
+        </label>
+      </div>
+
+      <div id="onBehalfOfFields" style="display:none">
+        <div class="card-subtitle" style="margin-top:-4px;">Who is this survey for? The details above are yours — we'll use these to get in touch about the actual property.</div>
+
+        <div class="field-group">
+          <label>Client Full Name <span class="required">*</span></label>
+          <input type="text" id="clientName" placeholder="Your client's full name">
+          <div class="field-error" id="clientNameError">Please enter the client's name.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Client Email Address</label>
+          <input type="email" id="clientEmail" placeholder="client@example.com">
+          <div class="field-hint">Optional — we'll copy them on the quote if provided.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Client Phone Number</label>
+          <input type="tel" id="clientPhone" placeholder="07700 000000">
+        </div>
+      </div>
+
       <div class="form-nav">
         <button class="btn btn-secondary" onclick="goTo('step-3-new')">← Back</button>
         <button class="btn btn-submit" onclick="submitNewEnquiry()" id="submitNewBtn">
@@ -1418,6 +1470,17 @@ function selectAmendDeadline(value, el) {
   hideError('amendDeadlineError', 'amendDeadline');
 }
 
+function toggleOnBehalfOf() {
+  const on = document.getElementById('onBehalfOfToggle').checked;
+  document.getElementById('onBehalfOfFields').style.display = on ? 'block' : 'none';
+  if (!on) {
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('clientPhone').value = '';
+    hideError('clientNameError', 'clientName');
+  }
+}
+
 // ============================================================
 // QUOTE CALCULATION
 // ============================================================
@@ -1541,6 +1604,12 @@ async function submitNewEnquiry() {
   else { hideError('newNameError', 'newName'); }
   if (!email || !email.includes('@')) { showError('newEmailError', 'newEmail'); valid = false; }
   else { hideError('newEmailError', 'newEmail'); }
+
+  const onBehalfOf = document.getElementById('onBehalfOfToggle').checked;
+  const clientName = document.getElementById('clientName').value.trim();
+  if (onBehalfOf && !clientName) { showError('clientNameError', 'clientName'); valid = false; }
+  else { hideError('clientNameError', 'clientName'); }
+
   if (!valid) return;
 
   const btn = document.getElementById('submitNewBtn');
@@ -1574,6 +1643,11 @@ async function submitNewEnquiry() {
     contact_email: email,
     contact_phone: document.getElementById('newPhone').value.trim(),
     company: document.getElementById('newCompany').value.trim(),
+    ...(onBehalfOf ? {
+      on_behalf_of_client_name: clientName,
+      on_behalf_of_client_email: document.getElementById('clientEmail').value.trim() || null,
+      on_behalf_of_client_phone: document.getElementById('clientPhone').value.trim() || null,
+    } : {}),
     quoted_price,
     // Only sent in travel_cost_areas mode — the enquiries.travel_cost column
     // arrives with the same migration as that mode, so this can't hit a
@@ -1732,6 +1806,8 @@ async function sendQuoteEmailAuto(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
         enquiry_id: enquiry.id,
         contact_email: enquiry.contact_email,
         contact_name: enquiry.contact_name,
+        on_behalf_of_client_name: enquiry.on_behalf_of_client_name,
+        on_behalf_of_client_email: enquiry.on_behalf_of_client_email,
         quoted_price: enquiry.quoted_price,
         deadline_tier: enquiry.deadline_tier,
         survey_type: enquiry.survey_type,

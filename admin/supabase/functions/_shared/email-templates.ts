@@ -58,7 +58,7 @@ export function emailWrapper(content: string): string {
 }
 
 // ── Send via Resend ─────────────────────────────────────────
-export async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(to: string | string[], subject: string, html: string) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -67,7 +67,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     },
     body: JSON.stringify({
       from: FROM_ADDRESS,
-      to: [to],
+      to: Array.isArray(to) ? to : [to],
       subject,
       html,
     }),

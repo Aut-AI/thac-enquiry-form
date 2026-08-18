@@ -55,7 +55,7 @@ serve(async (req) => {
           <span class="detail-value">${record.job_number || 'Pending assignment'}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Contact Name</span>
+          <span class="detail-label">${record.on_behalf_of_client_name ? 'Submitted By' : 'Contact Name'}</span>
           <span class="detail-value">${record.contact_name}</span>
         </div>
         <div class="detail-row">
@@ -71,6 +71,21 @@ serve(async (req) => {
         <div class="detail-row">
           <span class="detail-label">Company</span>
           <span class="detail-value">${record.company}</span>
+        </div>` : ''}
+        ${record.on_behalf_of_client_name ? `
+        <div class="detail-row">
+          <span class="detail-label">For (Client)</span>
+          <span class="detail-value">${record.on_behalf_of_client_name}</span>
+        </div>` : ''}
+        ${record.on_behalf_of_client_email ? `
+        <div class="detail-row">
+          <span class="detail-label">Client Email</span>
+          <span class="detail-value">${record.on_behalf_of_client_email}</span>
+        </div>` : ''}
+        ${record.on_behalf_of_client_phone ? `
+        <div class="detail-row">
+          <span class="detail-label">Client Phone</span>
+          <span class="detail-value">${record.on_behalf_of_client_phone}</span>
         </div>` : ''}
         <div class="detail-row">
           <span class="detail-label">Type</span>

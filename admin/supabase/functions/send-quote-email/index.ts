@@ -20,7 +20,7 @@ serve(async (req) => {
     })
   }
 
-  const { enquiry_id, contact_email, contact_name, quoted_price, deadline_tier, survey_type, job_number, site_postcode } = await req.json()
+  const { enquiry_id, contact_email, contact_name, on_behalf_of_client_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode } = await req.json()
 
   if (!contact_email || !quoted_price) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -72,8 +72,12 @@ serve(async (req) => {
     </p>
   `
 
+  // Submitted on behalf of someone else -- the client gets a copy of the
+  // same quote alongside the rep, per contact_email above.
+  const recipients = [...new Set([contact_email, on_behalf_of_client_email].filter(Boolean))]
+
   try {
-    await sendEmail(contact_email, `Your Tree Survey Quote — ${job_number || 'THAC'} | ${price}`, emailHtml)
+    await sendEmail(recipients, `Your Tree Survey Quote — ${job_number || 'THAC'} | ${price}`, emailHtml)
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
