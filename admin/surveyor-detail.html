@@ -354,8 +354,8 @@ function renderView() {
               </button>
             </div>
             ${surveyor.user_id ? `
-            <button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="unlinkUserId()">
-              Remove app access
+            <button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="removeSurveyor()">
+              Remove Surveyor
             </button>` : ''}
           </div>
         </div>
@@ -541,12 +541,22 @@ async function linkUserId() {
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
-async function unlinkUserId() {
-  if (!confirm('Remove app access? The surveyor will no longer be able to log in.')) return;
+async function removeSurveyor() {
+  // Deactivating (is_active: false) is what actually triggers the DB-side
+  // cleanup -- sync_outcodes_on_activation_change deletes this surveyor's
+  // surveyor_service_outcodes rows, which in turn recomputes
+  // postcode_areas.is_covered per affected area via an EXISTS check against
+  // every other surveyor's coverage, so overlapping areas someone else still
+  // covers are left alone. Clearing user_id in the same update is what
+  // actually blocks login -- doing only one or the other is exactly the gap
+  // that let a surveyor keep counting as coverage after "removal."
+  if (!confirm(`Remove ${surveyor.full_name || 'this surveyor'}? They'll no longer be able to log in, and their postcode coverage will be cleared (this won't affect any other surveyor covering the same areas).`)) return;
   try {
-    await dbUpdate('surveyors', `id=eq.${surveyorId}`, { user_id: null });
+    await dbUpdate('surveyors', `id=eq.${surveyorId}`, { user_id: null, is_active: false, status: 'paused' });
     surveyor.user_id = null;
-    showToast('App access removed');
+    surveyor.is_active = false;
+    surveyor.status = 'paused';
+    showToast('Surveyor removed');
     renderView();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
