@@ -429,6 +429,13 @@
     flex-shrink: 0;
   }
 
+  .price-option-vat {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    color: #000000;
+  }
+
   /* Branch selector */
   .branch-cards {
     display: grid;
@@ -938,19 +945,19 @@
         <div class="price-options" id="priceOptions">
           <button type="button" class="price-option" onclick="selectDeadline('no_rush', this)">
             <span class="price-option-label">No rush</span>
-            <span class="price-option-amount"><span id="priceAmount_no_rush">—</span></span>
+            <span class="price-option-amount"><span id="priceAmount_no_rush">—</span><span class="price-option-vat" id="priceVat_no_rush"> + VAT</span></span>
           </button>
           <button type="button" class="price-option" onclick="selectDeadline('10days', this)">
             <span class="price-option-label">Within 10 working days</span>
-            <span class="price-option-amount"><span id="priceAmount_10days">—</span></span>
+            <span class="price-option-amount"><span id="priceAmount_10days">—</span><span class="price-option-vat" id="priceVat_10days"> + VAT</span></span>
           </button>
           <button type="button" class="price-option" onclick="selectDeadline('5days', this)">
             <span class="price-option-label">Within 5 working days</span>
-            <span class="price-option-amount"><span id="priceAmount_5days">—</span></span>
+            <span class="price-option-amount"><span id="priceAmount_5days">—</span><span class="price-option-vat" id="priceVat_5days"> + VAT</span></span>
           </button>
           <button type="button" class="price-option" onclick="selectDeadline('3days', this)">
             <span class="price-option-label">Within 3 working days</span>
-            <span class="price-option-amount"><span id="priceAmount_3days">—</span></span>
+            <span class="price-option-amount"><span id="priceAmount_3days">—</span><span class="price-option-vat" id="priceVat_3days"> + VAT</span></span>
           </button>
         </div>
         <input type="hidden" id="deadline" value="">
@@ -1520,6 +1527,7 @@ function goToQuote() {
     // No computed price for 100+ trees — Trevor quotes these manually.
     DEADLINE_TIERS.forEach(tier => {
       document.getElementById('priceAmount_' + tier).textContent = 'Custom quote';
+      document.getElementById('priceVat_' + tier).style.display = 'none';
     });
   } else {
     document.getElementById('standardQuote').style.display = 'block';
@@ -1531,6 +1539,7 @@ function goToQuote() {
     DEADLINE_TIERS.forEach(tier => {
       const total = base + travel + (SURCHARGES[tier] || 0);
       document.getElementById('priceAmount_' + tier).textContent = '£' + total;
+      document.getElementById('priceVat_' + tier).style.display = '';
     });
 
     const noteEl = document.getElementById('qTravelNote');
