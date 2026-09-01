@@ -540,7 +540,7 @@ function renderContactDetails() {
 
 function renderSurveyAndSiteDetails() {
   const surveyType = enquiry?.survey_type || job?.survey_type || job?.job_type;
-  const treeCount = enquiry?.tree_count_band;
+  const treeCount = job?.tree_count_band || enquiry?.tree_count_band;
   const deadlineTier = job?.deadline_tier || enquiry?.deadline_tier;
   const addressParts = [enquiry?.site_street, enquiry?.site_city, enquiry?.site_postcode].filter(Boolean);
   const address = addressParts.join('<br>');
@@ -564,12 +564,38 @@ function renderSurveyAndSiteDetails() {
             <div class="field-value">${getSurveyLabel(surveyType)}</div>
           </div>
         ` : ''}
-        ${treeCount ? `
-          <div class="detail-field">
+        <div class="detail-field" style="grid-column:1/-1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
             <label>Tree Count Band</label>
-            <div class="field-value">${treeCount} trees</div>
+            <button class="btn btn-secondary btn-sm" id="editTreeCountBtn" onclick="toggleTreeCountEditor()">${treeCount ? 'Edit' : 'Set'}</button>
           </div>
-        ` : ''}
+          <div id="treeCountView">
+            <div class="field-value">${treeCount ? treeCount + ' trees' : '—'}</div>
+          </div>
+          <div id="treeCountEdit" style="display:none;margin-top:8px;">
+            <div class="form-group">
+              <label>Vegetation area (m²) <span style="font-weight:400;color:var(--text-muted);">— optional, picks the band below for you</span></label>
+              <input type="number" class="form-control" id="vegArea" min="0" step="1" placeholder="e.g. 2500" oninput="calcTreeBandFromArea()">
+              <div id="vegAreaHint" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+            </div>
+            <div class="form-group">
+              <label>Tree count band</label>
+              <select class="form-control" id="treeBandSelect">
+                <option value="">Select...</option>
+                <option value="1-20" ${treeCount === '1-20' ? 'selected' : ''}>1 – 20 trees</option>
+                <option value="21-40" ${treeCount === '21-40' ? 'selected' : ''}>21 – 40 trees</option>
+                <option value="41-60" ${treeCount === '41-60' ? 'selected' : ''}>41 – 60 trees</option>
+                <option value="61-80" ${treeCount === '61-80' ? 'selected' : ''}>61 – 80 trees</option>
+                <option value="81-100" ${treeCount === '81-100' ? 'selected' : ''}>81 – 100 trees</option>
+                <option value="100+" ${treeCount === '100+' ? 'selected' : ''}>100+ trees (custom quote)</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-secondary" onclick="toggleTreeCountEditor()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveTreeCountBand()">Save</button>
+            </div>
+          </div>
+        </div>
         ${deadlineTier ? `
           <div class="detail-field">
             <label>Required Deadline</label>
@@ -1868,6 +1894,64 @@ async function saveDocs() {
 // ============================================================
 // BILLING CONTACT
 // ============================================================
+
+// ============================================================
+// TREE COUNT BAND
+// ============================================================
+
+// Trevor's rule of thumb: average tree canopy footprint is 40sqm, so
+// vegetation area / 40 gives an estimated tree count to pick the band from.
+const TREE_FOOTPRINT_SQM = 40;
+
+function bandFromTreeCount(n) {
+  if (n <= 20) return '1-20';
+  if (n <= 40) return '21-40';
+  if (n <= 60) return '41-60';
+  if (n <= 80) return '61-80';
+  if (n <= 100) return '81-100';
+  return '100+';
+}
+
+function calcTreeBandFromArea() {
+  const area = parseFloat(document.getElementById('vegArea').value);
+  const hint = document.getElementById('vegAreaHint');
+  if (!area || area <= 0) { hint.textContent = ''; return; }
+  const trees = area / TREE_FOOTPRINT_SQM;
+  const band = bandFromTreeCount(trees);
+  document.getElementById('treeBandSelect').value = band;
+  const treesLabel = Number.isInteger(trees) ? trees : trees.toFixed(1);
+  hint.textContent = `≈ ${treesLabel} trees → ${band} band`;
+}
+
+function toggleTreeCountEditor() {
+  const view = document.getElementById('treeCountView');
+  const edit = document.getElementById('treeCountEdit');
+  const btn  = document.getElementById('editTreeCountBtn');
+  const isEditing = edit.style.display !== 'none';
+  view.style.display = isEditing ? '' : 'none';
+  edit.style.display = isEditing ? 'none' : '';
+  btn.textContent = isEditing ? (job.tree_count_band || enquiry?.tree_count_band ? 'Edit' : 'Set') : 'Cancel';
+}
+
+async function saveTreeCountBand() {
+  const tree_count_band = document.getElementById('treeBandSelect').value;
+  if (!tree_count_band) {
+    showToast('Select a tree count band', 'error');
+    return;
+  }
+  try {
+    await dbUpdate('jobs', `id=eq.${jobId}`, { tree_count_band });
+    if (job.enquiry_id) {
+      await dbUpdate('enquiries', `id=eq.${job.enquiry_id}`, { tree_count_band });
+    }
+    job.tree_count_band = tree_count_band;
+    if (enquiry) enquiry.tree_count_band = tree_count_band;
+    showToast('Tree count band updated');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
 
 // ============================================================
 // FINANCIALS EDIT
