@@ -446,7 +446,7 @@ function renderContactDetails() {
   const introducerEmail   = enquiry?.introducer_email;
   const introducerCompany = enquiry?.introducer_company;
 
-  if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName) return '';
+  if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
 
   return `
     <div class="card">
@@ -478,14 +478,16 @@ function renderContactDetails() {
         ` : ''}
       </div>
 
-      ${introducerName ? `
+      ${(introducerName || introducerEmail) ? `
         <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Introduced By</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Also Copied On Quote</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            ${introducerName ? `
             <div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Name</div>
               <div style="font-size:13px;color:var(--text);">${introducerName}</div>
             </div>
+            ` : ''}
             ${introducerEmail ? `
               <div>
                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>

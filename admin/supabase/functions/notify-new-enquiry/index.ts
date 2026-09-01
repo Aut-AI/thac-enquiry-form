@@ -28,6 +28,7 @@ const DEADLINE_LABELS: Record<string, string> = {
   '5days':   'Within 5 working days',
   '7days':   'Within 7 working days',
   '10days':  'Within 10 working days',
+  '15days':  'Within 15 working days or more',
   'no_rush': 'No rush (just looking)',
 };
 
@@ -79,7 +80,7 @@ serve(async (req) => {
         </div>` : ''}
         ${record.introducer_email ? `
         <div class="detail-row">
-          <span class="detail-label">Introducer Email</span>
+          <span class="detail-label">Also Copied On Quote</span>
           <span class="detail-value">${record.introducer_email}</span>
         </div>` : ''}
         ${record.introducer_company ? `

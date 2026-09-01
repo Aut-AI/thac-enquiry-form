@@ -881,6 +881,10 @@
             <span class="deadline-option-label">Within 10 working days</span>
             <span class="deadline-option-price">+£75</span>
           </button>
+          <button type="button" class="deadline-option" onclick="selectAmendDeadline('15days', this)">
+            <span class="deadline-option-label">Within 15 working days or more</span>
+            <span class="deadline-option-price">+£0</span>
+          </button>
           <button type="button" class="deadline-option" onclick="selectAmendDeadline('no_rush', this)">
             <span class="deadline-option-label">No rush (just looking)</span>
             <span class="deadline-option-price">+£0</span>
@@ -947,6 +951,10 @@
             <span class="price-option-label">No rush</span>
             <span class="price-option-amount"><span id="priceAmount_no_rush">—</span><span class="price-option-vat" id="priceVat_no_rush"> + VAT</span></span>
           </button>
+          <button type="button" class="price-option" onclick="selectDeadline('15days', this)">
+            <span class="price-option-label">Within 15 working days or more</span>
+            <span class="price-option-amount"><span id="priceAmount_15days">—</span><span class="price-option-vat" id="priceVat_15days"> + VAT</span></span>
+          </button>
           <button type="button" class="price-option" onclick="selectDeadline('10days', this)">
             <span class="price-option-label">Within 10 working days</span>
             <span class="price-option-amount"><span id="priceAmount_10days">—</span><span class="price-option-vat" id="priceVat_10days"> + VAT</span></span>
@@ -987,7 +995,7 @@
     <!-- STEP 4: Contact Details (New) -->
     <div class="step-panel" id="step-4-new">
       <div class="card-title">Your Contact Details</div>
-      <div class="card-subtitle">We'll send your quote confirmation to this email address.</div>
+      <div class="card-subtitle">We'll send your quote confirmation to the email address you provide below. Please make sure to check your spam folder.</div>
 
       <div class="field-group">
         <label>Site Postcode</label>
@@ -1011,12 +1019,12 @@
 
       <div class="field-group">
         <label>Full Name <span class="required">*</span></label>
-        <input type="text" id="newName" placeholder="Your full name">
+        <input type="text" id="newName" placeholder="Enquirer's name">
         <div class="field-error" id="newNameError">Please enter your name.</div>
       </div>
 
       <div class="field-group">
-        <label>Email Address <span class="required">*</span></label>
+        <label>Enquirer's Email Address <span class="required">*</span></label>
         <input type="email" id="newEmail" placeholder="you@example.com">
         <div class="field-error" id="newEmailError">Please enter a valid email address.</div>
       </div>
@@ -1035,28 +1043,16 @@
       <div class="field-group">
         <label class="on-behalf-toggle">
           <input type="checkbox" id="onBehalfOfToggle" onchange="toggleOnBehalfOf()">
-          <span>I'm an agent, broker, or representative submitting this on behalf of the client above</span>
+          <span>If you are enquiring on behalf of your client, would you like to add their email address so they can be sent a copy of the quote?</span>
         </label>
       </div>
 
       <div id="onBehalfOfFields" style="display:none">
-        <div class="card-subtitle" style="margin-top:-4px;">Your details as the introducer — we'll copy you on the quote alongside the client.</div>
-
         <div class="field-group">
-          <label>Your Full Name <span class="required">*</span></label>
-          <input type="text" id="introducerName" placeholder="Your full name">
-          <div class="field-error" id="introducerNameError">Please enter your name.</div>
-        </div>
-
-        <div class="field-group">
-          <label>Your Email Address <span class="required">*</span></label>
-          <input type="email" id="introducerEmail" placeholder="you@example.com">
+          <label>Client's Email Address <span class="required">*</span></label>
+          <input type="email" id="introducerEmail" placeholder="client@example.com">
+          <div class="field-hint">We'll send them a copy of the quote too.</div>
           <div class="field-error" id="introducerEmailError">Please enter a valid email address.</div>
-        </div>
-
-        <div class="field-group">
-          <label>Agency / Company</label>
-          <input type="text" id="introducerCompany" placeholder="Optional">
         </div>
       </div>
 
@@ -1253,6 +1249,7 @@ const SURCHARGES = {
   '3days': 200,
   '5days': 150,
   '10days': 75,
+  '15days': 0,
   'no_rush': 0
 };
 
@@ -1295,6 +1292,7 @@ const DEADLINE_LABELS = {
   '3days':   'Within 3 working days',
   '5days':   'Within 5 working days',
   '10days':  'Within 10 working days',
+  '15days':  'Within 15 working days or more',
   'no_rush': 'No rush (just looking)'
 };
 
@@ -1481,10 +1479,7 @@ function toggleOnBehalfOf() {
   const on = document.getElementById('onBehalfOfToggle').checked;
   document.getElementById('onBehalfOfFields').style.display = on ? 'block' : 'none';
   if (!on) {
-    document.getElementById('introducerName').value = '';
     document.getElementById('introducerEmail').value = '';
-    document.getElementById('introducerCompany').value = '';
-    hideError('introducerNameError', 'introducerName');
     hideError('introducerEmailError', 'introducerEmail');
   }
 }
@@ -1517,7 +1512,7 @@ function goToQuote() {
   hideError('deadlineError', 'deadline');
   document.querySelectorAll('#priceOptions .price-option').forEach(o => o.classList.remove('selected'));
 
-  const DEADLINE_TIERS = ['no_rush', '10days', '5days', '3days'];
+  const DEADLINE_TIERS = ['no_rush', '15days', '10days', '5days', '3days'];
 
   // Build quote preview
   if (treeCount === '100+') {
@@ -1616,10 +1611,7 @@ async function submitNewEnquiry() {
   else { hideError('newEmailError', 'newEmail'); }
 
   const onBehalfOf = document.getElementById('onBehalfOfToggle').checked;
-  const introducerName = document.getElementById('introducerName').value.trim();
   const introducerEmail = document.getElementById('introducerEmail').value.trim();
-  if (onBehalfOf && !introducerName) { showError('introducerNameError', 'introducerName'); valid = false; }
-  else { hideError('introducerNameError', 'introducerName'); }
   if (onBehalfOf && (!introducerEmail || !introducerEmail.includes('@'))) { showError('introducerEmailError', 'introducerEmail'); valid = false; }
   else { hideError('introducerEmailError', 'introducerEmail'); }
 
@@ -1657,9 +1649,7 @@ async function submitNewEnquiry() {
     contact_phone: document.getElementById('newPhone').value.trim(),
     company: document.getElementById('newCompany').value.trim(),
     ...(onBehalfOf ? {
-      introducer_name: introducerName,
       introducer_email: introducerEmail,
-      introducer_company: document.getElementById('introducerCompany').value.trim() || null,
     } : {}),
     quoted_price,
     // Only sent in travel_cost_areas mode — the enquiries.travel_cost column
@@ -1765,6 +1755,7 @@ async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
       const daysToAdd = enquiry.deadline_tier === '3days' ? 3 :
                         enquiry.deadline_tier === '5days' ? 5 :
                         enquiry.deadline_tier === '7days' ? 7 :
+                        enquiry.deadline_tier === '15days' ? 15 :
                         enquiry.deadline_tier === 'no_rush' ? null : 10;
       const slaDeadline = daysToAdd ? new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString() : null;
 
