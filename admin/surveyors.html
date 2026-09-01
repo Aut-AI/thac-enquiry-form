@@ -43,6 +43,7 @@ async function init() {
             <button class="filter-btn" onclick="setFilter('pending', this)">⏳ Pending Approval</button>
             <button class="filter-btn" onclick="setFilter('active', this)">✅ Active</button>
             <button class="filter-btn" onclick="setFilter('paused', this)">⏸ Paused</button>
+            <button class="filter-btn" onclick="setFilter('archived', this)">🗄 Archived</button>
             <button class="filter-btn" onclick="setFilter('expiring', this)">🟠 Insurance Expiring</button>
             <button class="filter-btn" onclick="setFilter('expired', this)">🔴 Insurance Expired</button>
           </div>
@@ -291,6 +292,7 @@ async function renderTable() {
   if (activeFilter === 'pending')  filtered = filtered.filter(s => s.status === 'pending');
   if (activeFilter === 'active')   filtered = filtered.filter(s => s.status === 'active');
   if (activeFilter === 'paused')   filtered = filtered.filter(s => s.status === 'paused');
+  if (activeFilter === 'archived') filtered = filtered.filter(s => s.status === 'archived');
   if (activeFilter === 'expiring') filtered = filtered.filter(s =>
     expiryStatus(s.pi_expiry_date).cls === 'badge-elevated' ||
     expiryStatus(s.pl_expiry_date).cls === 'badge-elevated'
@@ -329,6 +331,8 @@ async function renderTable() {
       statusBadge = `<span class="badge badge-elevated">⏳ Pending</span>`;
     } else if (s.status === 'active') {
       statusBadge = `<span class="badge badge-accepted">✅ Active</span>`;
+    } else if (s.status === 'archived') {
+      statusBadge = `<span class="badge badge-low">🗄 Archived</span>`;
     } else {
       statusBadge = `<span class="badge badge-low">⏸ Paused</span>`;
     }
@@ -351,6 +355,11 @@ async function renderTable() {
       <td style="font-weight:600;color:var(--green-mid);">${s.earnings.jobs} jobs</td>
       <td style="font-weight:600;font-size:15px;color:var(--green-dark);">£${Number(s.earnings.total).toLocaleString()}</td>
       <td>${statusBadge}</td>
+      <td onclick="event.stopPropagation()">
+        ${s.status !== 'archived'
+          ? `<button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="archiveSurveyor('${s.id}', '${(s.full_name || 'this surveyor').replace(/'/g, "\\'")}')">Archive</button>`
+          : '<span class="muted">—</span>'}
+      </td>
     </tr>`;
   }));
 
@@ -369,10 +378,31 @@ async function renderTable() {
           <th>Jobs (YTD)</th>
           <th>Earnings (YTD)</th>
           <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>${rows.join('')}</tbody>
     </table>`;
+}
+
+// Same mechanism as archiveSurveyor() on the detail page: clearing user_id
+// blocks login, and is_active: false triggers the DB-side
+// sync_outcodes_on_activation_change trigger, which deletes this surveyor's
+// surveyor_service_outcodes rows and recomputes postcode_areas.is_covered
+// per affected area (leaving areas another active surveyor still covers
+// alone). status: 'archived' keeps this distinguishable from a genuine
+// temporary pause (toggleActive(), which never touches user_id).
+async function archiveSurveyor(id, name) {
+  if (!confirm(`Archive ${name}? They'll no longer be able to log in, and their postcode coverage will be cleared (this won't affect any other surveyor covering the same areas).`)) return;
+  try {
+    await dbUpdate('surveyors', `id=eq.${id}`, { user_id: null, is_active: false, status: 'archived' });
+    const s = allSurveyors.find(s => s.id === id);
+    if (s) { s.user_id = null; s.is_active = false; s.status = 'archived'; s.account = null; }
+    showToast('Surveyor archived');
+    await renderTable();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 async function setFilter(filter, btn) {
