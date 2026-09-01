@@ -188,7 +188,7 @@ function renderSidebar(activePage) {
         <div style="display:flex;align-items:center;">
           <div>
             <div class="logo-name">🌳 THAC</div>
-            <div class="logo-sub">Trevor Heaps Arboricultural</div>
+            <div class="logo-sub">Heaps Arboriculture</div>
           </div>
           <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu">✕</button>
         </div>

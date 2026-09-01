@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Get a Quote — Trevor Heaps Arboricultural Consultancy</title>
+<title>Get a Quote — Heaps Arboriculture</title>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Quicksand:wght@400&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -716,7 +716,7 @@
   <div class="form-header">
     <h1>Get an Instant Quote</h1>
     <p>Fill in the quick questionnaire below for an instant estimate.<br>
-    Not sure? Call Trevor on <a href="tel:+447957763533" class="phone-link">07957 763 533</a></p>
+    Not sure? Email us using <a href="mailto:hello@heapsarboriculture.co.uk" class="phone-link">hello@heapsarboriculture.co.uk</a></p>
   </div>
 
   <!-- Progress -->
@@ -779,7 +779,7 @@
 
       <div class="field-error" id="gateOutOfAreaError" style="display:none;">
         Sorry, we don't currently operate in this area.<br>
-        Please call Trevor on <a href="tel:+447957763533" class="phone-link">07957 763 533</a> to discuss your options.
+        Please email us using <a href="mailto:hello@heapsarboriculture.co.uk" class="phone-link">hello@heapsarboriculture.co.uk</a> to discuss your options.
       </div>
 
       <div class="form-nav">
@@ -1114,7 +1114,7 @@
           We'll be sending you an email with important information we need from you to carry out the job. Please look out for this email and reply with the requested details as soon as possible.
         </div>
 
-        <p style="margin-top:16px;">Questions? Call Trevor on <a href="tel:+447957763533" style="color:var(--green-mid);font-weight:500;">07957 763 533</a></p>
+        <p style="margin-top:16px;">Questions? Email us using <a href="mailto:hello@heapsarboriculture.co.uk" style="color:var(--green-mid);font-weight:500;">hello@heapsarboriculture.co.uk</a></p>
       </div>
     </div>
 
@@ -1331,7 +1331,7 @@ async function checkPostcodeArea() {
     // travel cost for the quote. No surveyor-coverage lookups in this mode.
     if (Object.keys(travelAreas).length === 0) {
       console.error('Travel cost areas failed to load; blocking postcode check');
-      document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
+      document.getElementById('gatePostcodeError').innerHTML = 'Service unavailable. Please email us using <a href="mailto:hello@heapsarboriculture.co.uk">hello@heapsarboriculture.co.uk</a> to submit an enquiry.';
       showError('gatePostcodeError', 'gatePostcode');
       return;
     }
@@ -1351,7 +1351,7 @@ async function checkPostcodeArea() {
     // Hard stop: if the area coverage list failed to load, block entry
     if (coveredAreaCodes.length === 0) {
       console.error('Coverage data failed to load; blocking postcode check');
-      document.getElementById('gatePostcodeError').textContent = 'Service unavailable. Please call Trevor on 07957 763 533 to submit an enquiry.';
+      document.getElementById('gatePostcodeError').innerHTML = 'Service unavailable. Please email us using <a href="mailto:hello@heapsarboriculture.co.uk">hello@heapsarboriculture.co.uk</a> to submit an enquiry.';
       showError('gatePostcodeError', 'gatePostcode');
       return;
     }

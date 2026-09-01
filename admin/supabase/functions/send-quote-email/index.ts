@@ -68,7 +68,7 @@ serve(async (req) => {
     <p style="color: #666; font-size: 13px;">
       Kind regards,<br/>
       Trevor Heaps<br/>
-      Trevor Heaps Arboricultural Consultancy Ltd.
+      Heaps Arboriculture
     </p>
   `
 

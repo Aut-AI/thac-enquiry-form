@@ -45,14 +45,14 @@ export function emailWrapper(content: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🌳 Trevor Heaps Arboricultural</h1>
+      <h1>🌳 Heaps Arboriculture</h1>
       <p>CRM Notification System</p>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      Trevor Heaps Arboricultural Consultancy Ltd. &nbsp;·&nbsp; This is an automated notification.
+      Heaps Arboriculture &nbsp;·&nbsp; This is an automated notification.
     </div>
   </div>
 </body>

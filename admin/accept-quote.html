@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Accept Quote — Trevor Heaps Arboricultural</title>
+<title>Accept Quote — Heaps Arboriculture</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -219,7 +219,7 @@ function showAcceptConfirm(enq) {
   const price = enq.quoted_price ? '£' + Number(enq.quoted_price).toLocaleString() + ' + VAT' : 'Custom quote';
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
-    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="brand">Heaps Arboriculture</div>
     <div class="icon">📋</div>
     <h1>Confirm Your Quote</h1>
     <p class="sub">Please review the details below and confirm your acceptance.</p>
@@ -267,7 +267,7 @@ function showAcceptConfirm(enq) {
 function showDeclineConfirm(enq) {
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
-    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="brand">Heaps Arboriculture</div>
     <div class="icon">🤔</div>
     <h1>Decline This Quote?</h1>
     <p class="sub">We're sorry to hear that. Your feedback helps us improve.</p>
@@ -323,7 +323,7 @@ function showStep2(enquiryId, ref, contactName, postcode, enquiry) {
   currentEnquiry = enquiry || { id: enquiryId, postcode };
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
-    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="brand">Heaps Arboriculture</div>
     <div class="icon">✅</div>
     <h1>Quote Accepted!</h1>
     <p class="sub" style="margin-bottom:8px;">One more step — a few details so we can get started quickly.</p>
@@ -595,11 +595,11 @@ async function declineQuote(enquiryId) {
 
     document.getElementById('card').innerHTML = `
       <div class="logo">🌳</div>
-      <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+      <div class="brand">Heaps Arboriculture</div>
       <div class="icon">👋</div>
       <h1>Quote Declined</h1>
       <p class="sub">No problem at all. Thank you for letting us know${reason ? ' — your feedback is appreciated' : ''}. If you change your mind or need help in the future, we're always happy to assist.</p>
-      <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+      <div class="footer">Heaps Arboriculture</div>
     `;
   } catch (e) {
     btn.textContent = 'Confirm Decline';
@@ -611,23 +611,23 @@ async function declineQuote(enquiryId) {
 function showDone(icon, title, message, enq) {
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
-    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="brand">Heaps Arboriculture</div>
     <div class="icon">${icon}</div>
     <h1>${title}</h1>
     <p class="sub">${message}</p>
     ${enq?.job_number ? `<div class="ref">${enq.job_number}</div>` : ''}
-    <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="footer">Heaps Arboriculture</div>
   `;
 }
 
 function showError(msg) {
   document.getElementById('card').innerHTML = `
     <div class="logo">🌳</div>
-    <div class="brand">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="brand">Heaps Arboriculture</div>
     <div class="icon">⚠️</div>
     <h1>Something went wrong</h1>
     <p class="sub">${msg}</p>
-    <div class="footer">Trevor Heaps Arboricultural Consultancy Ltd.</div>
+    <div class="footer">Heaps Arboriculture</div>
   `;
 }
 
@@ -638,7 +638,7 @@ function showTerms() {
     '• Site access and safety requirements must be agreed before survey date\n' +
     '• Any additional work identified during the survey will be quoted separately\n' +
     '• The report is prepared based on information provided and site conditions on the survey date\n\n' +
-    'For full terms and conditions, please contact Trevor Heaps Arboricultural Consultancy Ltd.');
+    'For full terms and conditions, please contact Heaps Arboriculture');
 }
 
 function updateAcceptanceTime() {
