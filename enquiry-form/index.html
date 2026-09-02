@@ -239,6 +239,7 @@
   input[type="text"],
   input[type="email"],
   input[type="tel"],
+  input[type="number"],
   select,
   textarea {
     width: 100%;
@@ -611,6 +612,13 @@
     color: var(--text);
   }
 
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: 13px;
+    flex: none;
+    white-space: nowrap;
+  }
+
   .btn-submit {
     background: var(--green-mid);
     color: white;
@@ -913,15 +921,25 @@
 
       <div class="field-group">
         <label>Approximate Number of Trees <span class="required">*</span></label>
-        <select id="treeCount" onchange="updateQuotePreview()">
-          <option value="">Select tree count band...</option>
-          <option value="1-20">1 – 20 trees</option>
-          <option value="21-40">21 – 40 trees</option>
-          <option value="41-60">41 – 60 trees</option>
-          <option value="61-80">61 – 80 trees</option>
-          <option value="81-100">81 – 100 trees</option>
-          <option value="100+">100+ trees (custom quote)</option>
-        </select>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <select id="treeCount" onchange="updateQuotePreview()" style="flex:1;">
+            <option value="">Select tree count band...</option>
+            <option value="1-20">1 – 20 trees</option>
+            <option value="21-40">21 – 40 trees</option>
+            <option value="41-60">41 – 60 trees</option>
+            <option value="61-80">61 – 80 trees</option>
+            <option value="81-100">81 – 100 trees</option>
+            <option value="100+">100+ trees (custom quote)</option>
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleM2Calculator()" title="Work it out from the vegetation area instead">m²</button>
+        </div>
+        <div id="m2CalculatorRow" style="display:none;margin-top:10px;">
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <input type="number" id="m2Area" placeholder="Vegetation area, e.g. 2500" min="0" step="1" style="flex:1;" onkeypress="if(event.key==='Enter'){event.preventDefault();applyM2Calculator();}">
+            <button type="button" class="btn btn-primary btn-sm" onclick="applyM2Calculator()">OK</button>
+          </div>
+          <div class="field-hint" id="m2Hint">Enter the area in square metres and we'll pick the right band for you.</div>
+        </div>
         <div class="field-hint">An estimate is fine — this determines the pricing band.</div>
         <div class="field-error" id="treeCountError">Please select the number of trees.</div>
       </div>
@@ -1257,6 +1275,42 @@ const SURCHARGES = {
 function bandIndex(band) {
   const bandMap = { '1-20': 1, '21-40': 2, '41-60': 3, '61-80': 4, '81-100': 5 };
   return bandMap[band] || null;
+}
+
+// Trevor's rule of thumb: average tree canopy footprint is 40sqm, so
+// vegetation area / 40 gives an estimated tree count to pick the band from.
+const TREE_FOOTPRINT_SQM = 40;
+
+function bandFromTreeCount(n) {
+  if (n <= 20) return '1-20';
+  if (n <= 40) return '21-40';
+  if (n <= 60) return '41-60';
+  if (n <= 80) return '61-80';
+  if (n <= 100) return '81-100';
+  return '100+';
+}
+
+function toggleM2Calculator() {
+  const row = document.getElementById('m2CalculatorRow');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) document.getElementById('m2Area').focus();
+}
+
+function applyM2Calculator() {
+  const area = parseFloat(document.getElementById('m2Area').value);
+  const hint = document.getElementById('m2Hint');
+  if (!area || area <= 0) {
+    hint.textContent = 'Enter a number greater than 0.';
+    return;
+  }
+  const trees = area / TREE_FOOTPRINT_SQM;
+  const band = bandFromTreeCount(trees);
+  document.getElementById('treeCount').value = band;
+  hideError('treeCountError', 'treeCount');
+  updateQuotePreview();
+  document.getElementById('m2CalculatorRow').style.display = 'none';
+  document.getElementById('m2Area').value = '';
 }
 
 // Single source of truth for the base price, used by every place that shows

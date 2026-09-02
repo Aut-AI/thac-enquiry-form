@@ -576,11 +576,6 @@ function renderSurveyAndSiteDetails() {
           </div>
           <div id="treeCountEdit" style="display:none;margin-top:8px;">
             <div class="form-group">
-              <label>Vegetation area (m²) <span style="font-weight:400;color:var(--text-muted);">— optional, picks the band below for you</span></label>
-              <input type="number" class="form-control" id="vegArea" min="0" step="1" placeholder="e.g. 2500" oninput="calcTreeBandFromArea()">
-              <div id="vegAreaHint" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
-            </div>
-            <div class="form-group">
               <label>Tree count band</label>
               <select class="form-control" id="treeBandSelect">
                 <option value="">Select...</option>
@@ -1900,30 +1895,6 @@ async function saveDocs() {
 // ============================================================
 // TREE COUNT BAND
 // ============================================================
-
-// Trevor's rule of thumb: average tree canopy footprint is 40sqm, so
-// vegetation area / 40 gives an estimated tree count to pick the band from.
-const TREE_FOOTPRINT_SQM = 40;
-
-function bandFromTreeCount(n) {
-  if (n <= 20) return '1-20';
-  if (n <= 40) return '21-40';
-  if (n <= 60) return '41-60';
-  if (n <= 80) return '61-80';
-  if (n <= 100) return '81-100';
-  return '100+';
-}
-
-function calcTreeBandFromArea() {
-  const area = parseFloat(document.getElementById('vegArea').value);
-  const hint = document.getElementById('vegAreaHint');
-  if (!area || area <= 0) { hint.textContent = ''; return; }
-  const trees = area / TREE_FOOTPRINT_SQM;
-  const band = bandFromTreeCount(trees);
-  document.getElementById('treeBandSelect').value = band;
-  const treesLabel = Number.isInteger(trees) ? trees : trees.toFixed(1);
-  hint.textContent = `≈ ${treesLabel} trees → ${band} band`;
-}
 
 function toggleTreeCountEditor() {
   const view = document.getElementById('treeCountView');
