@@ -236,6 +236,13 @@
     line-height: 1.4;
   }
 
+  .on-behalf-subheading {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin: 14px 0 16px;
+  }
+
   input[type="text"],
   input[type="email"],
   input[type="tel"],
@@ -1066,11 +1073,24 @@
       </div>
 
       <div id="onBehalfOfFields" style="display:none">
+        <div class="on-behalf-subheading">Your details as the introducer — we'll copy you on the quote alongside the client.</div>
+
         <div class="field-group">
-          <label>Client's Email Address <span class="required">*</span></label>
-          <input type="email" id="introducerEmail" placeholder="client@example.com">
+          <label>Your Client's Name <span class="required">*</span></label>
+          <input type="text" id="introducerName" placeholder="Client's name">
+          <div class="field-error" id="introducerNameError">Please enter your name.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Your Client's Email Address <span class="required">*</span></label>
+          <input type="email" id="introducerEmail" placeholder="you@example.com">
           <div class="field-hint">We'll send them a copy of the quote too.</div>
           <div class="field-error" id="introducerEmailError">Please enter a valid email address.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Agency / Company</label>
+          <input type="text" id="introducerCompany" placeholder="Optional">
         </div>
       </div>
 
@@ -1533,7 +1553,10 @@ function toggleOnBehalfOf() {
   const on = document.getElementById('onBehalfOfToggle').checked;
   document.getElementById('onBehalfOfFields').style.display = on ? 'block' : 'none';
   if (!on) {
+    document.getElementById('introducerName').value = '';
     document.getElementById('introducerEmail').value = '';
+    document.getElementById('introducerCompany').value = '';
+    hideError('introducerNameError', 'introducerName');
     hideError('introducerEmailError', 'introducerEmail');
   }
 }
@@ -1665,7 +1688,11 @@ async function submitNewEnquiry() {
   else { hideError('newEmailError', 'newEmail'); }
 
   const onBehalfOf = document.getElementById('onBehalfOfToggle').checked;
+  const introducerName = document.getElementById('introducerName').value.trim();
   const introducerEmail = document.getElementById('introducerEmail').value.trim();
+  const introducerCompany = document.getElementById('introducerCompany').value.trim();
+  if (onBehalfOf && !introducerName) { showError('introducerNameError', 'introducerName'); valid = false; }
+  else { hideError('introducerNameError', 'introducerName'); }
   if (onBehalfOf && (!introducerEmail || !introducerEmail.includes('@'))) { showError('introducerEmailError', 'introducerEmail'); valid = false; }
   else { hideError('introducerEmailError', 'introducerEmail'); }
 
@@ -1703,7 +1730,9 @@ async function submitNewEnquiry() {
     contact_phone: document.getElementById('newPhone').value.trim(),
     company: document.getElementById('newCompany').value.trim(),
     ...(onBehalfOf ? {
+      introducer_name: introducerName,
       introducer_email: introducerEmail,
+      introducer_company: introducerCompany,
     } : {}),
     quoted_price,
     // Only sent in travel_cost_areas mode — the enquiries.travel_cost column
