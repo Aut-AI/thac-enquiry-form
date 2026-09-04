@@ -1067,7 +1067,7 @@
 
       <div class="field-group">
         <label class="on-behalf-toggle">
-          <input type="checkbox" id="onBehalfOfToggle" onchange="toggleOnBehalfOf()">
+          <input type="checkbox" id="onBehalfOfToggle" autocomplete="off" onchange="toggleOnBehalfOf()">
           <span>If you are enquiring on behalf of your client, would you like to add their email address so they can be sent a copy of the quote?</span>
         </label>
       </div>
@@ -1929,6 +1929,14 @@ function hideError(errorId, fieldId) {
   const field = document.getElementById(fieldId);
   if (field) field.classList.remove('error');
 }
+
+// Some browsers restore checkbox state on reload/back-forward without
+// re-firing onchange, leaving the toggle checked but its fields hidden.
+// Force it back to its unchecked default every time the page is shown.
+window.addEventListener('pageshow', function() {
+  document.getElementById('onBehalfOfToggle').checked = false;
+  toggleOnBehalfOf();
+});
 </script>
 </body>
 </html>
