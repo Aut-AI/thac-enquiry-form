@@ -129,13 +129,7 @@ function groupOutcodesByArea(outcodes) {
   return Object.values(byArea).sort((a, b) => a.minDistance - b.minDistance);
 }
 
-function expiryStatus(dateStr) {
-  if (!dateStr) return { cls: 'badge-low', label: '— Not set', detail: '' };
-  const days = Math.floor((new Date(dateStr) - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days < 0)   return { cls: 'badge-urgent',   label: '🔴 Expired',       detail: `Expired ${Math.abs(days)}d ago` };
-  if (days <= 30) return { cls: 'badge-elevated', label: `🟠 ${days}d left`,  detail: `Expires ${formatDate(dateStr)}` };
-  return             { cls: 'badge-accepted', label: '🟢 Valid',            detail: `Expires ${formatDate(dateStr)}` };
-}
+// expiryStatus() is shared from js/thac.js
 
 function insuranceRow(label, policyNum, expiryDate) {
   const s = expiryStatus(expiryDate);
@@ -155,16 +149,7 @@ function insuranceRow(label, policyNum, expiryDate) {
 // ============================================================
 
 function renderView() {
-  let statusLabel = '';
-  if (surveyor.status === 'pending') {
-    statusLabel = `<span class="badge badge-elevated">⏳ Pending Approval</span>`;
-  } else if (surveyor.status === 'active') {
-    statusLabel = `<span class="badge badge-accepted">✅ Active</span>`;
-  } else if (surveyor.status === 'archived') {
-    statusLabel = `<span class="badge badge-low">🗄 Archived</span>`;
-  } else {
-    statusLabel = `<span class="badge badge-low">⏸ Paused</span>`;
-  }
+  const statusLabel = surveyorStatusBadge(surveyor.status);
 
   const jobRows = surveyorJobs.length === 0
     ? ''
@@ -309,11 +294,11 @@ function renderView() {
         <div class="card">
           <div class="card-title">Quick Actions</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderEdit()">✏️ Edit Details</button>
+            <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderEdit()">${icon('pencil', 14)}Edit Details</button>
             ${surveyor.status === 'pending'
-              ? `<button class="btn btn-primary w-100" style="justify-content:center;" onclick="approveSurveyor()">✅ Approve & Activate</button>`
+              ? `<button class="btn btn-primary w-100" style="justify-content:center;" onclick="approveSurveyor()">${icon('checkCircle', 14)}Approve & Activate</button>`
               : `<button class="btn btn-secondary w-100" style="justify-content:center;" onclick="toggleActive()">
-                  ${surveyor.status === 'active' ? '⏸ Pause Account' : '✅ Reactivate Account'}
+                  ${surveyor.status === 'active' ? icon('pause', 14) + 'Pause Account' : icon('checkCircle', 14) + 'Reactivate Account'}
                 </button>`
             }
           </div>
@@ -342,9 +327,9 @@ function renderView() {
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="font-size:13px;color:var(--text-muted);line-height:1.5;">
               ${surveyor.user_id
-                ? `<span style="color:var(--green-dark);font-weight:600;">✅ App account linked</span><br>
+                ? `<span style="color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 14)}App account linked</span><br>
                    <span style="font-size:11px;font-family:monospace;">${surveyor.user_id}</span>`
-                : '⚠️ No app account linked yet. Create a Supabase auth user for this surveyor then paste their UUID below.'}
+                : `<span style="display:inline-flex;align-items:center;gap:6px;">${icon('alertTriangle', 14)}No app account linked yet. Create a Supabase auth user for this surveyor then paste their UUID below.</span>`}
             </div>
             <div style="display:flex;gap:8px;">
               <input type="text" class="form-control" id="userIdInput"
@@ -470,7 +455,7 @@ function renderEdit() {
           <div class="card-title">${isNew ? 'Create Surveyor' : 'Save Changes'}</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
             <button class="btn btn-primary w-100" style="justify-content:center;" onclick="saveSurveyor()" id="saveBtn">
-              ${isNew ? '✓ Create Surveyor' : '✓ Save Changes'}
+              ${isNew ? icon('check', 14) + 'Create Surveyor' : icon('check', 14) + 'Save Changes'}
             </button>
             ${!isNew ? `<button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderView()">Cancel</button>` : ''}
           </div>
@@ -526,7 +511,7 @@ async function saveSurveyor() {
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
     btn.disabled = false;
-    btn.textContent = isNew ? '✓ Create Surveyor' : '✓ Save Changes';
+    btn.textContent = isNew ? 'Create Surveyor' : 'Save Changes';
   }
 }
 
@@ -585,7 +570,7 @@ async function addOutcodeOverride() {
       outcode,
       override_type: overrideType,
     });
-    showToast(`${outcode} ${overrideType === 'include' ? 'added to' : 'excluded from'} coverage ✓`);
+    showToast(`${outcode} ${overrideType === 'include' ? 'added to' : 'excluded from'} coverage`);
     outcodeInput.value = '';
     await loadSurveyor();
   } catch (e) {
@@ -598,7 +583,7 @@ async function addOutcodeOverride() {
 async function removeOutcodeOverride(id) {
   try {
     await dbDelete('surveyor_outcode_overrides', `id=eq.${id}`);
-    showToast('Override removed ✓');
+    showToast('Override removed');
     await loadSurveyor();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');

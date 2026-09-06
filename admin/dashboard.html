@@ -22,7 +22,7 @@ async function init() {
       <div class="topbar">
         <div class="topbar-title">Dashboard</div>
         <div class="topbar-search" style="position:relative;">
-          <span>🔍</span>
+          <span>${icon('search')}</span>
           <input type="text" placeholder="Search jobs, clients, enquiries..." id="globalSearch"
             oninput="handleGlobalSearch(this.value)" autocomplete="off">
           <div id="searchResults" style="display:none;position:absolute;top:100%;left:0;right:0;
@@ -37,22 +37,22 @@ async function init() {
         <!-- Stat Cards -->
         <div class="stat-grid" id="statGrid">
           <div class="stat-card urgent" onclick="window.location.href='jobs.html?urgency=red'" style="cursor:pointer;">
-            <div class="stat-label">🔴 Urgent Jobs</div>
+            <div class="stat-label">${dot('urgent')}Urgent Jobs</div>
             <div class="stat-value" id="statUrgent">—</div>
             <div class="stat-sub">Due within 3 working days</div>
           </div>
           <div class="stat-card elevated" onclick="window.location.href='jobs.html?urgency=orange'" style="cursor:pointer;">
-            <div class="stat-label">🟠 Elevated Jobs</div>
+            <div class="stat-label">${dot('elevated')}Elevated Jobs</div>
             <div class="stat-value" id="statElevated">—</div>
             <div class="stat-sub">Due within 5 working days</div>
           </div>
           <div class="stat-card standard" onclick="window.location.href='jobs.html?urgency=yellow'" style="cursor:pointer;">
-            <div class="stat-label">🟡 Standard Jobs</div>
+            <div class="stat-label">${dot('standard')}Standard Jobs</div>
             <div class="stat-value" id="statStandard">—</div>
             <div class="stat-sub">Due within 7 working days</div>
           </div>
           <div class="stat-card complete" onclick="window.location.href='jobs.html?urgency=grey'" style="cursor:pointer;">
-            <div class="stat-label">⚫ Low Priority Jobs</div>
+            <div class="stat-label">${dot('low')}Low Priority Jobs</div>
             <div class="stat-value" id="statLow">—</div>
             <div class="stat-sub">10 working days / No rush</div>
           </div>
@@ -61,12 +61,12 @@ async function init() {
         <!-- Revenue Summary -->
         <div class="stat-grid" id="revenueGrid" style="grid-template-columns:repeat(2,1fr);margin-bottom:0;">
           <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
-            <div class="stat-label" style="color:#16a34a;">💰 This Month</div>
+            <div class="stat-label" style="color:#16a34a;">${icon('currency',13)}This Month</div>
             <div class="stat-value" id="revMonth" style="color:#16a34a;">—</div>
             <div class="stat-sub">Invoiced in <span id="revMonthLabel"></span></div>
           </div>
           <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
-            <div class="stat-label" style="color:#16a34a;">📊 This Year</div>
+            <div class="stat-label" style="color:#16a34a;">${icon('chartBar',13)}This Year</div>
             <div class="stat-value" id="revYear" style="color:#16a34a;">—</div>
             <div class="stat-sub">Total invoiced <span id="revYearLabel"></span></div>
           </div>
@@ -176,38 +176,30 @@ function jobUrgencyRowClass(state) {
 function slaCountdown(dateStr) {
   if (!dateStr) return '<span class="muted">No SLA set</span>';
   const days = Math.ceil((new Date(dateStr) - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days < 0)  return `<span style="color:#dc2626;font-weight:700;">⚠️ ${Math.abs(days)}d overdue</span>`;
-  if (days === 0) return `<span style="color:#dc2626;font-weight:700;">⚠️ Due today</span>`;
-  if (days <= 1)  return `<span style="color:#dc2626;font-weight:600;">🔴 ${days}d left</span>`;
-  if (days <= 3)  return `<span style="color:#ea580c;font-weight:600;">🟠 ${days}d left</span>`;
-  if (days <= 5)  return `<span style="color:#ca8a04;font-weight:600;">🟡 ${days}d left</span>`;
+  if (days < 0)  return `<span style="color:#dc2626;font-weight:700;display:inline-flex;align-items:center;gap:6px;">${icon('alertTriangle',14)}${Math.abs(days)}d overdue</span>`;
+  if (days === 0) return `<span style="color:#dc2626;font-weight:700;display:inline-flex;align-items:center;gap:6px;">${icon('alertTriangle',14)}Due today</span>`;
+  if (days <= 1)  return `<span style="color:#dc2626;font-weight:600;display:inline-flex;align-items:center;gap:6px;">${dot('urgent')}${days}d left</span>`;
+  if (days <= 3)  return `<span style="color:#ea580c;font-weight:600;display:inline-flex;align-items:center;gap:6px;">${dot('elevated')}${days}d left</span>`;
+  if (days <= 5)  return `<span style="color:#ca8a04;font-weight:600;display:inline-flex;align-items:center;gap:6px;">${dot('standard')}${days}d left</span>`;
   return `<span style="color:var(--text-muted);">${days}d left</span>`;
 }
 
+// NOTE: labels/classes here intentionally differ slightly from the shared
+// getDispatchMeta() table in thac.js (e.g. "Pending" vs "Pending Approval"),
+// so this local copy is kept rather than switched to the shared dispatchBadge()
+// helper. Only the glyphs were swapped from emoji to the shared icon()/dot().
 function dispatchBadge(state) {
   const map = {
-    pending_approval:  ['⏳ Pending',          'badge-low'],
-    waiting_for_plans: ['🕐 Waiting for Plans', 'badge-low'],
-    red:      ['🔴 Unallocated', 'badge-urgent'],
-    orange:   ['🟠 Claimed',     'badge-elevated'],
-    yellow:   ['🟡 Attended',    'badge-standard'],
-    green:    ['🟢 Report Sent', 'badge-accepted'],
-    archived: ['📦 Archived',   'badge-low'],
+    pending_approval:  [icon('clock', 12),   'Pending',            'badge-low'],
+    waiting_for_plans: [icon('clock', 12),   'Waiting for Plans',  'badge-low'],
+    red:      [dot('urgent'),   'Unallocated', 'badge-urgent'],
+    orange:   [dot('elevated'), 'Claimed',     'badge-elevated'],
+    yellow:   [dot('standard'), 'Attended',    'badge-standard'],
+    green:    [dot('complete'), 'Report Sent', 'badge-accepted'],
+    archived: [icon('archive', 12), 'Archived', 'badge-low'],
   };
-  const [label, cls] = map[state] || [state || '—', 'badge-low'];
-  return `<span class="badge ${cls}">${label}</span>`;
-}
-
-function urgencyStateBadge(state) {
-  const map = {
-    red:    ['🔴 Urgent',   'badge-urgent'],
-    orange: ['🟠 Elevated', 'badge-elevated'],
-    yellow: ['🟡 Standard', 'badge-standard'],
-    grey:   ['⚫ Low',      'badge-low'],
-    green:  ['🟢 Complete', 'badge-accepted'],
-  };
-  const [label, cls] = map[state] || [state || '—', 'badge-low'];
-  return `<span class="badge ${cls}">${label}</span>`;
+  const [glyph, label, cls] = map[state] || ['', state || '—', 'badge-low'];
+  return `<span class="badge ${cls}">${glyph}${label}</span>`;
 }
 
 async function loadUrgencyDashboard() {
@@ -222,7 +214,7 @@ async function loadUrgencyDashboard() {
     if (!jobs || jobs.length === 0) {
       document.getElementById('urgencyDashboard').innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">💼</div>
+          <div class="empty-icon">${icon('briefcase', 48)}</div>
           <h3>No active jobs</h3>
           <p>Jobs will appear here once enquiries are converted</p>
         </div>`;
@@ -304,7 +296,7 @@ async function runGlobalSearch(q) {
       sections.push(`<div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Jobs</div>`);
       jobs.forEach(j => {
         sections.push(`<a href="job-detail.html?id=${j.id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:var(--text);" class="hover-row">
-          <span style="font-size:16px;">💼</span>
+          <span style="display:flex;color:var(--text-muted);">${icon('briefcase', 16)}</span>
           <div>
             <div style="font-weight:600;font-size:13px;">${j.reference || '—'}</div>
             <div style="font-size:12px;color:var(--text-muted);">${getSurveyLabel(j.survey_type)} · ${j.site_postcode || '—'}</div>
@@ -317,7 +309,7 @@ async function runGlobalSearch(q) {
       sections.push(`<div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid var(--border);">Clients</div>`);
       clients.forEach(c => {
         sections.push(`<a href="client-detail.html?id=${c.id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:var(--text);" class="hover-row">
-          <span style="font-size:16px;">👤</span>
+          <span style="display:flex;color:var(--text-muted);">${icon('user', 16)}</span>
           <div>
             <div style="font-weight:600;font-size:13px;">${c.company_name || c.full_name || '—'}</div>
             <div style="font-size:12px;color:var(--text-muted);">${c.email || ''}</div>

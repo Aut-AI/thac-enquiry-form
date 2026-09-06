@@ -26,7 +26,7 @@ async function init() {
       <div class="topbar">
         <div class="topbar-title">Clients</div>
         <div class="topbar-search">
-          <span>🔍</span>
+          <span style="display:flex;">${icon('search', 16)}</span>
           <input type="text" placeholder="Search by name, email, company..." oninput="handleSearch(this.value)">
         </div>
       </div>
@@ -90,7 +90,7 @@ function renderTable() {
   if (filtered.length === 0) {
     document.getElementById('clientsTable').innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">👥</div>
+        <div class="empty-icon" style="display:flex;justify-content:center;color:var(--green-light);">${icon('users', 40)}</div>
         <h3>No clients found</h3>
         <p>Clients are created when jobs are approved</p>
       </div>`;

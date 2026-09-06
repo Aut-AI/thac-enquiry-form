@@ -131,7 +131,7 @@ async function init() {
     <div class="main-content" style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
       <div class="topbar" style="flex-shrink:0;">
         <div class="topbar-title">Live Map</div>
-        <button class="btn btn-secondary btn-sm" onclick="refreshMap()">↻ Refresh</button>
+        <button class="btn btn-secondary btn-sm" onclick="refreshMap()">${icon('refresh')} Refresh</button>
         <select id="coverageFilter" onchange="applyCoverageFilter()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;background:white;">
           <option value="">Coverage: Off</option>
           <option value="all">Coverage: All surveyors</option>
@@ -170,7 +170,7 @@ async function init() {
   if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY === 'YOUR_GOOGLE_MAPS_KEY_HERE') {
     document.getElementById('mapCanvas').innerHTML = `
       <div class="map-no-key">
-        <div style="font-size:48px;">🗺️</div>
+        <div>${icon('map', 48)}</div>
         <div style="font-size:18px;font-weight:600;color:var(--text);">Google Maps API key not set</div>
         <div style="max-width:400px;text-align:center;line-height:1.6;">
           Add your key to <strong>admin/js/thac.js</strong>:<br>
@@ -309,13 +309,13 @@ function plotJobs(jobs) {
         <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:210px;">
           <div style="font-weight:700;font-size:15px;color:#1a3d2b;margin-bottom:2px;">${job.reference || '—'}</div>
           <div style="font-size:12px;color:#666;margin-bottom:10px;">${getSurveyLabel(job.survey_type || job.job_type)}</div>
-          <div style="font-size:13px;margin-bottom:3px;">📍 ${job.site_postcode || '—'}</div>
+          <div style="font-size:13px;margin-bottom:3px;"><span style="display:inline-flex;align-items:center;gap:6px;">${icon('mapPin')}${job.site_postcode || '—'}</span></div>
           <div style="font-size:13px;margin-bottom:3px;">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px;vertical-align:middle;"></span>
             ${dispatchLabel}
           </div>
-          <div style="font-size:13px;margin-bottom:3px;">👤 ${surveyorName || 'Unclaimed'}</div>
-          ${job.agreed_amount ? `<div style="font-size:13px;margin-bottom:10px;">💰 £${Number(job.agreed_amount).toLocaleString()}</div>` : '<div style="margin-bottom:10px;"></div>'}
+          <div style="font-size:13px;margin-bottom:3px;"><span style="display:inline-flex;align-items:center;gap:6px;">${icon('user')}${surveyorName || 'Unclaimed'}</span></div>
+          ${job.agreed_amount ? `<div style="font-size:13px;margin-bottom:10px;"><span style="display:inline-flex;align-items:center;gap:6px;">${icon('currency')}£${Number(job.agreed_amount).toLocaleString()}</span></div>` : '<div style="margin-bottom:10px;"></div>'}
           <a href="job-detail.html?id=${job.id}"
              style="display:block;background:#1a3d2b;color:white;padding:7px 12px;border-radius:7px;
                     text-decoration:none;text-align:center;font-size:12px;font-weight:600;">
@@ -402,7 +402,7 @@ function drawSurveyorCoverage(surveyor, color) {
     infoWindow.setContent(`
       <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:180px;">
         <div style="font-weight:700;font-size:14px;color:#1a3d2b;">${surveyor.full_name}</div>
-        <div style="font-size:12px;color:#666;margin-top:2px;">📍 ${surveyor.home_postcode || '—'}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px;"><span style="display:inline-flex;align-items:center;gap:6px;">${icon('mapPin')}${surveyor.home_postcode || '—'}</span></div>
         <div style="font-size:12px;color:#666;">${surveyor.radius_miles || '?'} mile radius</div>
         <a href="surveyor-detail.html?id=${surveyor.id}" style="display:block;margin-top:8px;font-size:12px;color:${color};font-weight:600;">View surveyor →</a>
       </div>`);

@@ -349,7 +349,7 @@ async function resetPassword(id, email) {
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.msg || data.error_description || 'Request failed');
-    showToast(`Password reset email sent to ${email} ✓`);
+    showToast(`Password reset email sent to ${email}`);
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }

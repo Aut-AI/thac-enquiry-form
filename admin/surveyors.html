@@ -27,7 +27,7 @@ async function init() {
       <div class="topbar">
         <div class="topbar-title">Surveyors</div>
         <div class="topbar-search">
-          <span>🔍</span>
+          <span>${icon('search')}</span>
           <input type="text" placeholder="Search by name, email..." oninput="handleSearch(this.value)">
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.location.href='surveyor-detail.html?new=1'">+ Add Surveyor</button>
@@ -40,12 +40,12 @@ async function init() {
           </div>
           <div class="filter-bar">
             <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
-            <button class="filter-btn" onclick="setFilter('pending', this)">⏳ Pending Approval</button>
-            <button class="filter-btn" onclick="setFilter('active', this)">✅ Active</button>
-            <button class="filter-btn" onclick="setFilter('paused', this)">⏸ Paused</button>
-            <button class="filter-btn" onclick="setFilter('archived', this)">🗄 Archived</button>
-            <button class="filter-btn" onclick="setFilter('expiring', this)">🟠 Insurance Expiring</button>
-            <button class="filter-btn" onclick="setFilter('expired', this)">🔴 Insurance Expired</button>
+            <button class="filter-btn" onclick="setFilter('pending', this)">${icon('clock')}Pending Approval</button>
+            <button class="filter-btn" onclick="setFilter('active', this)">${icon('checkCircle')}Active</button>
+            <button class="filter-btn" onclick="setFilter('paused', this)">${icon('pause')}Paused</button>
+            <button class="filter-btn" onclick="setFilter('archived', this)">${icon('archive')}Archived</button>
+            <button class="filter-btn" onclick="setFilter('expiring', this)">${dot('elevated')}Insurance Expiring</button>
+            <button class="filter-btn" onclick="setFilter('expired', this)">${dot('urgent')}Insurance Expired</button>
           </div>
           <div id="surveyorsTable"><div class="loading"><div class="spinner"></div><br>Loading surveyors...</div></div>
         </div>
@@ -118,26 +118,9 @@ async function loadSurveyors() {
   }
 }
 
-// Login/account status badge for the linked Supabase Auth user, if any
-function accountStatusBadge(account) {
-  if (!account) return '<span class="badge badge-low">No login</span>';
-  if (account.banned_until && new Date(account.banned_until) > new Date()) {
-    return '<span class="badge badge-low">⏸ Disabled</span>';
-  }
-  if (!account.email_confirmed_at) {
-    return '<span class="badge badge-elevated">⏳ Invited</span>';
-  }
-  return '<span class="badge badge-accepted">✅ Active</span>';
-}
-
-// Traffic-light status for an expiry date
-function expiryStatus(dateStr) {
-  if (!dateStr) return { cls: 'badge-low', label: '— Not set' };
-  const days = Math.floor((new Date(dateStr) - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days < 0)    return { cls: 'badge-urgent',   label: '🔴 Expired' };
-  if (days <= 30)  return { cls: 'badge-elevated', label: '🟠 ' + days + 'd left' };
-  return { cls: 'badge-accepted', label: '🟢 Valid' };
-}
+// accountStatusBadge() and expiryStatus() are now provided globally by
+// js/thac.js (identical labels/classes to the copies that used to live
+// here) -- removed the local duplicates.
 
 function worstInsuranceStatus(s) {
   const pi = expiryStatus(s.pi_expiry_date);
@@ -315,7 +298,7 @@ async function renderTable() {
   if (filtered.length === 0) {
     document.getElementById('surveyorsTable').innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon">${icon('userCheck', 48)}</div>
         <h3>No surveyors yet</h3>
         <p>Add a surveyor using the button in the top-right</p>
       </div>`;
@@ -328,13 +311,13 @@ async function renderTable() {
     const dbs = expiryStatus(s.dbs_expiry_date);
     let statusBadge;
     if (s.status === 'pending') {
-      statusBadge = `<span class="badge badge-elevated">⏳ Pending</span>`;
+      statusBadge = `<span class="badge badge-elevated">${icon('clock', 12)}Pending</span>`;
     } else if (s.status === 'active') {
-      statusBadge = `<span class="badge badge-accepted">✅ Active</span>`;
+      statusBadge = `<span class="badge badge-accepted">${icon('checkCircle', 12)}Active</span>`;
     } else if (s.status === 'archived') {
-      statusBadge = `<span class="badge badge-low">🗄 Archived</span>`;
+      statusBadge = `<span class="badge badge-low">${icon('archive', 12)}Archived</span>`;
     } else {
-      statusBadge = `<span class="badge badge-low">⏸ Paused</span>`;
+      statusBadge = `<span class="badge badge-low">${icon('pause', 12)}Paused</span>`;
     }
     const area = await getAreaFromPostcodeAPI(s.home_postcode);
     const postcodeDisplay = s.home_postcode ? `${s.home_postcode}<br><span style="font-size:12px;color:#666;">${area || '—'}</span>` : '—';

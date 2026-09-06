@@ -31,7 +31,7 @@ async function init() {
       <div class="topbar">
         <div class="topbar-title">Jobs</div>
         <div class="topbar-search">
-          <span>🔍</span>
+          <span>${icon('search')}</span>
           <input type="text" placeholder="Search by ref, postcode..." oninput="handleSearch(this.value)">
         </div>
       </div>
@@ -43,21 +43,21 @@ async function init() {
           </div>
           <div class="filter-bar">
             <button class="filter-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all',this)">All</button>
-            <button class="filter-btn ${activeFilter==='pending_approval'?'active':''}" onclick="setFilter('pending_approval',this)">⏳ Pending</button>
-            <button class="filter-btn ${activeFilter==='waiting_for_plans'?'active':''}" onclick="setFilter('waiting_for_plans',this)">🕐 Waiting</button>
-            <button class="filter-btn ${activeFilter==='red'?'active':''}" onclick="setFilter('red',this)">🔴 Unallocated</button>
-            <button class="filter-btn ${activeFilter==='orange'?'active':''}" onclick="setFilter('orange',this)">🟠 Claimed</button>
-            <button class="filter-btn ${activeFilter==='yellow'?'active':''}" onclick="setFilter('yellow',this)">🟡 Attended</button>
-            <button class="filter-btn ${activeFilter==='green'?'active':''}" onclick="setFilter('green',this)">🟢 Report Sent</button>
-            <button class="filter-btn ${activeFilter==='archived'?'active':''}" onclick="setFilter('archived',this)">📦 Archived</button>
+            <button class="filter-btn ${activeFilter==='pending_approval'?'active':''}" onclick="setFilter('pending_approval',this)">${icon('clock')}Pending</button>
+            <button class="filter-btn ${activeFilter==='waiting_for_plans'?'active':''}" onclick="setFilter('waiting_for_plans',this)">${icon('clock')}Waiting</button>
+            <button class="filter-btn ${activeFilter==='red'?'active':''}" onclick="setFilter('red',this)">${dot('urgent')}Unallocated</button>
+            <button class="filter-btn ${activeFilter==='orange'?'active':''}" onclick="setFilter('orange',this)">${dot('elevated')}Claimed</button>
+            <button class="filter-btn ${activeFilter==='yellow'?'active':''}" onclick="setFilter('yellow',this)">${dot('standard')}Attended</button>
+            <button class="filter-btn ${activeFilter==='green'?'active':''}" onclick="setFilter('green',this)">${dot('complete')}Report Sent</button>
+            <button class="filter-btn ${activeFilter==='archived'?'active':''}" onclick="setFilter('archived',this)">${icon('archive')}Archived</button>
           </div>
           <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
             <span style="font-size:12px;color:var(--text-muted);padding:4px 2px;">Urgency:</span>
             <button class="filter-btn ${activeUrgency==='all'?'active':''}" onclick="setUrgency('all',this)">All</button>
-            <button class="filter-btn ${activeUrgency==='red'?'active':''}" onclick="setUrgency('red',this)">🔴 Urgent</button>
-            <button class="filter-btn ${activeUrgency==='orange'?'active':''}" onclick="setUrgency('orange',this)">🟠 Elevated</button>
-            <button class="filter-btn ${activeUrgency==='yellow'?'active':''}" onclick="setUrgency('yellow',this)">🟡 Standard</button>
-            <button class="filter-btn ${activeUrgency==='grey'?'active':''}" onclick="setUrgency('grey',this)">⚫ Low</button>
+            <button class="filter-btn ${activeUrgency==='red'?'active':''}" onclick="setUrgency('red',this)">${dot('urgent')}Urgent</button>
+            <button class="filter-btn ${activeUrgency==='orange'?'active':''}" onclick="setUrgency('orange',this)">${dot('elevated')}Elevated</button>
+            <button class="filter-btn ${activeUrgency==='yellow'?'active':''}" onclick="setUrgency('yellow',this)">${dot('standard')}Standard</button>
+            <button class="filter-btn ${activeUrgency==='grey'?'active':''}" onclick="setUrgency('grey',this)">${dot('low')}Low</button>
           </div>
           <div id="jobsTable"><div class="loading"><div class="spinner"></div><br>Loading jobs...</div></div>
         </div>
@@ -91,30 +91,6 @@ async function loadJobs() {
   }
 }
 
-function getDispatchLabel(state) {
-  switch(state) {
-    case 'pending_approval':  return { label: '⏳ Pending Approval',  class: 'badge-low' };
-    case 'waiting_for_plans': return { label: '🕐 Waiting for Plans', class: 'badge-low' };
-    case 'red':    return { label: '🔴 Unallocated', class: 'badge-urgent' };
-    case 'orange': return { label: '🟠 Claimed',     class: 'badge-elevated' };
-    case 'yellow': return { label: '🟡 Attended',    class: 'badge-standard' };
-    case 'green':  return { label: '🟢 Report Sent', class: 'badge-accepted' };
-    case 'archived': return { label: '📦 Archived',  class: 'badge-low' };
-    default:       return { label: state || '—',     class: 'badge-low' };
-  }
-}
-
-function getUrgencyLabel(state) {
-  switch(state) {
-    case 'red':    return { label: '🔴 Urgent',   class: 'badge-urgent' };
-    case 'orange': return { label: '🟠 Elevated', class: 'badge-elevated' };
-    case 'yellow': return { label: '🟡 Standard', class: 'badge-standard' };
-    case 'grey':   return { label: '⚫ Low',      class: 'badge-low' };
-    case 'green':  return { label: '🟢 Complete', class: 'badge-accepted' };
-    default:       return { label: state || '—',  class: 'badge-low' };
-  }
-}
-
 function renderTable() {
   let filtered = allJobs;
 
@@ -145,7 +121,7 @@ function renderTable() {
   if (filtered.length === 0) {
     document.getElementById('jobsTable').innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">💼</div>
+        <div class="empty-icon">${icon('briefcase', 48)}</div>
         <h3>No jobs found</h3>
         <p>Jobs will appear here once enquiries are approved</p>
       </div>`;
@@ -153,12 +129,10 @@ function renderTable() {
   }
 
   const rows = filtered.map(j => {
-    const dispatch = getDispatchLabel(j.dispatch_state);
-    const urgency = getUrgencyLabel(j.urgency_state);
     const surveyorCell = j.surveyor_name
       ? `<span class="badge badge-accepted">${j.surveyor_name}</span>`
       : '<span class="badge badge-low">Unclaimed</span>';
-    const infoStatus = j.extended_info_received ? '<span class="badge badge-accepted">✅ Received</span>' : '<span class="badge badge-low">⏳ Pending</span>';
+    const infoStatus = j.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle')}Received</span>` : `<span class="badge badge-low">${icon('clock')}Pending</span>`;
     return `
     <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
       <td><div class="ref">${j.reference || j.id.slice(0,8).toUpperCase()}</div></td>
@@ -167,8 +141,8 @@ function renderTable() {
       <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
       <td>${j.site_postcode || '—'}</td>
       <td>${j.survey_date ? formatDate(j.survey_date) : '<span class="muted">TBC</span>'}</td>
-      <td><span class="badge ${urgency.class}">${urgency.label}</span></td>
-      <td><span class="badge ${dispatch.class}">${dispatch.label}</span></td>
+      <td>${urgencyColorBadge(j.urgency_state)}</td>
+      <td>${dispatchBadge(j.dispatch_state)}</td>
       <td>${infoStatus}</td>
       <td>${surveyorCell}</td>
       <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '<span class="muted">—</span>'}</td>

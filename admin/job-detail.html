@@ -87,7 +87,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closePaidModal()" style="flex:1;justify-content:center;">Cancel</button>
-      <button class="btn btn-primary" onclick="submitPaid()" style="flex:2;justify-content:center;">✅ Confirm Paid</button>
+      <button class="btn btn-primary" onclick="submitPaid()" style="flex:2;justify-content:center;"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l2.7 2.7L16.4 9"/></svg> Confirm Paid</button>
     </div>
   </div>
 </div>
@@ -119,7 +119,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeAllocateModal()" style="flex:1;justify-content:center;">Cancel</button>
-      <button class="btn btn-primary" onclick="submitAllocate()" style="flex:2;justify-content:center;">✅ Allocate</button>
+      <button class="btn btn-primary" onclick="submitAllocate()" style="flex:2;justify-content:center;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l2.7 2.7L16.4 9"/></svg>Allocate</button>
     </div>
   </div>
 </div>
@@ -144,11 +144,11 @@
     <div style="display:flex;gap:8px;margin-bottom:16px;">
       <button type="button" class="btn w-100" id="linkAsParentBtn" onclick="setLinkMode('parent')"
         style="justify-content:center;background:var(--green-dark);color:white;">
-        📌 Parent
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><path d="M6 4.5h12l-3.2 4.2 3.2 4.2H6Z"/></svg> Parent
       </button>
       <button type="button" class="btn w-100" id="linkAsChildBtn" onclick="setLinkMode('child')"
         style="justify-content:center;background:#e5e7eb;color:var(--text-muted);">
-        📎 Child
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.8V6.5a3 3 0 0 1 6 0v9.3a1.7 1.7 0 0 1-3.4 0V7.8"/></svg> Child
       </button>
     </div>
 
@@ -164,7 +164,7 @@
 
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeLinkJobsModal()" style="flex:1;justify-content:center;">Cancel</button>
-      <button class="btn btn-primary" onclick="submitLinkJobs()" style="flex:2;justify-content:center;">✅ Link Jobs</button>
+      <button class="btn btn-primary" onclick="submitLinkJobs()" style="flex:2;justify-content:center;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l2.7 2.7L16.4 9"/></svg>Link Jobs</button>
     </div>
   </div>
 </div>
@@ -261,32 +261,6 @@ async function loadJob() {
   }
 }
 
-function getDispatchBadge(state) {
-  const map = {
-    pending_approval:  { label: '⏳ Pending Approval',  cls: 'badge-low' },
-    waiting_for_plans: { label: '🕐 Waiting for Plans', cls: 'badge-low' },
-    red:      { label: '🔴 Unallocated', cls: 'badge-urgent' },
-    orange:   { label: '🟠 Claimed',     cls: 'badge-elevated' },
-    yellow:   { label: '🟡 Attended',    cls: 'badge-standard' },
-    green:    { label: '🟢 Report Sent', cls: 'badge-accepted' },
-    archived: { label: '📦 Archived',   cls: 'badge-low' },
-  };
-  const s = map[state] || { label: state || '—', cls: 'badge-low' };
-  return `<span class="badge ${s.cls}">${s.label}</span>`;
-}
-
-function getUrgencyBadge(state) {
-  const map = {
-    red:    { label: '🔴 Urgent',   cls: 'badge-urgent' },
-    orange: { label: '🟠 Elevated', cls: 'badge-elevated' },
-    yellow: { label: '🟡 Standard', cls: 'badge-standard' },
-    grey:   { label: '⚫ Low',      cls: 'badge-low' },
-    green:  { label: '🟢 Complete', cls: 'badge-accepted' },
-  };
-  const s = map[state] || { label: state || '—', cls: 'badge-low' };
-  return `<span class="badge ${s.cls}">${s.label}</span>`;
-}
-
 // Returns true if an invoice raised on dateStr is now overdue (30+ days unpaid)
 function isOverdue(dateStr) {
   if (!dateStr) return false;
@@ -344,21 +318,21 @@ function renderInvoiceActions() {
     if (!job.invoice1_date) {
       buttons.push(`
         <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="quickInvoice(1)">
-          📋 Mark Invoiced
+          ${icon('receipt', 14)}Mark Invoiced
         </button>`);
       buttons.push(`
         <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openInvoiceModal(1)">
-          🧾 Custom Invoice
+          ${icon('receipt', 14)}Custom Invoice
         </button>`);
     } else if (!job.invoice1_paid) {
       buttons.push(`
         <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(1)">
-          ✅ Mark Invoice Paid
+          ${icon('checkCircle', 14)}Mark Invoice Paid
         </button>`);
     } else {
       buttons.push(`
-        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;">
-          ✅ Invoice paid and archived
+        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
+          ${icon('checkCircle', 14)}Invoice paid and archived
         </div>`);
     }
   } else {
@@ -366,12 +340,12 @@ function renderInvoiceActions() {
     if (!job.invoice1_date) {
       buttons.push(`
         <button class="btn btn-primary w-100" style="justify-content:center;" onclick="openInvoiceModal(1)">
-          🧾 Raise Invoice 1 (50%)
+          ${icon('receipt', 14)}Raise Invoice 1 (50%)
         </button>`);
     } else if (!job.invoice1_paid) {
       buttons.push(`
         <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(1)">
-          ✅ Mark Invoice 1 Paid
+          ${icon('checkCircle', 14)}Mark Invoice 1 Paid
         </button>`);
     }
 
@@ -379,17 +353,17 @@ function renderInvoiceActions() {
     if (job.invoice1_date && !job.invoice2_date) {
       buttons.push(`
         <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openInvoiceModal(2)">
-          🧾 Raise Invoice 2 (50%)
+          ${icon('receipt', 14)}Raise Invoice 2 (50%)
         </button>`);
     } else if (job.invoice2_date && !job.invoice2_paid) {
       buttons.push(`
         <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(2)">
-          ✅ Mark Invoice 2 Paid
+          ${icon('checkCircle', 14)}Mark Invoice 2 Paid
         </button>`);
     } else if (job.invoice1_paid && job.invoice2_paid) {
       buttons.push(`
-        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;">
-          ✅ Both invoices paid and archived
+        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
+          ${icon('checkCircle', 14)}Both invoices paid and archived
         </div>`);
     }
   }
@@ -603,13 +577,13 @@ function renderSurveyAndSiteDetails() {
           <div class="detail-field">
             <label>Coordinates</label>
             <div class="field-value" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
-              <span>📍 ${coordinates}</span>
-              <button style="padding:4px 8px;font-size:11px;background:var(--green-light);color:var(--green-dark);border:none;cursor:pointer;border-radius:4px;font-weight:500;" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='✓ Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
+              <span style="display:inline-flex;align-items:center;gap:6px;">${icon('mapPin', 13)}${coordinates}</span>
+              <button style="padding:4px 8px;font-size:11px;background:var(--green-light);color:var(--green-dark);border:none;cursor:pointer;border-radius:4px;font-weight:500;" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
             </div>
           </div>
         ` : job?.site_postcode && !coordinates ? `
           <div class="detail-field">
-            <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">📍 Get Coordinates</button>
+            <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">${icon('mapPin', 13)}Get Coordinates</button>
           </div>
         ` : ''}
         ${address ? `
@@ -622,8 +596,8 @@ function renderSurveyAndSiteDetails() {
           <div class="detail-field" style="grid-column:1/-1">
             <label>Survey Date</label>
             <div id="surveyDateDisplay" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span style="font-weight:600;color:${job?.survey_date_confirmed ? 'var(--green-mid)' : '#f97316'};">
-                ${job?.survey_date_confirmed ? '🟢 Confirmed' : '🟠 Proposed'}: ${formatDate(surveyDate)}
+              <span style="font-weight:600;color:${job?.survey_date_confirmed ? 'var(--green-mid)' : '#f97316'};display:inline-flex;align-items:center;gap:6px;">
+                ${job?.survey_date_confirmed ? dot('complete') + 'Confirmed' : dot('elevated') + 'Proposed'}: ${formatDate(surveyDate)}
               </span>
               <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Edit</button>
             </div>
@@ -720,7 +694,7 @@ function renderJobLinkingBanner() {
   if (job.parent_job_id) {
     return `
       <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
-        <div style="font-size:24px;">📎</div>
+        <div style="color:#1e40af;">${icon('paperclip', 24)}</div>
         <div style="flex:1;">
           <div style="font-weight:700;color:#1e40af;font-size:14px;">Child Job</div>
           <div style="font-size:13px;color:#1e40af;margin-top:2px;">
@@ -741,7 +715,7 @@ function renderJobLinkingBanner() {
 
     return `
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;">
-        <div style="font-size:24px;">📌</div>
+        <div style="color:#166534;">${icon('flag', 24)}</div>
         <div style="flex:1;">
           <div style="font-weight:700;color:#166534;font-size:14px;">Parent Job</div>
           <div style="font-size:13px;color:#166534;margin-top:6px;">
@@ -766,9 +740,9 @@ function renderJob() {
         <div class="detail-sub">${getSurveyLabel(job.survey_type || job.job_type)}</div>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        ${job.extended_info_received ? '<span class="badge badge-accepted">✅ Details Received</span>' : '<span class="badge badge-low">⏳ Awaiting Customer Details</span>'}
-        ${getUrgencyBadge(job.urgency_state)}
-        ${getDispatchBadge(job.dispatch_state)}
+        ${job.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle', 12)}Details Received</span>` : `<span class="badge badge-low">${icon('clock', 12)}Awaiting Customer Details</span>`}
+        ${urgencyColorBadge(job.urgency_state)}
+        ${dispatchBadge(job.dispatch_state)}
       </div>
     </div>
 
@@ -787,7 +761,7 @@ function renderJob() {
         <div class="card">
           <div class="card-title">
             Financial
-            ${!job.invoiced ? `<button class="btn btn-primary btn-sm" style="background:var(--green-dark);" onclick="markInvoiced()">✅ Mark Invoiced</button>` : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;">✅ Invoiced ${job.invoiced_at ? formatDate(job.invoiced_at) : ''}</span>`}
+            ${!job.invoiced ? `<button class="btn btn-primary btn-sm" style="background:var(--green-dark);" onclick="markInvoiced()">${icon('checkCircle', 13)}Mark Invoiced</button>` : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 13)}Invoiced ${job.invoiced_at ? formatDate(job.invoiced_at) : ''}</span>`}
             <button id="editFinBtn" class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Edit</button>
           </div>
           <div id="financialView">
@@ -855,18 +829,18 @@ function renderJob() {
             ${(job.doc_block_plan_url || job.doc_topo_survey_url || job.doc_other_urls || job.topo_survey_provided) ? `
               <div style="display:flex;flex-direction:column;gap:10px;">
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
-                  <span>${job.topo_survey_provided ? '✅' : '⬜'}</span>
+                  <span style="display:flex;color:${job.topo_survey_provided ? 'var(--green-dark)' : 'var(--border)'};">${job.topo_survey_provided ? icon('checkCircle', 16) : '<span class="status-dot" style="width:14px;height:14px;background:none;border:1.5px solid var(--border);"></span>'}</span>
                   <span style="color:${job.topo_survey_provided ? 'var(--green-dark)' : 'var(--text-muted)'};">Topo survey provided</span>
                 </div>
                 ${job.doc_block_plan_url ? `
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span style="font-size:12px;color:var(--text-muted);width:90px;flex-shrink:0;">Block Plan</span>
-                  <a href="${job.doc_block_plan_url}" target="_blank" class="btn btn-secondary btn-sm">📄 Open →</a>
+                  <a href="${job.doc_block_plan_url}" target="_blank" class="btn btn-secondary btn-sm">${icon('document', 13)}Open →</a>
                 </div>` : '<div style="font-size:12px;color:var(--text-muted);">Block plan: not yet uploaded</div>'}
                 ${job.doc_topo_survey_url ? `
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span style="font-size:12px;color:var(--text-muted);width:90px;flex-shrink:0;">Topo Survey</span>
-                  <a href="${job.doc_topo_survey_url}" target="_blank" class="btn btn-secondary btn-sm">📄 Open →</a>
+                  <a href="${job.doc_topo_survey_url}" target="_blank" class="btn btn-secondary btn-sm">${icon('document', 13)}Open →</a>
                 </div>` : ''}
                 ${job.doc_other_urls ? `
                 <div style="font-size:13px;line-height:1.6;color:var(--text-muted);">${job.doc_other_urls}</div>` : ''}
@@ -932,23 +906,23 @@ function renderJob() {
           <div class="form-group">
             <label>Urgency State</label>
             <select class="form-control" id="urgencySelect">
-              <option value="red"    ${job.urgency_state==='red'    ?'selected':''}>🔴 Urgent</option>
-              <option value="orange" ${job.urgency_state==='orange' ?'selected':''}>🟠 Elevated</option>
-              <option value="yellow" ${job.urgency_state==='yellow' ?'selected':''}>🟡 Standard</option>
-              <option value="grey"   ${job.urgency_state==='grey'   ?'selected':''}>⚫ Low</option>
-              <option value="green"  ${job.urgency_state==='green'  ?'selected':''}>🟢 Complete</option>
+              <option value="red"    ${job.urgency_state==='red'    ?'selected':''}>Urgent</option>
+              <option value="orange" ${job.urgency_state==='orange' ?'selected':''}>Elevated</option>
+              <option value="yellow" ${job.urgency_state==='yellow' ?'selected':''}>Standard</option>
+              <option value="grey"   ${job.urgency_state==='grey'   ?'selected':''}>Low</option>
+              <option value="green"  ${job.urgency_state==='green'  ?'selected':''}>Complete</option>
             </select>
           </div>
           <div class="form-group">
             <label>Dispatch State</label>
             <select class="form-control" id="dispatchSelect">
-              <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>⏳ Pending Approval</option>
-              <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>🕐 Waiting for Plans</option>
-              <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>🔴 Unallocated</option>
-              <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>🟠 Claimed</option>
-              <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>🟡 Attended</option>
-              <option value="green"    ${job.dispatch_state==='green'    ?'selected':''}>🟢 Report Sent</option>
-              <option value="archived" ${job.dispatch_state==='archived' ?'selected':''}>📦 Archived</option>
+              <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>Pending Approval</option>
+              <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>Waiting for Plans</option>
+              <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>Unallocated</option>
+              <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>Claimed</option>
+              <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>Attended</option>
+              <option value="green"    ${job.dispatch_state==='green'    ?'selected':''}>Report Sent</option>
+              <option value="archived" ${job.dispatch_state==='archived' ?'selected':''}>Archived</option>
             </select>
           </div>
           <button class="btn btn-primary w-100" onclick="updateStates()" style="justify-content:center;">Save</button>
@@ -965,7 +939,7 @@ function renderJob() {
             ${renderStage2Button()}
             ${job.enquiry_id && enquiry?.contact_email ? `
               <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="sendQuoteEmailFromJob()">
-                📧 Resend Quote Email
+                ${icon('mail', 14)}Resend Quote Email
               </button>
             ` : ''}
             ${renderInvoiceActions()}
@@ -993,11 +967,11 @@ function renderJob() {
             <div style="display:flex;gap:8px;">
               <button class="btn w-100" onclick="changeInvoicingMethod('split')"
                 style="justify-content:center;${job.invoicing_method === 'split' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.invoicing_method === 'split' ? '✅ ' : ''}50/50 Split
+                ${job.invoicing_method === 'split' ? icon('checkCircle', 13) : ''}50/50 Split
               </button>
               <button class="btn w-100" onclick="changeInvoicingMethod('single')"
                 style="justify-content:center;${job.invoicing_method === 'single' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.invoicing_method === 'single' ? '✅ ' : ''}Single Invoice
+                ${job.invoicing_method === 'single' ? icon('checkCircle', 13) : ''}Single Invoice
               </button>
             </div>
           </div>
@@ -1019,7 +993,7 @@ function renderJob() {
             <div class="detail-field">
               <label>Job Linking</label>
               <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
-                <div style="font-size:12px;color:var(--text-muted);font-weight:500;">📎 Linked to parent job:</div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:500;display:flex;align-items:center;gap:6px;">${icon('paperclip', 13)}Linked to parent job:</div>
                 <a href="job-detail.html?id=${job.parent_job_id}" style="font-size:14px;color:var(--green-dark);font-weight:600;">← ${job.parent_job_ref || 'Parent Job'}</a>
               </div>
             </div>` : ''}
@@ -1027,11 +1001,11 @@ function renderJob() {
             <div class="detail-field">
               <label>Job Linking</label>
               <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
-                <div style="font-size:12px;color:var(--text-muted);font-weight:500;">📎 Linked child jobs (${job.linkedJobs.length}):</div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:500;display:flex;align-items:center;gap:6px;">${icon('paperclip', 13)}Linked child jobs (${job.linkedJobs.length}):</div>
                 ${job.linkedJobs.map(child => `
                   <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f3f4f6;border-radius:6px;">
                     <a href="job-detail.html?id=${child.id}" style="flex:1;color:var(--green-dark);font-weight:600;text-decoration:none;">${child.reference} →</a>
-                    <span style="font-size:11px;">${getDispatchBadge(child.dispatch_state)}</span>
+                    <span style="font-size:11px;">${dispatchBadge(child.dispatch_state)}</span>
                   </div>
                 `).join('')}
               </div>
@@ -1147,7 +1121,7 @@ async function markInvoiced() {
 
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
-    showToast('✅ Job marked as invoiced');
+    showToast('Job marked as invoiced');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1161,7 +1135,7 @@ async function markInvoiced() {
 function renderAllocationStatus() {
   if (!job.allocated_surveyor_id) {
     return `<button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openAllocateModal()">
-      📌 Allocate to Surveyor
+      ${icon('flag', 14)}Allocate to Surveyor
     </button>`;
   }
 
@@ -1172,14 +1146,14 @@ function renderAllocationStatus() {
   const hoursRemaining = Math.max(0, (expiresAt - now) / (60 * 60 * 1000));
 
   const status = hoursRemaining > 0
-    ? `🕐 Allocated · ${Math.ceil(hoursRemaining)}h remaining`
-    : `⏰ Allocation expired`;
+    ? `${icon('clock', 14)}Allocated · ${Math.ceil(hoursRemaining)}h remaining`
+    : `${icon('alarm', 14)}Allocation expired`;
 
   return `
     <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;">
-      <div style="font-size:13px;color:#92400e;font-weight:600;margin-bottom:4px;">${status}</div>
+      <div style="font-size:13px;color:#92400e;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;">${status}</div>
       <button class="btn btn-secondary btn-sm" onclick="openAllocateModal()" style="justify-content:center;">
-        🔄 Change Allocation
+        ${icon('refresh', 14)}Change Allocation
       </button>
     </div>`;
 }
@@ -1190,14 +1164,14 @@ function renderNDAStatus() {
   const nda = job.nda_acceptance;
   return `
     <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px;">
-      <div style="font-size:13px;color:#166534;font-weight:600;">✅ NDA Accepted</div>
+      <div style="font-size:13px;color:#166534;font-weight:600;display:flex;align-items:center;gap:6px;">${icon('checkCircle', 14)}NDA Accepted</div>
       <div style="font-size:12px;color:#166534;margin-top:4px;">${nda?.accepted_at ? formatDateTime(nda.accepted_at) : 'Upon job claim'}</div>
     </div>`;
 }
 
 function renderLinkedJobButton() {
   return `<button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openLinkJobsModal()">
-    🔗 Link to Another Job
+    ${icon('link', 14)}Link to Another Job
   </button>`;
 }
 
@@ -1270,7 +1244,7 @@ async function submitAllocate() {
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
     closeAllocateModal();
-    showToast('✅ Job allocated to surveyor');
+    showToast('Job allocated to surveyor');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1393,7 +1367,7 @@ async function submitLinkJobs() {
     await dbUpdate('jobs', `id=eq.${childId}`, { parent_job_id: parentId });
 
     closeLinkJobsModal();
-    showToast('✅ Jobs linked successfully');
+    showToast('Jobs linked successfully');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1466,7 +1440,7 @@ async function toggleChecklist(field, atField, advancesDispatchTo) {
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
     if (!isDone && advancesDispatchTo && updates.dispatch_state) {
-      const labels = { yellow: '🟡 Attended', green: '🟢 Report Sent' };
+      const labels = { yellow: 'Attended', green: 'Report Sent' };
       showToast(`Saved — dispatch state advanced to ${labels[advancesDispatchTo]}`);
     } else {
       showToast(!isDone ? 'Marked complete' : 'Marked incomplete');
@@ -1497,7 +1471,7 @@ async function saveSurveyDate() {
     await dbUpdate('jobs', `id=eq.${jobId}`, { survey_date: date, survey_date_confirmed: confirmed });
     job.survey_date           = date;
     job.survey_date_confirmed = confirmed;
-    showToast(confirmed ? 'Survey date confirmed ✅' : 'Survey date saved as proposed 🟠');
+    showToast(confirmed ? 'Survey date confirmed' : 'Survey date saved as proposed');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1594,7 +1568,7 @@ function renderTwoStageActions() {
           It will sit in <strong>Waiting for Plans</strong> until you activate it.
         </p>
         <button class="btn btn-primary w-100" style="justify-content:center;" onclick="createStage2()">
-          ➕ Create Stage 2 Job
+          ${icon('plus', 14)}Create Stage 2 Job
         </button>
       </div>`;
   }
@@ -1608,7 +1582,7 @@ function renderTwoStageActions() {
           and make it live on the map.
         </p>
         <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="activateStage2()">
-          ✅ Plans Received — Activate Job
+          ${icon('checkCircle', 14)}Plans Received — Activate Job
         </button>
       </div>`;
   }
@@ -1672,39 +1646,39 @@ function renderStage2Button() {
   if (!job.is_two_stage || job.parent_job_id || !job.field_data_uploaded) return '';
 
   // Check if Stage 2 already exists
-  if (stage2Job) return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>✅ Stage 2 Created</button>`;
+  if (stage2Job) return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>${icon('checkCircle', 14)}Stage 2 Created</button>`;
 
-  return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--amber);" onclick="showCreateStage2Modal()">📋 Create Stage 2 Job</button>`;
+  return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--amber);" onclick="showCreateStage2Modal()">${icon('plus', 14)}Create Stage 2 Job</button>`;
 }
 
 function renderDispatchButton() {
   const d = job.dispatch_state;
   if (d === 'pending_approval' || d === 'yellow') {
     return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="approveToMap()">
-      ✅ Approve to Map
+      ${icon('checkCircle', 14)}Approve to Map
     </button>`;
   }
   if (d === 'red') {
     return `
       <button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-        🔴 Live on Map
+        ${dot('urgent')}Live on Map
       </button>
       <button class="btn btn-secondary w-100" style="justify-content:center;color:#dc2626;margin-top:6px;" onclick="removeFromMap()">
-        ✕ Remove from Map
+        ${icon('x', 14)}Remove from Map
       </button>`;
   }
   if (d === 'archived') return '';
   if (d === 'orange') {
     return `
       <button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-        🟠 Claimed by Surveyor
+        ${dot('elevated')}Claimed by Surveyor
       </button>
       <button class="btn btn-secondary w-100" style="justify-content:center;color:#dc2626;margin-top:6px;" onclick="handBackJob()">
-        ↩ Unassign Surveyor
+        ${icon('arrowLeft', 14)}Unassign Surveyor
       </button>`;
   }
   return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-    📍 Dispatched
+    ${icon('mapPin', 14)}Dispatched
   </button>`;
 }
 
@@ -1765,7 +1739,7 @@ async function approveToMap() {
     job.dispatch_state = 'red';
     if (surveyor_pay_amount) job.surveyor_pay_amount = surveyor_pay_amount;
     Object.assign(job, clientUpdates);
-    showToast('Job approved — live on map 🔴');
+    showToast('Job approved — live on map');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1990,16 +1964,16 @@ async function loadUploadedFiles() {
     const html = files.map(f => {
       const fileName = f.file_name || f.file_path.split('/').pop();
       const date = formatDate(f.uploaded_at);
-      const icon = f.file_type === 'image' ? '🖼️' : f.file_type === 'video' ? '🎥' : '📄';
+      const fileIconName = f.file_type === 'image' ? 'image' : f.file_type === 'video' ? 'video' : 'document';
 
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9f9f9;border-radius:6px;">
           <div style="flex:1;">
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${icon} ${fileName}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;">${icon(fileIconName, 14)}${fileName}</div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${date}</div>
           </div>
-          <a href="#" onclick="downloadFile('${f.file_path}');return false;" style="color:var(--green-dark);text-decoration:none;font-weight:600;margin-left:8px;">
-            ⬇️ Download
+          <a href="#" onclick="downloadFile('${f.file_path}');return false;" style="color:var(--green-dark);text-decoration:none;font-weight:600;margin-left:8px;display:inline-flex;align-items:center;gap:6px;">
+            ${icon('download', 14)}Download
           </a>
         </div>
       `;
@@ -2009,7 +1983,7 @@ async function loadUploadedFiles() {
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div class="card-title" style="margin:0;">Uploaded Files</div>
-          <button class="btn btn-secondary btn-sm" onclick="downloadAllFiles('${jobId}')">⬇️ Download All</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadAllFiles('${jobId}')">${icon('download', 13)}Download All</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${html}
@@ -2191,7 +2165,7 @@ async function sendQuoteEmailFromJob() {
       throw new Error(errorText || `Email send failed (${response.status})`);
     }
 
-    showToast('✅ Quote email sent to ' + enquiry.contact_email);
+    showToast('Quote email sent to ' + enquiry.contact_email);
     if (btn) btn.disabled = false;
   } catch (err) {
     console.error('Error sending quote email:', err);

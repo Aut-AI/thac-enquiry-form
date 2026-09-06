@@ -166,7 +166,7 @@ function renderView() {
         <div class="card">
           <div class="card-title">Quick Actions</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderEdit()">✏️ Edit Details</button>
+            <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderEdit()">${icon('pencil', 14)}Edit Details</button>
           </div>
         </div>
 
@@ -272,7 +272,7 @@ function renderEdit() {
           <div class="card-title">Save Changes</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
             <button class="btn btn-primary w-100" style="justify-content:center;" onclick="saveEdit()" id="saveEditBtn">
-              ✓ Save Changes
+              ${icon('check', 14)}Save Changes
             </button>
             <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="renderView()">
               Cancel
@@ -320,7 +320,7 @@ async function saveEdit() {
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
     btn.disabled = false;
-    btn.textContent = '✓ Save Changes';
+    btn.textContent = 'Save Changes';
   }
 }
 

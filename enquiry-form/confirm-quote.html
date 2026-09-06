@@ -46,7 +46,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    color: white;
     margin-bottom: 16px;
   }
 
@@ -235,7 +235,7 @@
 
 <div class="form-shell">
   <div class="form-header">
-    <div class="logo-mark">🌳</div>
+    <div class="logo-mark"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none"><polygon points="12,2 6.2,11.5 17.8,11.5"/><polygon points="12,7 4.2,18.5 19.8,18.5"/><rect x="10.4" y="18.5" width="3.2" height="3.6" rx="0.5"/></svg></div>
     <h1>Confirm Your Details</h1>
     <p>Please provide the following information so we can proceed with your survey</p>
   </div>
@@ -407,12 +407,12 @@ function renderForm() {
       <input type="text" id="addressSearch" placeholder="Search for address or postcode..." style="width:100%;padding:10px;margin-bottom:14px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;" />
 
       <div id="mapContainer"></div>
-      <div class="map-hint">💡 Optional — tap the map to drop a pin where the surveyor should park. Feel free to skip this.</div>
+      <div class="map-hint" style="display:flex;align-items:flex-start;gap:6px;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M9.2 18.2h5.6"/><path d="M12 3.3a6 6 0 0 0-3.4 10.9c.6.5 1 1.2 1 2h4.8c0-.8.4-1.5 1-2A6 6 0 0 0 12 3.3Z"/><line x1="10.2" y1="21" x2="13.8" y2="21"/></svg><span>Optional — tap the map to drop a pin where the surveyor should park. Feel free to skip this.</span></div>
     </div>
 
     <div class="card" style="margin-bottom: 40px;">
-      <button class="btn btn-primary w-100" style="width: 100%;" onclick="submitDetails()" id="submitBtn">
-        ✓ Confirm & Accept Quote
+      <button class="btn btn-primary w-100" style="width: 100%;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="submitDetails()" id="submitBtn">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L20 6.5"/></svg>Confirm & Accept Quote
       </button>
     </div>
   `;
@@ -473,7 +473,7 @@ async function submitDetails() {
       document.getElementById('formContainer').innerHTML = `
         <div class="card">
           <div class="success-message">
-            <p style="margin: 0; font-size: 16px; font-weight: 600;">✓ Quote Confirmed</p>
+            <p style="margin: 0; font-size: 16px; font-weight: 600;display:flex;align-items:center;justify-content:center;gap:8px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l2.7 2.7L16.4 9"/></svg>Quote Confirmed</p>
           </div>
           <p style="margin: 16px 0 0 0; line-height: 1.6;">
             Thank you for confirming your details. We've received your information and our team will be in touch shortly to arrange the survey.
@@ -486,12 +486,12 @@ async function submitDetails() {
     } else {
       alert('Error saving details. Please try again.');
       btn.disabled = false;
-      btn.textContent = '✓ Confirm & Accept Quote';
+      btn.textContent = 'Confirm & Accept Quote';
     }
   } catch (e) {
     alert('Error: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '✓ Confirm & Accept Quote';
+    btn.textContent = 'Confirm & Accept Quote';
   }
 }
 

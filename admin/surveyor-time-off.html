@@ -213,9 +213,9 @@
           <div class="card">
             <div class="card-title">Surveyor Availability Calendar</div>
             <div class="controls">
-              <button class="nav-arrow" id="upArrow" onclick="shiftWindow(-1)" title="Earlier month">▲</button>
+              <button class="nav-arrow" id="upArrow" onclick="shiftWindow(-1)" title="Earlier month">${icon('chevronUp')}</button>
               <div class="range-label" id="rangeLabel"></div>
-              <button class="nav-arrow" id="downArrow" onclick="shiftWindow(1)" title="Later month">▼</button>
+              <button class="nav-arrow" id="downArrow" onclick="shiftWindow(1)" title="Later month">${icon('chevronDown')}</button>
             </div>
             <div class="controls" style="margin-bottom:20px;">
               <select class="surveyor-filter" id="surveyorFilter" onchange="applySurveyorFilter()">

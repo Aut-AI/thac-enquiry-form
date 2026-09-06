@@ -41,7 +41,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>⚡ Test Quote Generator</h1>
+    <h1>Test Quote Generator</h1>
     <p class="sub">Quickly generate a test quote and send it to ciaran@aut-ai.com</p>
 
     <div class="form-group">
@@ -155,7 +155,7 @@
         if (emailResponse.ok) {
           status.className = 'status success';
           status.innerHTML = `
-            ✅ <strong>Quote generated & email sent!</strong><br>
+            <strong>Quote generated & email sent!</strong><br>
             Job: ${jobNumber}<br>
             To: ciaran@aut-ai.com<br>
             <small style="margin-top:8px;display:block;">Check your email for the accept link</small>
@@ -165,7 +165,7 @@
         }
       } catch (e) {
         status.className = 'status error';
-        status.textContent = '❌ Error: ' + e.message;
+        status.textContent = 'Error: ' + e.message;
       } finally {
         btn.disabled = false;
         btn.textContent = 'Generate & Send Test Quote';

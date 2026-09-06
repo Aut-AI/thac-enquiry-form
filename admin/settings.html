@@ -125,7 +125,7 @@ async function saveSettings() {
     await dbUpdate('pricing_settings', 'id=eq.1', {
       thac_hourly_rate: thacRate
     });
-    showToast('Settings saved ✓');
+    showToast('Settings saved');
   } catch (e) {
     showToast('Error saving settings: ' + e.message, 'error');
   }
@@ -178,7 +178,7 @@ async function saveSurveyTypes() {
     await Promise.all(
       Object.entries(byId).map(([id, data]) => dbUpdate('survey_types', `id=eq.${id}`, data))
     );
-    showToast('Survey type hours saved ✓');
+    showToast('Survey type hours saved');
     await loadSurveyTypes();
   } catch (e) {
     showToast('Error saving: ' + e.message, 'error');
@@ -229,7 +229,7 @@ async function saveSurcharges() {
     await Promise.all(
       updates.map(u => dbUpdate('deadline_surcharges', `tier=eq.${u.tier}`, { surcharge: u.surcharge }))
     );
-    showToast('Surcharges saved ✓');
+    showToast('Surcharges saved');
     await loadSurcharges();
   } catch (e) {
     showToast('Error saving: ' + e.message, 'error');
@@ -297,7 +297,7 @@ async function saveTravelAreas() {
     await Promise.all(
       Object.entries(byArea).map(([area, data]) => dbUpdate('travel_cost_areas', `area_code=eq.${area}`, data))
     );
-    showToast('Travel cost areas saved ✓');
+    showToast('Travel cost areas saved');
     await loadTravelAreas();
   } catch (e) {
     showToast('Error saving: ' + e.message, 'error');

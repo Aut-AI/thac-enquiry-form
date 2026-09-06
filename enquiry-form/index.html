@@ -870,8 +870,9 @@
       <div class="card-title">Amendment to Existing Work</div>
       <div class="card-subtitle">Please provide your job reference and describe what needs to change.</div>
 
-      <div class="amendment-notice">
-        ⏱ Amendments are charged at <strong>£100 + VAT per hour</strong> (minimum charge £25 + VAT). No automated quote is generated — Once instructed, we will make a start, record the time taken to make the necessary changes and charge accordingly.
+      <div class="amendment-notice" style="display:flex;align-items:flex-start;gap:8px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="13.5" r="8"/><line x1="12" y1="13.5" x2="12" y2="9.3"/><line x1="9.7" y1="2" x2="14.3" y2="2"/><line x1="12" y1="2" x2="12" y2="4.3"/></svg>
+        <span>Amendments are charged at <strong>£100 + VAT per hour</strong> (minimum charge £25 + VAT). No automated quote is generated — Once instructed, we will make a start, record the time taken to make the necessary changes and charge accordingly.</span>
       </div>
 
       <div class="field-group">
@@ -1007,7 +1008,7 @@
       <!-- Custom quote (100+ trees) -->
       <div id="customQuote" style="display:none">
         <div class="custom-quote-notice">
-          🌳 <strong>100+ trees detected.</strong> Sites with more than 100 trees require a custom quote. Trevor will review your enquiry and be in touch within one working day with a bespoke price.
+          <strong>100+ trees detected.</strong> Sites with more than 100 trees require a custom quote. Trevor will review your enquiry and be in touch within one working day with a bespoke price.
         </div>
       </div>
 
@@ -1097,7 +1098,8 @@
       <div class="form-nav">
         <button class="btn btn-secondary" onclick="goTo('step-3-new')">← Back</button>
         <button class="btn btn-submit" onclick="submitNewEnquiry()" id="submitNewBtn">
-          Submit Enquiry ✓
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L20 6.5"/></svg>
+          Submit Enquiry
         </button>
       </div>
     </div>
@@ -1127,7 +1129,8 @@
       <div class="form-nav">
         <button class="btn btn-secondary" onclick="goTo('step-1-amendment')">← Back</button>
         <button class="btn btn-submit" onclick="submitAmendment()" id="submitAmendBtn">
-          Submit Amendment Request ✓
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L20 6.5"/></svg>
+          Submit Amendment Request
         </button>
       </div>
     </div>
@@ -1144,7 +1147,7 @@
         <p>We'll send a confirmation to <strong id="successEmail">your email</strong> shortly.</p>
 
         <div style="background:rgba(74,140,92,0.12);border:1.5px solid var(--green-light);border-radius:12px;padding:20px;margin:24px 0;font-size:14px;line-height:1.6;color:#1a1a1a;">
-          <strong style="display:block;margin-bottom:8px;color:var(--green-dark);">📧 Important: Check Your Email</strong>
+          <strong style="display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--green-dark);"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="5.5" width="18" height="13" rx="2"/><polyline points="4 7 12 13 20 7"/></svg>Important: Check Your Email</strong>
           We'll be sending you an email with important information we need from you to carry out the job. Please look out for this email and reply with the requested details as soon as possible.
         </div>
 
