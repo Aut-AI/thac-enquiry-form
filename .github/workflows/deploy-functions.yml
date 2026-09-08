@@ -37,6 +37,7 @@ jobs:
           supabase functions deploy notify-quote-declined --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy send-quote-email --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy submit-enquiry --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy respond-to-quote --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy geocode-postcode --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-surveyor-approved --project-ref lemppaqgpntadeylzzwn

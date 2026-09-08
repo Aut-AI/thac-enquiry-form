@@ -167,24 +167,23 @@ let parkingLat = null;
 let parkingLng = null;
 let loadedEnquiry = null;
 
-async function supabaseGet(table, query) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
-  return res.json();
-}
-
-async function supabasePatch(table, filter, data) {
-  await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
-    method: 'PATCH',
+// anon has no SELECT or UPDATE policy on enquiries (only `authenticated`
+// does) -- reads and writes both go through respond-to-quote instead,
+// which does them server-side with the service role key. See the comment
+// at the top of that function for how this was found.
+async function respondToQuote(payload) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/respond-to-quote`, {
+    method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
 }
 
 async function init() {
@@ -196,16 +195,7 @@ async function init() {
   }
 
   try {
-    const data = await supabaseGet('enquiries',
-      `id=eq.${id}&select=id,job_number,contact_name,survey_type,site_postcode,deadline_tier,quoted_price,travel_cost,status&limit=1`
-    );
-
-    if (!data || !data.length) {
-      showError('Quote not found. Please contact us directly.');
-      return;
-    }
-
-    const enq = data[0];
+    const enq = await respondToQuote({ action: 'get', id });
 
     // Already actioned
     if (enq.status === 'accepted') {
@@ -223,7 +213,9 @@ async function init() {
       showAcceptConfirm(enq);
     }
   } catch (e) {
-    showError('Something went wrong. Please contact us directly.');
+    showError(e.message === 'Not found'
+      ? 'Quote not found. Please contact us directly.'
+      : 'Something went wrong. Please contact us directly.');
   }
 }
 
@@ -414,7 +406,6 @@ function toggleEndClient(val) {
 }
 
 async function submitStep2(enquiryId, ref) {
-  console.log('🚀 submitStep2 called with enquiryId:', enquiryId, 'ref:', ref);
   const btn = document.querySelector('.btn-accept');
 
   // Validate T&C acceptance
@@ -437,9 +428,9 @@ async function submitStep2(enquiryId, ref) {
   const finalReportAddress = reportAddress || billAddress      || null;
 
   try {
-    const updateData = {
-      status:                   'accepted',
-      accepted_at:              new Date().toISOString(),
+    const result = await respondToQuote({
+      action: 'accept',
+      id: enquiryId,
       billing_contact_name:     document.getElementById('billName').value.trim()  || null,
       billing_contact_email:    document.getElementById('billEmail').value.trim() || null,
       billing_address:          billAddress,
@@ -450,114 +441,12 @@ async function submitStep2(enquiryId, ref) {
       report_title:             document.getElementById('reportTitle').value.trim() || null,
       access_details:           document.getElementById('accessDetails').value.trim() || null,
       parking_details:          document.getElementById('parkingDetails').value.trim() || null,
-      tc_accepted:              true,
-      tc_accepted_at:           new Date().toISOString(),
-      client_details_at:        new Date().toISOString(),
-    };
-
-    if (parkingLat !== null && parkingLng !== null) {
-      updateData.parking_lat = parkingLat;
-      updateData.parking_lng = parkingLng;
-      console.log('✅ Parking data added to update:', parkingLat, parkingLng);
-    } else {
-      console.log('⚠️ No parking location - parkingLat:', parkingLat, 'parkingLng:', parkingLng);
-    }
-
-    console.log('📤 Sending PATCH to enquiries with data:', updateData);
-    await supabasePatch('enquiries', `id=eq.${enquiryId}`, updateData);
-    console.log('✅ Enquiries PATCH completed');
-
-    // Update the job that was created at enquiry submission time
-    try {
-      const jobResp = await fetch(`${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-
-      if (jobResp.ok) {
-        const jobs = await jobResp.json();
-        if (jobs && jobs.length > 0) {
-          const jobId = jobs[0].id;
-          const jobUpdateData = {
-            site_access_notes: document.getElementById('accessDetails').value.trim() || null,
-            billing_contact_name: document.getElementById('billName').value.trim() || null,
-            billing_contact_email: document.getElementById('billEmail').value.trim() || null,
-            billing_address: billAddress,
-            report_addressee_name: finalReportName,
-            report_addressee_address: finalReportAddress,
-            report_title: document.getElementById('reportTitle').value.trim() || null,
-            parking_lat: parkingLat,
-            parking_lng: parkingLng,
-            extended_info_received: true,
-            extended_info_received_at: new Date().toISOString(),
-          };
-
-          console.log('📤 Updating job', jobId, 'with parking_lat:', jobUpdateData.parking_lat, 'parking_lng:', jobUpdateData.parking_lng);
-
-          const updateJobResp = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}`, {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(jobUpdateData)
-          });
-
-          if (updateJobResp.ok) {
-            console.log('✅ Job updated successfully');
-          } else {
-            console.error('❌ Job update failed:', updateJobResp.status);
-          }
-        } else {
-          console.log('⚠️ No job found for enquiry, falling back to create');
-          // Defensive fallback: create job if not found
-          const jobData = {
-            enquiry_id: enquiryId,
-            survey_type: currentEnquiry?.survey_type,
-            site_postcode: currentEnquiry?.site_postcode,
-            dispatch_state: 'pending_approval',
-            urgency_state: currentEnquiry?.deadline_tier === '3days' ? 'red' :
-                           currentEnquiry?.deadline_tier === '5days' ? 'orange' :
-                           currentEnquiry?.deadline_tier === '7days' ? 'yellow' : 'grey',
-            quoted_amount: currentEnquiry?.quoted_price,
-            agreed_amount: currentEnquiry?.quoted_price,
-            site_access_notes: document.getElementById('accessDetails').value.trim() || null,
-            billing_contact_name: document.getElementById('billName').value.trim() || null,
-            billing_contact_email: document.getElementById('billEmail').value.trim() || null,
-            billing_address: billAddress,
-            report_addressee_name: finalReportName,
-            report_addressee_address: finalReportAddress,
-            report_title: document.getElementById('reportTitle').value.trim() || null,
-            parking_lat: parkingLat,
-            parking_lng: parkingLng,
-          };
-
-          const createJobResp = await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(jobData)
-          });
-
-          if (createJobResp.ok) {
-            console.log('✅ Job created as fallback');
-          }
-        }
-      }
-    } catch (jobErr) {
-      console.error('Error updating/creating job:', jobErr.message);
-    }
+      ...(parkingLat !== null && parkingLng !== null ? { parking_lat: parkingLat, parking_lng: parkingLng } : {}),
+    });
 
     showDone(ICON_CHECK_CIRCLE, 'All Done!',
       `Thank you — we have everything we need. Trevor will review and contact you shortly to confirm your survey date.`,
-      { job_number: ref }
+      { job_number: result.job_number || ref }
     );
   } catch (e) {
     btn.textContent = 'Submit Details →';
@@ -576,35 +465,7 @@ async function declineQuote(enquiryId) {
   const reason   = [selected, extra].filter(Boolean).join(' — ') || null;
 
   try {
-    await supabasePatch('enquiries', `id=eq.${enquiryId}`, {
-      status:          'declined',
-      declined_reason: reason,
-      declined_at:     new Date().toISOString(),
-    });
-
-    // Archive the linked job
-    try {
-      const jobResp = await fetch(`${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-
-      if (jobResp.ok) {
-        const jobs = await jobResp.json();
-        if (jobs && jobs.length > 0) {
-          const jobId = jobs[0].id;
-          await supabasePatch('jobs', `id=eq.${jobId}`, {
-            dispatch_state: 'archived'
-          });
-          console.log('✅ Linked job archived');
-        }
-      }
-    } catch (jobErr) {
-      console.error('Error archiving job:', jobErr.message);
-    }
+    await respondToQuote({ action: 'decline', id: enquiryId, reason });
 
     document.getElementById('card').innerHTML = `
       <div class="logo">${LOGO_MARK}</div>

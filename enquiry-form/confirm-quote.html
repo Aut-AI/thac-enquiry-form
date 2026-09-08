@@ -265,23 +265,26 @@ async function init() {
     return;
   }
 
-  // Fetch enquiry details
+  // anon has no SELECT/UPDATE policy on enquiries (only `authenticated`
+  // does) -- this used to fetch the row directly with the anon key, which
+  // always returned zero rows under RLS ("Quote not found" for every real
+  // customer). Reads and writes both go through respond-to-quote now,
+  // which does them server-side with the service role key.
   try {
     const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/enquiries?id=eq.${enquiryId}&select=*`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        }
-      }
-    );
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/respond-to-quote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ action: 'get', id: enquiryId }),
+    });
 
-    const data = await response.json();
-    if (!data || data.length === 0) {
+    if (!response.ok) {
       document.getElementById('formContainer').innerHTML = `
         <div class="card">
           <p style="color: #dc2626;">Quote not found. Please check your email link.</p>
@@ -290,14 +293,16 @@ async function init() {
       return;
     }
 
-    enquiry = data[0];
+    enquiry = await response.json();
 
-    // If status is not 'quoted', don't allow editing
-    if (enquiry.status !== 'quoted') {
+    // This page is only ever linked to once an enquiry is already accepted
+    // (notify-quote-accepted-to-customer's trigger condition), so that's
+    // the expected status on arrival -- only a decline should block it.
+    if (enquiry.status === 'declined') {
       document.getElementById('formContainer').innerHTML = `
         <div class="card">
           <div class="error-message">
-            <p>This quote has already been processed. If you need to make changes, please contact us.</p>
+            <p>This quote was declined. If that's changed, please contact us directly.</p>
           </div>
         </div>
       `;
@@ -447,14 +452,18 @@ async function submitDetails() {
     const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXBwYXFncG50YWRleWx6enduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUzOTMsImV4cCI6MjA5NDg5MTM5M30.SU2M7e5OSwqIjRJfM15uKLHTqSrLadcY46MR51twosU';
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/enquiries?id=eq.${enquiryId}`, {
-      method: 'PATCH',
+    // anon has no UPDATE policy on enquiries -- goes through respond-to-quote
+    // now, the same server-side function accept-quote.html uses.
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/respond-to-quote`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
+        action: 'accept',
+        id: enquiryId,
         end_client_name: endClientName,
         billing_contact_name: billingContactName,
         billing_contact_email: billingContactEmail,
@@ -462,10 +471,7 @@ async function submitDetails() {
         report_addressee_name: reportAddresseeName,
         report_addressee_address: reportAddresseeAddress,
         client_site_access: document.getElementById('siteAccessNotes').value.trim() || null,
-        parking_lat: parkingLat,
-        parking_lng: parkingLng,
-        status: 'accepted',
-        accepted_at: new Date().toISOString()
+        ...(parkingLat !== null && parkingLng !== null ? { parking_lat: parkingLat, parking_lng: parkingLng } : {}),
       })
     });
 
