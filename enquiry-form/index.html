@@ -1797,116 +1797,35 @@ async function geocodePostcode(postcode) {
   return null;
 }
 
+// Submission goes through the submit-enquiry Edge Function rather than
+// inserting into enquiries/jobs directly with the anon key: anon has
+// never had INSERT on jobs at all (that step always failed silently),
+// and even the enquiries insert alone failed once Prefer:
+// return=representation was added, since anon has no SELECT policy on
+// enquiries to satisfy the RETURNING clause. The Edge Function does both
+// inserts (and the auto quote-email trigger) server-side with the
+// service role key instead.
 async function submitToSupabase(payload, email) {
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/enquiries`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-enquiry`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Prefer': 'return=representation'
       },
       body: JSON.stringify(payload)
     });
 
     if (response.ok) {
-      const data = await response.json();
-      const enquiry = data[0];
+      const enquiry = await response.json();
       const ref = enquiry?.job_number || 'TH —';
-
-      // Create job immediately (non-blocking)
-      createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      // Auto-send quote email if price was computed
-      if (enquiry?.quoted_price) {
-        sendQuoteEmailAuto(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY);
-      }
-
       showSuccess(ref, email);
     } else {
       alert('Submission failed. Please try again.');
     }
   } catch (err) {
     alert('Submission failed. Please try again.');
-  }
-}
-
-async function createJobForEnquiry(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
-  try {
-    let jobData = {};
-
-    if (enquiry.enquiry_type === 'new') {
-      const now = new Date();
-      const daysToAdd = enquiry.deadline_tier === '3days' ? 3 :
-                        enquiry.deadline_tier === '5days' ? 5 :
-                        enquiry.deadline_tier === '7days' ? 7 :
-                        enquiry.deadline_tier === '15days' ? 15 :
-                        enquiry.deadline_tier === 'no_rush' ? null : 10;
-      const slaDeadline = daysToAdd ? new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString() : null;
-
-      jobData = {
-        enquiry_id: enquiry.id,
-        job_type: 'new',
-        survey_type: enquiry.survey_type,
-        site_postcode: enquiry.site_postcode,
-        dispatch_state: 'pending_approval',
-        urgency_state: enquiry.deadline_tier === '3days' ? 'red' :
-                       enquiry.deadline_tier === '5days' ? 'orange' :
-                       enquiry.deadline_tier === '7days' ? 'yellow' : 'grey',
-        sla_deadline: slaDeadline,
-        quoted_amount: enquiry.quoted_price,
-        agreed_amount: enquiry.quoted_price,
-        billing_contact_name: enquiry.contact_name,
-        billing_contact_email: enquiry.contact_email,
-      };
-    } else if (enquiry.enquiry_type === 'amendment') {
-      jobData = {
-        enquiry_id: enquiry.id,
-        job_type: 'amendment',
-        dispatch_state: 'pending_approval',
-        internal_notes: `Amendment request — customer-provided original job ref: "${enquiry.original_job_ref}". Scope: ${enquiry.amendment_scope}`,
-      };
-    }
-
-    await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(jobData),
-    });
-  } catch (e) {
-    console.error('Auto job creation failed:', e);
-  }
-}
-
-async function sendQuoteEmailAuto(enquiry, SUPABASE_URL, SUPABASE_ANON_KEY) {
-  try {
-    await fetch(`${SUPABASE_URL}/functions/v1/send-quote-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        enquiry_id: enquiry.id,
-        contact_email: enquiry.contact_email,
-        contact_name: enquiry.contact_name,
-        introducer_name: enquiry.introducer_name,
-        introducer_email: enquiry.introducer_email,
-        quoted_price: enquiry.quoted_price,
-        deadline_tier: enquiry.deadline_tier,
-        survey_type: enquiry.survey_type,
-        job_number: enquiry.job_number,
-        site_postcode: enquiry.site_postcode,
-      }),
-    });
-  } catch (e) {
-    console.error('Auto quote email failed:', e);
   }
 }
 
