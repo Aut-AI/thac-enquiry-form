@@ -79,9 +79,8 @@ serve(async (req) => {
     });
 
     if (!enqRes.ok) {
-      const errText = await enqRes.text();
-      console.error("Enquiry insert failed:", errText);
-      return jsonResponse({ error: "Could not save enquiry", detail: errText }, 500);
+      console.error("Enquiry insert failed:", await enqRes.text());
+      return jsonResponse({ error: "Could not save enquiry" }, 500);
     }
 
     const [enquiry] = await enqRes.json();
