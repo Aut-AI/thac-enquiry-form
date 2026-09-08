@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -37,7 +37,7 @@ serve(async (req) => {
     }
 
     const surveyorName = await getSurveyorName(record.surveyor_id);
-    const subject = `🟡 Field Data Ready — ${record.reference} | Finalise Report Now`;
+    const subject = `Field Data Ready — ${record.reference} | Finalise Report Now`;
 
     const uploadedAt = record.field_data_uploaded_at
       ? new Date(record.field_data_uploaded_at).toLocaleString('en-GB')
@@ -56,14 +56,14 @@ serve(async (req) => {
       const sla = new Date(record.sla_deadline);
       const diff = Math.ceil((sla.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       daysRemaining = diff > 0
-        ? `<span style="color:#ca8a04; font-weight:600;">${diff} day${diff !== 1 ? 's' : ''} remaining</span>`
-        : `<span style="color:#dc2626; font-weight:600;">⚠️ SLA OVERDUE by ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''}</span>`;
+        ? `<span style="color:#b8960a; font-weight:600;">${diff} day${diff !== 1 ? 's' : ''} remaining</span>`
+        : `<span style="color:#c0392b; font-weight:600;">SLA overdue by ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''}</span>`;
     }
 
     const html = emailWrapper(`
       <h2>Field Data Uploaded — Report Finalisation Required</h2>
-      <p>The surveyor has completed the site visit and uploaded field data, photos, and notes. 
-         The dot has turned <strong style="color:#ca8a04;">🟡 yellow</strong>. 
+      <p>The surveyor has completed the site visit and uploaded field data, photos, and notes.
+         The dot has turned <strong style="color:#b8960a;">${statusDot('#b8960a')}yellow</strong>.
          The draft report now needs to be finalised.</p>
 
       <div class="detail-block">
@@ -77,7 +77,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Surveyor</span>
-          <span class="detail-value">👤 ${surveyorName}</span>
+          <span class="detail-value">${surveyorName}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Data Uploaded At</span>
@@ -98,11 +98,11 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Axiscape DB Prepared</span>
-          <span class="detail-value">${record.axi_prepared ? '✅ Yes' : '⏳ Pending'}</span>
+          <span class="detail-value" style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Report Drafted</span>
-          <span class="detail-value">${record.report_drafted ? '✅ Yes' : '⏳ Pending'}</span>
+          <span class="detail-value" style="color:${record.report_drafted ? '#1a3a2a' : '#c8773a'};">${record.report_drafted ? 'Yes' : 'Pending'}</span>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendEmail } from "../_shared/email-templates.ts";
+import { sendEmail, emailWrapper } from "../_shared/email-templates.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -23,15 +23,14 @@ serve(async (req) => {
       });
     }
 
-    await sendEmail(
-      surveyor.email,
-      "Your Heaps Arboriculture account is approved",
-      `
-        <p>Welcome, ${surveyor.full_name}!</p>
-        <p>Your account has been approved and you can now log in to the Heaps Arboriculture surveyor app.</p>
-        <p>Open the app and enter your credentials to get started.</p>
-      `,
-    );
+    const html = emailWrapper(`
+      <h2>You're Approved</h2>
+      <p>Welcome, ${surveyor.full_name} — your account has been approved and you can
+         now log in to the Heaps Arboriculture surveyor app. Open the app and enter
+         your credentials to get started.</p>
+    `);
+
+    await sendEmail(surveyor.email, "Your Heaps Arboriculture Account Is Approved", html);
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {

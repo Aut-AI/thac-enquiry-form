@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { sendEmail } from '../_shared/email-templates.ts'
+import { sendEmail, emailWrapper } from '../_shared/email-templates.ts'
 
 serve(async (req) => {
   const { record } = await req.json()
@@ -8,30 +8,40 @@ serve(async (req) => {
 
   const confirmLink = `https://aut-ai.github.io/thac-enquiry-form/confirm-quote.html?id=${record.id}`
 
-  const emailHtml = `
+  const emailHtml = emailWrapper(`
     <h2>Your Quote Has Been Accepted</h2>
     <p>Hi ${record.contact_name},</p>
-    <p>Great news! We're ready to proceed with your tree survey.</p>
+    <p>Great news — we're ready to proceed with your tree survey. Please complete
+       a few last details so we can get started.</p>
 
-    <p><strong>Please complete the following by clicking the button below:</strong></p>
-    <ul>
-      <li>Confirm the end client (property owner) details</li>
-      <li>Provide billing contact information</li>
-      <li>Specify where the report should be addressed</li>
-      <li>Share any site access information (gate codes, contact numbers, etc)</li>
-    </ul>
+    <div class="detail-block">
+      <div class="detail-row">
+        <span class="detail-label">End client details</span>
+        <span class="detail-value">the property owner</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Billing contact</span>
+        <span class="detail-value">who receives the invoice</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Report addressee</span>
+        <span class="detail-value">who the report is for</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Site access</span>
+        <span class="detail-value">gate codes, contact on arrival</span>
+      </div>
+    </div>
 
-    <p style="margin: 24px 0;">
-      <a href="${confirmLink}" style="display: inline-block; background: #1a3a2a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-        Confirm Your Details →
-      </a>
+    <a href="${confirmLink}" class="cta-button">
+      Confirm Your Details →
+    </a>
+
+    <p style="margin-top:26px;">Reference: <strong>${record.job_number}</strong></p>
+    <p style="color: #6b756f; font-size: 13px; margin-top: 20px;">
+      If you have any questions, just reply to this email or give us a call.
     </p>
-
-    <p>Reference: <strong>${record.job_number}</strong></p>
-    <p style="color: #666; font-size: 13px; margin-top: 24px;">
-      If you have any questions, please reply to this email or call us.
-    </p>
-  `
+  `)
 
   try {
     await sendEmail(record.contact_email, `Confirm Your Quote Details — Reference ${record.job_number}`, emailHtml)

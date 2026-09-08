@@ -8,6 +8,25 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { sendEmail, emailWrapper, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
+const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_KEY  = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
+
+// The job for this enquiry is created immediately by submit-enquiry, but
+// this webhook only receives the enquiry row -- look up the job it's
+// linked to so the CTA can go straight to job-detail.html. There's no
+// enquiry-detail.html page in the admin CRM; that link 404'd for every
+// single enquiry until this was added.
+async function getLinkedJobId(enquiryId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`,
+      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const rows = await res.json();
+    return rows?.[0]?.id || null;
+  } catch { return null; }
+}
+
 const SURVEY_LABELS: Record<string, string> = {
   planning_stage1:  'Planning — Stage 1 (BS5837)',
   planning_stage2:  'Planning — Stage 2 (AIA/AMS/TPP)',
@@ -39,8 +58,13 @@ serve(async (req) => {
 
     const isAmendment = record.enquiry_type === 'amendment';
     const subject = isAmendment
-      ? `📋 New Amendment Enquiry — ${record.contact_name}`
-      : `📬 New Enquiry Received — ${record.contact_name}`;
+      ? `New Amendment Enquiry — ${record.contact_name}`
+      : `New Enquiry Received — ${record.contact_name}`;
+
+    const jobId = await getLinkedJobId(record.id);
+    const crmLink = jobId
+      ? `https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${jobId}`
+      : `https://thac-enquiry-form-production.up.railway.app/admin/jobs.html`;
 
     const quotedPrice = record.quoted_price
       ? `£${Number(record.quoted_price).toLocaleString('en-GB')} excl VAT`
@@ -111,7 +135,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Quoted Price</span>
-          <span class="detail-value" style="color:#1a3c2e;">${quotedPrice}</span>
+          <span class="detail-value" style="color:#1a3a2a;">${quotedPrice}</span>
         </div>` : ''}
         ${isAmendment ? `
         <div class="detail-row">
@@ -128,8 +152,8 @@ serve(async (req) => {
         </div>
       </div>
 
-      <a href="https://thac-enquiry-form-production.up.railway.app/admin/enquiry-detail.html?id=${record.id}" class="cta-button">
-        View Enquiry in CRM →
+      <a href="${crmLink}" class="cta-button">
+        View in CRM →
       </a>
     `);
 

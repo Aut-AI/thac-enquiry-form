@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -25,7 +25,7 @@ serve(async (req) => {
       return new Response('Already live — skipping', { status: 200 });
     }
 
-    const subject = `✅ Job Live on Map — ${record.reference} | Awaiting Surveyor Claim`;
+    const subject = `Job Live on Map — ${record.reference} | Awaiting Surveyor Claim`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', {
@@ -35,8 +35,8 @@ serve(async (req) => {
 
     const html = emailWrapper(`
       <h2>Job Approved & Live on Marketplace</h2>
-      <p>Trevor has approved this job. It is now visible as a 
-         <strong style="color:#dc2626;">🔴 red dot</strong> on the surveyor marketplace map 
+      <p>Trevor has approved this job. It is now visible as a
+         <strong style="color:#c0392b;">${statusDot('#c0392b')}red dot</strong> on the surveyor marketplace map
          and awaiting a surveyor claim.</p>
 
       <div class="detail-block">

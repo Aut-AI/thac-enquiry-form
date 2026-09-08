@@ -10,6 +10,21 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
+const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
+
+// There's no enquiry-detail.html page in the admin CRM -- look up the
+// linked job (created immediately by submit-enquiry) and go there instead.
+async function getLinkedJobId(enquiryId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`,
+      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const rows = await res.json();
+    return rows?.[0]?.id || null;
+  } catch { return null; }
+}
 
 serve(async (req) => {
   try {
@@ -24,14 +39,17 @@ serve(async (req) => {
       return new Response('Already declined — skipping', { status: 200 });
     }
 
-    const subject = `❌ Quote Declined — ${record.job_number || 'Enquiry'} | ${record.contact_name || 'Client'}`;
+    const subject = `Quote Declined — ${record.job_number || 'Enquiry'} | ${record.contact_name || 'Client'}`;
 
     const price = record.quoted_price
       ? `£${Number(record.quoted_price).toLocaleString()} + VAT`
       : 'Custom quote';
 
+    const jobId = await getLinkedJobId(record.id);
+    const crmLink = jobId ? `${CRM_URL}/job-detail.html?id=${jobId}` : `${CRM_URL}/jobs.html`;
+
     const html = emailWrapper(`
-      <h2>❌ Client Has Declined Their Quote</h2>
+      <h2>Client Has Declined Their Quote</h2>
       <p>A client has declined their quote. You may wish to follow up to understand
          their decision or offer an alternative.</p>
 
@@ -63,7 +81,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Reason Given</span>
-          <span class="detail-value" style="color:${record.declined_reason ? '#dc2626' : '#999'};">
+          <span class="detail-value" style="color:${record.declined_reason ? '#c0392b' : '#8a938d'};">
             ${record.declined_reason || 'No reason provided'}
           </span>
         </div>
@@ -76,13 +94,13 @@ serve(async (req) => {
       </div>
 
       ${record.declined_reason?.toLowerCase().includes('price') ? `
-      <p style="font-size:14px;color:#666;margin-top:8px;">
-        💡 <strong>Price objection detected.</strong> Consider whether a revised quote
+      <div class="callout">
+        <strong>Price objection detected.</strong> Consider whether a revised quote
         or payment terms discussion might bring this client back.
-      </p>` : ''}
+      </div>` : ''}
 
-      <a href="${CRM_URL}/enquiry-detail.html?id=${record.id}" class="cta-button">
-        View Enquiry →
+      <a href="${crmLink}" class="cta-button">
+        View in CRM →
       </a>
     `);
 

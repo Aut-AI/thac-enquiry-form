@@ -13,7 +13,7 @@ serve(async (req) => {
     const payload = await req.json();
     const record = payload.record;
 
-    const subject = `🆕 Job Created — ${record.reference || 'New Job'} | Ready for Preparation`;
+    const subject = `Job Created — ${record.reference || 'New Job'} | Ready for Preparation`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -21,8 +21,9 @@ serve(async (req) => {
 
     const html = emailWrapper(`
       <h2>New Job Created — Ready for Preparation</h2>
-      <p>A client has accepted their quote and a job has been automatically created and approved.
-         Please proceed with preparing the Axiscape database and drafting the initial report template.</p>
+      <p>A new job has been created and is sitting as Pending Approval in the CRM.
+         Prepare the Axiscape database and draft the initial report template, then approve
+         the job to put it live on the surveyor map.</p>
 
       <div class="detail-block">
         <div class="detail-row">
@@ -67,11 +68,11 @@ serve(async (req) => {
         </div>
       </div>
 
-      <p style="font-size:14px; color:#666; margin-top:16px;">
+      <p style="font-size:14px; color:#6b756f; margin-top:16px;">
         <strong>Next steps:</strong><br>
         1. Prepare Axiscape survey database<br>
         2. Draft initial report template<br>
-        3. Job is now live on the surveyor map and ready for allocation
+        3. Approve the job — it goes live on the surveyor map
       </p>
 
       <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -40,7 +40,7 @@ serve(async (req) => {
     }
 
     const surveyorName = await getSurveyorName(record.surveyor_id);
-    const subject = `🟠 Job Claimed — ${record.reference} | ${surveyorName}`;
+    const subject = `Job Claimed — ${record.reference} | ${surveyorName}`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', {
@@ -56,8 +56,8 @@ serve(async (req) => {
 
     const html = emailWrapper(`
       <h2>Job Claimed by Surveyor</h2>
-      <p>A surveyor has claimed this job on the marketplace. 
-         The dot has turned <strong style="color:#ea580c;">🟠 orange</strong>. 
+      <p>A surveyor has claimed this job on the marketplace.
+         The dot has turned <strong style="color:#c8773a;">${statusDot('#c8773a')}orange</strong>.
          The job is now locked — no other surveyor can claim it.</p>
 
       <div class="detail-block">
@@ -67,7 +67,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Assigned Surveyor</span>
-          <span class="detail-value">👤 ${surveyorName}</span>
+          <span class="detail-value">${surveyorName}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Survey Type</span>

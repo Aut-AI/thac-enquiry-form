@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -24,7 +24,7 @@ serve(async (req) => {
       return new Response('Already finalised — skipping', { status: 200 });
     }
 
-    const subject = `🟢 Report Finalised — ${record.reference} | Invoice Now Required`;
+    const subject = `Report Finalised — ${record.reference} | Invoice Now Required`;
 
     const reportSentAt = record.report_finalised_at
       ? new Date(record.report_finalised_at).toLocaleString('en-GB')
@@ -37,8 +37,8 @@ serve(async (req) => {
 
     const html = emailWrapper(`
       <h2>Report Sent to Client</h2>
-      <p>The report has been marked as sent. The dot has turned 
-         <strong style="color:#16a34a;">🟢 green</strong>. 
+      <p>The report has been marked as sent. The dot has turned
+         <strong style="color:#1a3a2a;">${statusDot('#1a3a2a')}green</strong>.
          Please now raise the invoice in QuickBooks and record it in the CRM.</p>
 
       <div class="detail-block">
@@ -65,15 +65,15 @@ serve(async (req) => {
         ${isStaged ? `
         <div class="detail-row">
           <span class="detail-label">Invoice 1 (survey stage)</span>
-          <span class="detail-value" style="color:#666;">£${invoice1} — already raised</span>
+          <span class="detail-value" style="color:#6b756f;">£${invoice1} — already raised</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Invoice 2 (report stage)</span>
-          <span class="detail-value" style="color:#16a34a; font-weight:700;">£${invoice2} — raise now ✍️</span>
+          <span class="detail-value" style="color:#1a3a2a; font-weight:700;">£${invoice2} — raise now</span>
         </div>` : `
         <div class="detail-row">
           <span class="detail-label">Invoice Amount</span>
-          <span class="detail-value" style="color:#16a34a; font-weight:700;">£${invoice2 ?? '—'} — raise now ✍️</span>
+          <span class="detail-value" style="color:#1a3a2a; font-weight:700;">£${invoice2 ?? '—'} — raise now</span>
         </div>`}
         <div class="detail-row">
           <span class="detail-label">Payment Due</span>

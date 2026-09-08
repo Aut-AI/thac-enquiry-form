@@ -11,6 +11,22 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
+const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
+
+// There's no enquiry-detail.html page in the admin CRM -- the job for this
+// enquiry already exists (created immediately by submit-enquiry, sitting
+// as Pending Approval), so link straight to it instead.
+async function getLinkedJobId(enquiryId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`,
+      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const rows = await res.json();
+    return rows?.[0]?.id || null;
+  } catch { return null; }
+}
 
 serve(async (req) => {
   try {
@@ -26,7 +42,7 @@ serve(async (req) => {
       return new Response('Already accepted — skipping', { status: 200 });
     }
 
-    const subject = `✅ Quote Accepted — ${record.job_number || 'Enquiry'} | Convert to Job Now`;
+    const subject = `Quote Accepted — ${record.job_number || 'Enquiry'} | Review the Job`;
 
     const acceptedAt = record.accepted_at
       ? new Date(record.accepted_at).toLocaleString('en-GB')
@@ -36,10 +52,14 @@ serve(async (req) => {
       ? `£${Number(record.quoted_price).toLocaleString()} + VAT`
       : 'Custom quote';
 
+    const jobId = await getLinkedJobId(record.id);
+    const crmLink = jobId ? `${CRM_URL}/job-detail.html?id=${jobId}` : `${CRM_URL}/jobs.html`;
+
     const html = emailWrapper(`
-      <h2>🎉 Client Has Accepted Their Quote</h2>
+      <h2>Client Has Accepted Their Quote</h2>
       <p>A client has clicked <strong>Accept Quote</strong>.
-         Please convert this enquiry to a job as soon as possible.</p>
+         The job is already in the CRM as Pending Approval — review it and approve
+         when ready.</p>
 
       <div class="detail-block">
         <div class="detail-row">
@@ -69,7 +89,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Quoted Amount</span>
-          <span class="detail-value" style="color:#16a34a; font-size:16px; font-weight:700;">${price}</span>
+          <span class="detail-value" style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Accepted At</span>
@@ -77,16 +97,15 @@ serve(async (req) => {
         </div>
       </div>
 
-      <p style="font-size:14px; color:#666; margin-top:8px;">
+      <p style="font-size:14px; color:#6b756f; margin-top:8px;">
         <strong>Next steps:</strong><br>
-        1. Open the enquiry and click <strong>Convert to Job</strong><br>
-        2. Prepare the Axiscape database entry<br>
-        3. Draft the initial report template<br>
-        4. Submit to Trevor for approval
+        1. Prepare the Axiscape database entry<br>
+        2. Draft the initial report template<br>
+        3. Approve the job — it goes live on the surveyor map
       </p>
 
-      <a href="${CRM_URL}/enquiry-detail.html?id=${record.id}" class="cta-button">
-        Open Enquiry — Convert to Job →
+      <a href="${crmLink}" class="cta-button">
+        Open Job in CRM →
       </a>
     `);
 

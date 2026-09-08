@@ -21,6 +21,15 @@ export const REPLY_TO_ADDRESS = 'nick@aut-ai.com';
 export const TESTING_CC: string | null = 'nick@aut-ai.com';
 
 // ── Base wrapper ────────────────────────────────────────────
+// Email clients don't render SVG or run CSS the way browsers do (Outlook
+// desktop in particular is Word's rendering engine), so icons here are
+// small CSS-drawn dots/badges rather than the site's SVG icon set -- same
+// "colour = status, no decorative emoji" principle, executed in a way that
+// actually survives Gmail/Outlook/Apple Mail. Layout is a fluid div (not a
+// table) capped at 600px, with a single media query to stack the detail
+// rows on narrow screens -- works in every modern client; falls back to
+// the (still readable) desktop layout on ancient Outlook, which ignores
+// the media query.
 export function emailWrapper(content: string): string {
   return `
 <!DOCTYPE html>
@@ -28,39 +37,57 @@ export function emailWrapper(content: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 32px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .header { background: #1a3c2e; padding: 24px 32px; }
-    .header h1 { color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; }
-    .header p { color: #a8c5b5; margin: 4px 0 0; font-size: 13px; }
-    .body { padding: 32px; color: #1a1a1a; }
-    .body h2 { font-size: 18px; margin: 0 0 16px; color: #1a3c2e; }
-    .detail-block { background: #f8faf9; border-left: 3px solid #1a3c2e; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
-    .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e8eeeb; font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #eef3ef; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    .bg { width: 100%; background: #eef3ef; padding: 36px 16px; }
+    .container { max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(26,58,42,0.09), 0 8px 24px rgba(26,58,42,0.06); }
+    .header { background: #1a3a2a; padding: 26px 32px; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+    .header p { color: #9fc2ac; margin: 4px 0 0; font-size: 12.5px; letter-spacing: 0.01em; }
+    .body { padding: 32px; color: #1a1a1a; font-size: 15px; line-height: 1.65; }
+    .body h2 { font-size: 19px; margin: 0 0 18px; color: #1a3a2a; font-weight: 700; letter-spacing: -0.01em; }
+    .body p { margin: 0 0 14px; }
+    .detail-block { background: #f7faf8; border: 1px solid #e2ebe4; border-radius: 10px; padding: 4px 20px; margin: 22px 0; }
+    .detail-row { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; padding: 13px 0; border-bottom: 1px solid #e6ede8; font-size: 14px; }
     .detail-row:last-child { border-bottom: none; }
-    .detail-label { color: #666; font-weight: 500; }
+    .detail-label { color: #6b756f; font-weight: 500; flex-shrink: 0; }
     .detail-value { color: #1a1a1a; font-weight: 600; text-align: right; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .badge-urgent { background: #fee2e2; color: #dc2626; }
-    .badge-elevated { background: #fff7ed; color: #ea580c; }
-    .badge-standard { background: #fefce8; color: #ca8a04; }
-    .badge-grey { background: #f3f4f6; color: #6b7280; }
-    .cta-button { display: inline-block; margin: 24px 0 0; padding: 12px 28px; background: #1a3c2e; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; }
-    .footer { background: #f8faf9; padding: 16px 32px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e8eeeb; }
+    .badge { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .badge-urgent { background: #fde8e8; color: #c0392b; }
+    .badge-elevated { background: #f5e6d8; color: #c8773a; }
+    .badge-standard { background: #fefce8; color: #b8960a; }
+    .badge-grey { background: #f0f0ee; color: #666666; }
+    .badge-complete { background: #e8f2ec; color: #1a3a2a; }
+    .callout { background: #f5e6d8; border: 1px solid #e8cfb0; border-radius: 10px; padding: 14px 18px; margin: 20px 0; font-size: 13.5px; color: #6b4321; }
+    .cta-button { display: inline-block; margin: 26px 0 6px; padding: 13px 30px; background: #1a3a2a; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 14.5px; font-weight: 600; }
+    .footer { background: #f7faf8; padding: 20px 32px; text-align: center; font-size: 12px; color: #8a938d; border-top: 1px solid #e6ede8; }
+    .footer a { color: #6b756f; }
+    @media (max-width: 520px) {
+      .bg { padding: 20px 6px; }
+      .header, .body, .footer { padding-left: 22px !important; padding-right: 22px !important; }
+      .detail-block { padding-left: 16px; padding-right: 16px; }
+      .detail-row { flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 0; }
+      .detail-value { text-align: left; }
+      .cta-button { display: block; text-align: center; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>🌳 Heaps Arboriculture</h1>
-      <p>CRM Notification System</p>
-    </div>
-    <div class="body">
-      ${content}
-    </div>
-    <div class="footer">
-      Heaps Arboriculture &nbsp;·&nbsp; This is an automated notification.
+  <div class="bg">
+    <div class="container">
+      <div class="header">
+        <h1>🌳 Heaps Arboriculture</h1>
+        <p>CRM Notification System</p>
+      </div>
+      <div class="body">
+        ${content}
+      </div>
+      <div class="footer">
+        Heaps Arboriculture &nbsp;·&nbsp; This is an automated notification.
+      </div>
     </div>
   </div>
 </body>
@@ -119,14 +146,23 @@ export const SURVEY_LABELS: Record<string, string> = {
   other:            'Other',
 };
 
+// ── A small solid-colour dot, replacing 🔴🟠🟡🟢⚫ -- renders reliably in
+// every email client, unlike SVG or the site's own icon() helper.
+export function statusDot(hex: string): string {
+  return `<span class="dot" style="background:${hex};"></span>`;
+}
+
 // ── Urgency state badge (uses urgency_state values: red/orange/yellow/grey)
+const URGENCY_META: Record<string, { cls: string; hex: string; label: string }> = {
+  red:    { cls: 'badge-urgent',   hex: '#c0392b', label: 'Urgent — within 3 working days' },
+  orange: { cls: 'badge-elevated', hex: '#c8773a', label: 'Elevated — within 5 working days' },
+  yellow: { cls: 'badge-standard', hex: '#b8960a', label: 'Standard — within 7 working days' },
+  grey:   { cls: 'badge-grey',     hex: '#666666', label: 'Low Priority — 10 working days / No rush' },
+  green:  { cls: 'badge-complete', hex: '#1a3a2a', label: 'Complete' },
+};
+
 export function urgencyStateBadge(state: string): string {
-  const map: Record<string, string> = {
-    red:    '<span class="badge badge-urgent">🔴 Urgent — within 3 working days</span>',
-    orange: '<span class="badge badge-elevated">🟠 Elevated — within 5 working days</span>',
-    yellow: '<span class="badge badge-standard">🟡 Standard — within 7 working days</span>',
-    grey:   '<span class="badge badge-grey">⚪ Low Priority — 10 working days / No rush</span>',
-    green:  '<span class="badge badge-grey">🟢 Complete</span>',
-  };
-  return map[state] || `<span class="badge badge-grey">${state || '—'}</span>`;
+  const m = URGENCY_META[state];
+  if (!m) return `<span class="badge badge-grey">${state || '—'}</span>`;
+  return `<span class="badge ${m.cls}">${statusDot(m.hex)}${m.label}</span>`;
 }
