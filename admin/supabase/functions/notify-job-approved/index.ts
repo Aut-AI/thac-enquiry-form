@@ -1,14 +1,14 @@
 // ============================================================
 // THAC — notify-job-approved
 // Trigger: UPDATE on public.jobs
-//          WHERE old.dispatch_state != 'live_unallocated'
-//            AND new.dispatch_state  = 'live_unallocated'
+//          WHERE old.dispatch_state IS DISTINCT FROM new.dispatch_state
+//            AND new.dispatch_state = 'red'
 // Fires:   When Trevor approves a job — red dot goes live on map
 // Sends:   Email to admin confirming job is live
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyBadge, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -16,11 +16,12 @@ serve(async (req) => {
     const record  = payload.record;       // new row state
     const oldRecord = payload.old_record; // previous row state
 
-    // Only fire when transitioning TO live_unallocated
-    if (record.dispatch_state !== 'live_unallocated') {
+    // Only fire when transitioning TO 'red' (the DB trigger already filters
+    // on this, but keep the check here as a defensive second layer).
+    if (record.dispatch_state !== 'red') {
       return new Response('Not a job-approval transition', { status: 200 });
     }
-    if (oldRecord?.dispatch_state === 'live_unallocated') {
+    if (oldRecord?.dispatch_state === 'red') {
       return new Response('Already live — skipping', { status: 200 });
     }
 
@@ -53,7 +54,7 @@ serve(async (req) => {
         </div>
         <div class="detail-row">
           <span class="detail-label">Urgency</span>
-          <span class="detail-value">${urgencyBadge(record.urgency_state)}</span>
+          <span class="detail-value">${urgencyStateBadge(record.urgency_state)}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">SLA Deadline</span>

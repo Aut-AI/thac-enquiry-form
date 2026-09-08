@@ -3,14 +3,22 @@
 // Shared across all notification edge functions
 // ============================================================
 
-export const ADMIN_EMAIL = 'nick@aut-ai.com';
+export const ADMIN_EMAIL = 'trevor@heapsarboriculture.co.uk';
 export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-// sends.aut-ai.com is verified in Resend (SPF/DKIM added via Squarespace DNS).
-export const FROM_ADDRESS = 'THAC <quotes@sends.aut-ai.com>';
-// sends.aut-ai.com is a send-only subdomain with no real mailbox behind it --
-// this is where a customer's "Reply" actually goes instead, so replies land
-// somewhere real rather than bouncing or vanishing.
+// heapsarboriculture.co.uk is verified in Trevor's own Resend account
+// (as of 2026-09-08) -- sending from his real mailbox, not an alias.
+export const FROM_ADDRESS = 'Heaps Arboriculture <trevor@heapsarboriculture.co.uk>';
+// FROM_ADDRESS is now Trevor's real mailbox (unlike the old send-only
+// sends.aut-ai.com setup), so replies would land there by default anyway --
+// this override still points them at Nick's inbox while testing. Worth
+// revisiting once Trevor's cutover is confirmed working: this may no longer
+// need to differ from FROM_ADDRESS.
 export const REPLY_TO_ADDRESS = 'nick@aut-ai.com';
+// TESTING ONLY -- CC every outbound email (both admin-facing notifications
+// and customer-facing quote/acceptance emails) to Nick while validating the
+// new Resend account and the Trevor cutover. Set to null once testing is
+// done and this should stop.
+export const TESTING_CC: string | null = 'nick@aut-ai.com';
 
 // ── Base wrapper ────────────────────────────────────────────
 export function emailWrapper(content: string): string {
@@ -61,6 +69,9 @@ export function emailWrapper(content: string): string {
 
 // ── Send via Resend ─────────────────────────────────────────
 export async function sendEmail(to: string | string[], subject: string, html: string) {
+  const toList = Array.isArray(to) ? to : [to];
+  const cc = TESTING_CC && !toList.includes(TESTING_CC) ? [TESTING_CC] : undefined;
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -69,7 +80,8 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     },
     body: JSON.stringify({
       from: FROM_ADDRESS,
-      to: Array.isArray(to) ? to : [to],
+      to: toList,
+      ...(cc ? { cc } : {}),
       reply_to: REPLY_TO_ADDRESS,
       subject,
       html,

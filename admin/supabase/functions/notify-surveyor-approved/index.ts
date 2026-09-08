@@ -23,15 +23,15 @@ serve(async (req) => {
       });
     }
 
-    await sendEmail({
-      to: surveyor.email,
-      subject: "Your Heaps Arboriculture account is approved",
-      html: `
+    await sendEmail(
+      surveyor.email,
+      "Your Heaps Arboriculture account is approved",
+      `
         <p>Welcome, ${surveyor.full_name}!</p>
         <p>Your account has been approved and you can now log in to the Heaps Arboriculture surveyor app.</p>
         <p>Open the app and enter your credentials to get started.</p>
       `,
-    });
+    );
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {
