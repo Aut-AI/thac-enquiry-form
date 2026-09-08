@@ -6,7 +6,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -25,48 +25,18 @@ serve(async (req) => {
          Prepare the Axiscape database and draft the initial report template, then approve
          the job to put it live on the surveyor map.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Job Reference</span>
-          <span class="detail-value">${record.reference || 'Being assigned...'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Job Type</span>
-          <span class="detail-value">${record.job_type === 'amendment' ? 'Amendment' : 'New Survey'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Site Postcode</span>
-          <span class="detail-value">${record.site_postcode || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Urgency</span>
-          <span class="detail-value">${urgencyStateBadge(record.urgency_state)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">SLA Deadline</span>
-          <span class="detail-value">${slaDate}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Quoted Amount</span>
-          <span class="detail-value">£${record.quoted_amount?.toFixed(2) || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Billing Mode</span>
-          <span class="detail-value">${record.billing_mode === 'staged' ? 'Staged 50/50' : 'Single Invoice'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Two-Stage BS5837?</span>
-          <span class="detail-value">${record.is_two_stage ? 'Yes' : 'No'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Created</span>
-          <span class="detail-value">${new Date(record.created_at).toLocaleString('en-GB')}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Job Reference', record.reference || 'Being assigned...'),
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Job Type', record.job_type === 'amendment' ? 'Amendment' : 'New Survey'),
+        detailRow('Site Postcode', record.site_postcode || '—'),
+        detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
+        detailRow('SLA Deadline', slaDate),
+        detailRow('Quoted Amount', `£${record.quoted_amount?.toFixed(2) || '—'}`),
+        detailRow('Billing Mode', record.billing_mode === 'staged' ? 'Staged 50/50' : 'Single Invoice'),
+        detailRow('Two-Stage BS5837?', record.is_two_stage ? 'Yes' : 'No'),
+        detailRow('Created', new Date(record.created_at).toLocaleString('en-GB')),
+      ].join(''))}
 
       <p style="font-size:14px; color:#6b756f; margin-top:16px;">
         <strong>Next steps:</strong><br>

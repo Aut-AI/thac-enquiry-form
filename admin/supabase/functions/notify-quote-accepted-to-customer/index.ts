@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { sendEmail, emailWrapper } from '../_shared/email-templates.ts'
+import { sendEmail, emailWrapper, detailBlock, detailRow } from '../_shared/email-templates.ts'
 
 serve(async (req) => {
   const { record } = await req.json()
@@ -14,24 +14,12 @@ serve(async (req) => {
     <p>Great news — we're ready to proceed with your tree survey. Please complete
        a few last details so we can get started.</p>
 
-    <div class="detail-block">
-      <div class="detail-row">
-        <span class="detail-label">End client details</span>
-        <span class="detail-value">the property owner</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Billing contact</span>
-        <span class="detail-value">who receives the invoice</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Report addressee</span>
-        <span class="detail-value">who the report is for</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Site access</span>
-        <span class="detail-value">gate codes, contact on arrival</span>
-      </div>
-    </div>
+    ${detailBlock([
+      detailRow('End client details', 'the property owner'),
+      detailRow('Billing contact', 'who receives the invoice'),
+      detailRow('Report addressee', 'who the report is for'),
+      detailRow('Site access', 'gate codes, contact on arrival'),
+    ].join(''))}
 
     <a href="${confirmLink}" class="cta-button">
       Confirm Your Details →

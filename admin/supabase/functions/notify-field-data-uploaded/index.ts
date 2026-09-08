@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -66,45 +66,17 @@ serve(async (req) => {
          The dot has turned <strong style="color:#b8960a;">${statusDot('#b8960a')}yellow</strong>.
          The draft report now needs to be finalised.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Job Reference</span>
-          <span class="detail-value">${record.reference}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Surveyor</span>
-          <span class="detail-value">${surveyorName}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Data Uploaded At</span>
-          <span class="detail-value">${uploadedAt}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">SLA Deadline</span>
-          <span class="detail-value">${slaDate}</span>
-        </div>
-        ${daysRemaining ? `
-        <div class="detail-row">
-          <span class="detail-label">Time Remaining</span>
-          <span class="detail-value">${daysRemaining}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Urgency</span>
-          <span class="detail-value">${urgencyStateBadge(record.urgency_state)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Axiscape DB Prepared</span>
-          <span class="detail-value" style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Report Drafted</span>
-          <span class="detail-value" style="color:${record.report_drafted ? '#1a3a2a' : '#c8773a'};">${record.report_drafted ? 'Yes' : 'Pending'}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Job Reference', record.reference),
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Surveyor', surveyorName),
+        detailRow('Data Uploaded At', uploadedAt),
+        detailRow('SLA Deadline', slaDate),
+        daysRemaining ? detailRow('Time Remaining', daysRemaining) : '',
+        detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
+        detailRow('Axiscape DB Prepared', `<span style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>`),
+        detailRow('Report Drafted', `<span style="color:${record.report_drafted ? '#1a3a2a' : '#c8773a'};">${record.report_drafted ? 'Yes' : 'Pending'}</span>`),
+      ].join(''))}
 
       <p style="font-size:14px; color:#666; margin-top:8px;">
         <strong>Next steps:</strong><br>

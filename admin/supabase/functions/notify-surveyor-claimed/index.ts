@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -60,40 +60,16 @@ serve(async (req) => {
          The dot has turned <strong style="color:#c8773a;">${statusDot('#c8773a')}orange</strong>.
          The job is now locked — no other surveyor can claim it.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Job Reference</span>
-          <span class="detail-value">${record.reference}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Assigned Surveyor</span>
-          <span class="detail-value">${surveyorName}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Site Postcode</span>
-          <span class="detail-value">${record.site_postcode || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Urgency</span>
-          <span class="detail-value">${urgencyStateBadge(record.urgency_state)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">SLA Deadline</span>
-          <span class="detail-value">${slaDate}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Proposed Survey Date</span>
-          <span class="detail-value">${surveyDate}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Surveyor Pay</span>
-          <span class="detail-value">£${record.surveyor_pay_amount?.toFixed(2) ?? '—'}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Job Reference', record.reference),
+        detailRow('Assigned Surveyor', surveyorName),
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Site Postcode', record.site_postcode || '—'),
+        detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
+        detailRow('SLA Deadline', slaDate),
+        detailRow('Proposed Survey Date', surveyDate),
+        detailRow('Surveyor Pay', `£${record.surveyor_pay_amount?.toFixed(2) ?? '—'}`),
+      ].join(''))}
 
       <p style="font-size:14px; color:#666; margin-top:8px;">
         The surveyor now has access to full site details, client address, parking/access notes, and uploaded plans.

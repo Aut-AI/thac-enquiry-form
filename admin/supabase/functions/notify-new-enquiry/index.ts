@@ -6,7 +6,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, detailBlock, detailRow, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY  = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -70,87 +70,31 @@ serve(async (req) => {
       ? `£${Number(record.quoted_price).toLocaleString('en-GB')} excl VAT`
       : 'Custom quote (100+ trees)';
 
+    const rows = [
+      detailRow('Reference', record.job_number || 'Pending assignment'),
+      detailRow('Contact Name', record.contact_name),
+      detailRow('Email', record.contact_email),
+      record.contact_phone ? detailRow('Phone', record.contact_phone) : '',
+      record.company ? detailRow('Company', record.company) : '',
+      record.introducer_name ? detailRow('Introduced By', record.introducer_name) : '',
+      record.introducer_email ? detailRow('Also Copied On Quote', record.introducer_email) : '',
+      record.introducer_company ? detailRow('Introducer Company', record.introducer_company) : '',
+      detailRow('Type', isAmendment ? 'Amendment to existing job' : 'New survey'),
+      !isAmendment ? detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—') : '',
+      !isAmendment ? detailRow('Tree Count Band', record.tree_count_band ? record.tree_count_band + ' trees' : '—') : '',
+      !isAmendment ? detailRow('Site Postcode', record.site_postcode || '—') : '',
+      !isAmendment ? detailRow('Deadline', DEADLINE_LABELS[record.deadline_tier] || record.deadline_tier || '—') : '',
+      !isAmendment ? detailRow('Quoted Price', `<span style="color:#1a3a2a;">${quotedPrice}</span>`) : '',
+      isAmendment ? detailRow('Original Job Ref', record.original_job_ref || '—') : '',
+      isAmendment ? detailRow('Amendment Scope', record.amendment_scope || '—') : '',
+      detailRow('Submitted', new Date(record.submitted_at).toLocaleString('en-GB')),
+    ].join('');
+
     const html = emailWrapper(`
       <h2>${isAmendment ? 'New Amendment Enquiry' : 'New Enquiry Received'}</h2>
       <p>A new enquiry has been submitted and is awaiting your review in the CRM.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Reference</span>
-          <span class="detail-value">${record.job_number || 'Pending assignment'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Contact Name</span>
-          <span class="detail-value">${record.contact_name}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Email</span>
-          <span class="detail-value">${record.contact_email}</span>
-        </div>
-        ${record.contact_phone ? `
-        <div class="detail-row">
-          <span class="detail-label">Phone</span>
-          <span class="detail-value">${record.contact_phone}</span>
-        </div>` : ''}
-        ${record.company ? `
-        <div class="detail-row">
-          <span class="detail-label">Company</span>
-          <span class="detail-value">${record.company}</span>
-        </div>` : ''}
-        ${record.introducer_name ? `
-        <div class="detail-row">
-          <span class="detail-label">Introduced By</span>
-          <span class="detail-value">${record.introducer_name}</span>
-        </div>` : ''}
-        ${record.introducer_email ? `
-        <div class="detail-row">
-          <span class="detail-label">Also Copied On Quote</span>
-          <span class="detail-value">${record.introducer_email}</span>
-        </div>` : ''}
-        ${record.introducer_company ? `
-        <div class="detail-row">
-          <span class="detail-label">Introducer Company</span>
-          <span class="detail-value">${record.introducer_company}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Type</span>
-          <span class="detail-value">${isAmendment ? 'Amendment to existing job' : 'New survey'}</span>
-        </div>
-        ${!isAmendment ? `
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Tree Count Band</span>
-          <span class="detail-value">${record.tree_count_band ? record.tree_count_band + ' trees' : '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Site Postcode</span>
-          <span class="detail-value">${record.site_postcode || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Deadline</span>
-          <span class="detail-value">${DEADLINE_LABELS[record.deadline_tier] || record.deadline_tier || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Quoted Price</span>
-          <span class="detail-value" style="color:#1a3a2a;">${quotedPrice}</span>
-        </div>` : ''}
-        ${isAmendment ? `
-        <div class="detail-row">
-          <span class="detail-label">Original Job Ref</span>
-          <span class="detail-value">${record.original_job_ref || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Amendment Scope</span>
-          <span class="detail-value">${record.amendment_scope || '—'}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Submitted</span>
-          <span class="detail-value">${new Date(record.submitted_at).toLocaleString('en-GB')}</span>
-        </div>
-      </div>
+      ${detailBlock(rows)}
 
       <a href="${crmLink}" class="cta-button">
         View in CRM →

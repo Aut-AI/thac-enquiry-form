@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, detailBlock, detailRow, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -39,36 +39,15 @@ serve(async (req) => {
          <strong style="color:#c0392b;">${statusDot('#c0392b')}red dot</strong> on the surveyor marketplace map
          and awaiting a surveyor claim.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Job Reference</span>
-          <span class="detail-value">${record.reference}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Site Postcode</span>
-          <span class="detail-value">${record.site_postcode || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Urgency</span>
-          <span class="detail-value">${urgencyStateBadge(record.urgency_state)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">SLA Deadline</span>
-          <span class="detail-value">${slaDate}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Agreed Amount</span>
-          <span class="detail-value">£${record.agreed_amount?.toFixed(2) ?? record.quoted_amount?.toFixed(2) ?? '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Approved</span>
-          <span class="detail-value">${new Date(record.approved_at || Date.now()).toLocaleString('en-GB')}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Job Reference', record.reference),
+        detailRow('Survey Type', record.survey_type || '—'),
+        detailRow('Site Postcode', record.site_postcode || '—'),
+        detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
+        detailRow('SLA Deadline', slaDate),
+        detailRow('Agreed Amount', `£${record.agreed_amount?.toFixed(2) ?? record.quoted_amount?.toFixed(2) ?? '—'}`),
+        detailRow('Approved', new Date(record.approved_at || Date.now()).toLocaleString('en-GB')),
+      ].join(''))}
 
       <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">
         View Job in CRM →

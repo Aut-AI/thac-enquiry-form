@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, statusDot, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, statusDot, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -41,45 +41,18 @@ serve(async (req) => {
          <strong style="color:#1a3a2a;">${statusDot('#1a3a2a')}green</strong>.
          Please now raise the invoice in QuickBooks and record it in the CRM.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Job Reference</span>
-          <span class="detail-value">${record.reference}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Report Finalised At</span>
-          <span class="detail-value">${reportSentAt}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Billing Mode</span>
-          <span class="detail-value">${isStaged ? 'Staged 50/50' : 'Single Invoice'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Total Agreed</span>
-          <span class="detail-value">£${invoiceAmount?.toFixed(2) ?? '—'}</span>
-        </div>
-        ${isStaged ? `
-        <div class="detail-row">
-          <span class="detail-label">Invoice 1 (survey stage)</span>
-          <span class="detail-value" style="color:#6b756f;">£${invoice1} — already raised</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Invoice 2 (report stage)</span>
-          <span class="detail-value" style="color:#1a3a2a; font-weight:700;">£${invoice2} — raise now</span>
-        </div>` : `
-        <div class="detail-row">
-          <span class="detail-label">Invoice Amount</span>
-          <span class="detail-value" style="color:#1a3a2a; font-weight:700;">£${invoice2 ?? '—'} — raise now</span>
-        </div>`}
-        <div class="detail-row">
-          <span class="detail-label">Payment Due</span>
-          <span class="detail-value">30 days from invoice date</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Job Reference', record.reference),
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Report Finalised At', reportSentAt),
+        detailRow('Billing Mode', isStaged ? 'Staged 50/50' : 'Single Invoice'),
+        detailRow('Total Agreed', `£${invoiceAmount?.toFixed(2) ?? '—'}`),
+        isStaged
+          ? detailRow('Invoice 1 (survey stage)', `<span style="color:#6b756f;">£${invoice1} — already raised</span>`)
+            + detailRow('Invoice 2 (report stage)', `<span style="color:#1a3a2a; font-weight:700;">£${invoice2} — raise now</span>`)
+          : detailRow('Invoice Amount', `<span style="color:#1a3a2a; font-weight:700;">£${invoice2 ?? '—'} — raise now</span>`),
+        detailRow('Payment Due', '30 days from invoice date'),
+      ].join(''))}
 
       <p style="font-size:14px; color:#666; margin-top:8px;">
         <strong>Next steps:</strong><br>

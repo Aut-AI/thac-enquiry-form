@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { sendEmail, emailWrapper } from '../_shared/email-templates.ts'
+import { sendEmail, emailWrapper, detailBlock, detailRow } from '../_shared/email-templates.ts'
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -41,28 +41,13 @@ serve(async (req) => {
     <p>Dear ${contact_name || 'there'},</p>
     <p>Thank you for your enquiry — please find your quote below.</p>
 
-    <div class="detail-block">
-      <div class="detail-row">
-        <span class="detail-label">Reference</span>
-        <span class="detail-value">${job_number || 'Pending'}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Survey Type</span>
-        <span class="detail-value">${survey_type || '—'}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Site Postcode</span>
-        <span class="detail-value">${site_postcode || '—'}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Deadline</span>
-        <span class="detail-value">${deadline_tier || '—'}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Quote</span>
-        <span class="detail-value" style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>
-      </div>
-    </div>
+    ${detailBlock([
+      detailRow('Reference', job_number || 'Pending'),
+      detailRow('Survey Type', survey_type || '—'),
+      detailRow('Site Postcode', site_postcode || '—'),
+      detailRow('Deadline', deadline_tier || '—'),
+      detailRow('Quote', `<span style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>`),
+    ].join(''))}
 
     <p style="margin: 26px 0 14px;">To proceed, click one of the buttons below:</p>
 

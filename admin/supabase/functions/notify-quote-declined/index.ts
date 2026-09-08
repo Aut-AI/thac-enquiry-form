@@ -7,7 +7,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
@@ -53,45 +53,18 @@ serve(async (req) => {
       <p>A client has declined their quote. You may wish to follow up to understand
          their decision or offer an alternative.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Reference</span>
-          <span class="detail-value">${record.job_number || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Client</span>
-          <span class="detail-value">${record.contact_name || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Email</span>
-          <span class="detail-value">${record.contact_email || '—'}</span>
-        </div>
-        ${record.contact_phone ? `
-        <div class="detail-row">
-          <span class="detail-label">Phone</span>
-          <span class="detail-value">${record.contact_phone}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Quoted Amount</span>
-          <span class="detail-value">${price}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Reason Given</span>
-          <span class="detail-value" style="color:${record.declined_reason ? '#c0392b' : '#8a938d'};">
-            ${record.declined_reason || 'No reason provided'}
-          </span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Declined At</span>
-          <span class="detail-value">${record.declined_at
-            ? new Date(record.declined_at).toLocaleString('en-GB')
-            : new Date().toLocaleString('en-GB')}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Reference', record.job_number || '—'),
+        detailRow('Client', record.contact_name || '—'),
+        detailRow('Email', record.contact_email || '—'),
+        record.contact_phone ? detailRow('Phone', record.contact_phone) : '',
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Quoted Amount', price),
+        detailRow('Reason Given', `<span style="color:${record.declined_reason ? '#c0392b' : '#8a938d'};">${record.declined_reason || 'No reason provided'}</span>`),
+        detailRow('Declined At', record.declined_at
+          ? new Date(record.declined_at).toLocaleString('en-GB')
+          : new Date().toLocaleString('en-GB')),
+      ].join(''))}
 
       ${record.declined_reason?.toLowerCase().includes('price') ? `
       <div class="callout">

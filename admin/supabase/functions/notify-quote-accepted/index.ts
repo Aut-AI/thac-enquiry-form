@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
@@ -61,41 +61,16 @@ serve(async (req) => {
          The job is already in the CRM as Pending Approval — review it and approve
          when ready.</p>
 
-      <div class="detail-block">
-        <div class="detail-row">
-          <span class="detail-label">Reference</span>
-          <span class="detail-value">${record.job_number || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Client</span>
-          <span class="detail-value">${record.contact_name || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Email</span>
-          <span class="detail-value">${record.contact_email || '—'}</span>
-        </div>
-        ${record.contact_phone ? `
-        <div class="detail-row">
-          <span class="detail-label">Phone</span>
-          <span class="detail-value">${record.contact_phone}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Survey Type</span>
-          <span class="detail-value">${SURVEY_LABELS[record.survey_type] || record.survey_type || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Site Postcode</span>
-          <span class="detail-value">${record.site_postcode || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Quoted Amount</span>
-          <span class="detail-value" style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Accepted At</span>
-          <span class="detail-value">${acceptedAt}</span>
-        </div>
-      </div>
+      ${detailBlock([
+        detailRow('Reference', record.job_number || '—'),
+        detailRow('Client', record.contact_name || '—'),
+        detailRow('Email', record.contact_email || '—'),
+        record.contact_phone ? detailRow('Phone', record.contact_phone) : '',
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
+        detailRow('Site Postcode', record.site_postcode || '—'),
+        detailRow('Quoted Amount', `<span style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>`),
+        detailRow('Accepted At', acceptedAt),
+      ].join(''))}
 
       <p style="font-size:14px; color:#6b756f; margin-top:8px;">
         <strong>Next steps:</strong><br>
