@@ -120,6 +120,10 @@ serve(async (req) => {
       jobData = {
         enquiry_id: enquiry.id,
         job_type: "amendment",
+        // jobs.survey_type is NOT NULL -- amendment jobs aren't tied to a
+        // new survey, but need some value here. 'amendment' is already a
+        // recognised SURVEY_TYPE_LABELS entry in the admin CRM.
+        survey_type: "amendment",
         dispatch_state: "pending_approval",
         internal_notes: `Amendment request — customer-provided original job ref: "${enquiry.original_job_ref}". Scope: ${enquiry.amendment_scope}`,
       };
