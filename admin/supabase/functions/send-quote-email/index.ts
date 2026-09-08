@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { sendEmail, emailWrapper, detailBlock, detailRow } from '../_shared/email-templates.ts'
+import { sendEmail, emailWrapper, detailBlock, detailRow, SURVEY_LABELS, DEADLINE_LABELS } from '../_shared/email-templates.ts'
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -43,9 +43,9 @@ serve(async (req) => {
 
     ${detailBlock([
       detailRow('Reference', job_number || 'Pending'),
-      detailRow('Survey Type', survey_type || '—'),
+      detailRow('Survey Type', SURVEY_LABELS[survey_type] || survey_type || '—'),
       detailRow('Site Postcode', site_postcode || '—'),
-      detailRow('Deadline', deadline_tier || '—'),
+      detailRow('Deadline', DEADLINE_LABELS[deadline_tier] || deadline_tier || '—'),
       detailRow('Quote', `<span style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>`),
     ].join(''))}
 

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, detailBlock, detailRow, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, urgencyStateBadge, statusDot, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 serve(async (req) => {
   try {
@@ -41,7 +41,7 @@ serve(async (req) => {
 
       ${detailBlock([
         detailRow('Job Reference', record.reference),
-        detailRow('Survey Type', record.survey_type || '—'),
+        detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
         detailRow('Site Postcode', record.site_postcode || '—'),
         detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
         detailRow('SLA Deadline', slaDate),

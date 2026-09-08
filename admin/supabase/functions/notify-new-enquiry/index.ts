@@ -6,7 +6,7 @@
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { sendEmail, emailWrapper, detailBlock, detailRow, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { sendEmail, emailWrapper, detailBlock, detailRow, SURVEY_LABELS, DEADLINE_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
 
 const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY  = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
@@ -26,30 +26,6 @@ async function getLinkedJobId(enquiryId: string): Promise<string | null> {
     return rows?.[0]?.id || null;
   } catch { return null; }
 }
-
-const SURVEY_LABELS: Record<string, string> = {
-  planning_stage1:  'Planning — Stage 1 (BS5837)',
-  planning_stage2:  'Planning — Stage 2 (AIA/AMS/TPP)',
-  health_safety:    'Tree Condition / Risk Survey',
-  insurer_mortgage: 'Insurer / Mortgage Lender',
-  subsidence:       'Building Damage / Subsidence',
-  nhbc:             'Foundation Depths (NHBC)',
-  site_visit:       'Site Visit & Advice',
-  resistograph:     'Resistograph Testing',
-  bs5837:           'BS5837 Tree Survey',
-  vta:              'Visual Tree Assessment',
-  amendment:        'Amendment',
-  other:            'Other',
-};
-
-const DEADLINE_LABELS: Record<string, string> = {
-  '3days':   'Within 3 working days',
-  '5days':   'Within 5 working days',
-  '7days':   'Within 7 working days',
-  '10days':  'Within 10 working days',
-  '15days':  'Within 15 working days or more',
-  'no_rush': 'No rush (just looking)',
-};
 
 serve(async (req) => {
   try {
