@@ -91,6 +91,36 @@ serve(async (req) => {
     let jobData: Record<string, unknown> = {};
 
     if (enquiry.enquiry_type === "new") {
+      // Jobs need their own site_lat/site_lng -- the surveyor-facing RLS
+      // marketplace policy on jobs (dispatch_state='red' + earth_distance
+      // vs a surveyor's home location and radius) requires them, and
+      // nothing was ever setting them here. The enquiry form geocodes the
+      // postcode client-side into enquiries.home_lat/home_lng, but that's
+      // unreliable (fails silently on API errors, and the value never
+      // gets copied onto the job anyway) -- confirmed against live data
+      // that every job created since (roughly) July has NULL site_lat/lng,
+      // meaning surveyors could never see them in the marketplace at all
+      // regardless of RLS being correct. Geocoding here, server-side, with
+      // the same free postcodes.io API already used for surveyor home
+      // postcodes (geocode-postcode function), makes this reliable and
+      // independent of whether the client-side geocode succeeded.
+      let siteLat: number | null = null;
+      let siteLng: number | null = null;
+      if (enquiry.site_postcode) {
+        try {
+          const geoRes = await fetch(
+            `https://api.postcodes.io/postcodes/${encodeURIComponent(enquiry.site_postcode.trim())}`
+          );
+          const geoData = await geoRes.json();
+          if (geoData.status === 200 && geoData.result) {
+            siteLat = geoData.result.latitude;
+            siteLng = geoData.result.longitude;
+          }
+        } catch (e) {
+          console.error("Site postcode geocoding failed:", e);
+        }
+      }
+
       const now = new Date();
       const daysToAdd = enquiry.deadline_tier === "3days" ? 3 :
                         enquiry.deadline_tier === "5days" ? 5 :
@@ -115,6 +145,9 @@ serve(async (req) => {
         job_type: "new",
         survey_type: enquiry.survey_type,
         site_postcode: enquiry.site_postcode,
+        site_lat: siteLat,
+        site_lng: siteLng,
+        tree_count_band: enquiry.tree_count_band,
         dispatch_state: "pending_approval",
         urgency_state: enquiry.deadline_tier === "3days" ? "red" :
                        enquiry.deadline_tier === "5days" ? "orange" :
