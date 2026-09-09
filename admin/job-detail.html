@@ -946,6 +946,8 @@ function renderJob() {
           </div>
         </div>
 
+        ${renderReportProgress()}
+
         <!-- Invoicing Configuration -->
         <div class="card">
           <div class="card-title">Invoicing Configuration</div>
@@ -1414,6 +1416,43 @@ async function submitPaid() {
 // PROGRESS CHECKLIST
 // ============================================================
 
+// Office workflow after the surveyor uploads field data. Ticking "Report
+// Finalised" also stamps report_sent_at and advances the job to green --
+// on_report_sent (the DB trigger that emails the client their report is
+// ready) fires off report_finalised flipping true, there's no separate
+// "send" step. Only shown once there's field data to act on, matching
+// notify-field-data-uploaded's own next-steps list.
+function renderReportProgress() {
+  if (!job.field_data_uploaded) return '';
+
+  const items = [
+    { field: 'axi_prepared',     atField: 'axi_prepared_at',     label: 'Axiscape DB Prepared' },
+    { field: 'report_drafted',   atField: 'report_drafted_at',   label: 'Report Drafted' },
+    { field: 'report_finalised', atField: 'report_finalised_at', label: 'Report Finalised', advancesDispatchTo: 'green' },
+  ];
+
+  const rows = items.map(item => {
+    const done = !!job[item.field];
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;"
+           onclick="toggleChecklist('${item.field}', '${item.atField}', ${item.advancesDispatchTo ? `'${item.advancesDispatchTo}'` : 'null'})">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:18px;height:18px;border-radius:4px;border:1.5px solid ${done ? 'var(--green-dark)' : 'var(--border)'};background:${done ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;">
+            ${done ? icon('checkCircle', 12) : ''}
+          </span>
+          <span style="font-size:13px;color:${done ? 'var(--text)' : 'var(--text-muted)'};">${item.label}</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);">${job[item.atField] ? formatDate(job[item.atField]) : ''}</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">Report Progress</div>
+      <div>${rows}</div>
+    </div>`;
+}
+
 async function toggleChecklist(field, atField, advancesDispatchTo) {
   const isDone = job[field];
 
@@ -1431,9 +1470,14 @@ async function toggleChecklist(field, atField, advancesDispatchTo) {
       const target  = order[advancesDispatchTo] ?? 0;
       if (current < target) updates.dispatch_state = advancesDispatchTo;
     }
+    // report_finalised flipping true is what the on_report_sent DB trigger
+    // watches to email the client -- report_sent_at just mirrors that same
+    // moment for display, there's no separate "send" step.
+    if (field === 'report_finalised') updates.report_sent_at = updates[atField];
   } else {
     updates[field]   = false;
     updates[atField] = null;
+    if (field === 'report_finalised') updates.report_sent_at = null;
   }
 
   try {
