@@ -3,9 +3,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail, emailWrapper, detailBlock, detailRow, ADMIN_EMAIL } from "../_shared/email-templates.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+const supabaseServiceKey = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Must use the service role key, not anon -- this runs with no user
+// session, and RLS on surveyors has no policy that lets anon (or any
+// unauthenticated caller) read an arbitrary row. With the anon key this
+// silently 404'd on every registration and the admin notification never
+// sent, swallowed by the calling trigger's catch-all exception handler.
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
   try {

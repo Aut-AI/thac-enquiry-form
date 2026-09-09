@@ -3,9 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail, emailWrapper } from "../_shared/email-templates.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+const supabaseServiceKey = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Must use the service role key, not anon -- see notify-new-surveyor-registered
+// for why: no user session here, and RLS has no policy letting anon read
+// an arbitrary surveyor row, so this silently 404'd on every approval and
+// the surveyor never got their "you're approved" email.
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
   try {
