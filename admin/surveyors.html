@@ -88,7 +88,7 @@ async function loadSurveyors() {
     const endOfYear = `${currentYear}-12-31`;
 
     const jobs = await dbGet('jobs', {
-      'select': 'id,assigned_surveyor_id,agreed_amount,invoiced,invoiced_at',
+      'select': 'id,surveyor_id,agreed_amount,invoiced,invoiced_at',
       'invoiced': `eq.true`,
       'invoiced_at': `gte.${startOfYear}`,
     });
@@ -96,12 +96,12 @@ async function loadSurveyors() {
     // Calculate earnings per surveyor
     const earningsBysSurveyor = {};
     (jobs || []).forEach(job => {
-      if (job.assigned_surveyor_id) {
-        if (!earningsBysSurveyor[job.assigned_surveyor_id]) {
-          earningsBysSurveyor[job.assigned_surveyor_id] = { jobs: 0, total: 0 };
+      if (job.surveyor_id) {
+        if (!earningsBysSurveyor[job.surveyor_id]) {
+          earningsBysSurveyor[job.surveyor_id] = { jobs: 0, total: 0 };
         }
-        earningsBysSurveyor[job.assigned_surveyor_id].jobs += 1;
-        earningsBysSurveyor[job.assigned_surveyor_id].total += Number(job.agreed_amount) || 0;
+        earningsBysSurveyor[job.surveyor_id].jobs += 1;
+        earningsBysSurveyor[job.surveyor_id].total += Number(job.agreed_amount) || 0;
       }
     });
 
