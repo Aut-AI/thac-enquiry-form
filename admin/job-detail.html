@@ -2088,9 +2088,16 @@ async function createStage2Job() {
   try {
     const surchargeMap = { '3days': 200, '5days': 100, '7days': 50, '10days': 0 };
     const urgency_surcharge = surchargeMap[deadline] || null;
-    const slaDeadline = new Date();
+    // Skip weekends so the SLA deadline lands N working days out, not N
+    // calendar days -- matches activateStage2()'s day-by-day skip just above.
     const daysMap = { '3days': 3, '5days': 5, '7days': 7, '10days': 10 };
-    slaDeadline.setDate(slaDeadline.getDate() + daysMap[deadline]);
+    const slaDeadline = new Date();
+    let daysCounted = 0;
+    while (daysCounted < daysMap[deadline]) {
+      slaDeadline.setDate(slaDeadline.getDate() + 1);
+      const day = slaDeadline.getDay();
+      if (day !== 0 && day !== 6) daysCounted++;
+    }
 
     const stage2Reference = job.reference ? `${job.reference}-1` : null;
     const stage2Data = await dbInsert('jobs', {
@@ -2100,7 +2107,7 @@ async function createStage2Job() {
       job_type: 'new',
       site_postcode: job.site_postcode,
       dispatch_state: 'red',
-      urgency_state: deadline === '3days' ? '3days' : deadline === '5days' ? '5days' : deadline === '7days' ? '7days' : '10days',
+      urgency_state: deadline === '3days' ? 'red' : deadline === '5days' ? 'orange' : deadline === '7days' ? 'yellow' : 'grey',
       billing_mode: job.billing_mode,
       urgency_surcharge: urgency_surcharge || 0,
       sla_deadline: slaDeadline.toISOString(),

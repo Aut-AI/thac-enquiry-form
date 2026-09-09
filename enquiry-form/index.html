@@ -901,10 +901,6 @@
             <span class="deadline-option-label">Within 15 working days or more</span>
             <span class="deadline-option-price">+£0</span>
           </button>
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('no_rush', this)">
-            <span class="deadline-option-label">No rush (just looking)</span>
-            <span class="deadline-option-price">+£0</span>
-          </button>
         </div>
         <input type="hidden" id="amendDeadline" value="">
         <div class="field-error" id="amendDeadlineError">Please select a deadline.</div>
@@ -973,10 +969,6 @@
       <div class="field-group">
         <label>Choose Your Quote <span class="required">*</span></label>
         <div class="price-options" id="priceOptions">
-          <button type="button" class="price-option" onclick="selectDeadline('no_rush', this)">
-            <span class="price-option-label">No rush</span>
-            <span class="price-option-amount"><span id="priceAmount_no_rush">—</span><span class="price-option-vat" id="priceVat_no_rush"> + VAT</span></span>
-          </button>
           <button type="button" class="price-option" onclick="selectDeadline('15days', this)">
             <span class="price-option-label">Within 15 working days or more</span>
             <span class="price-option-amount"><span id="priceAmount_15days">—</span><span class="price-option-vat" id="priceVat_15days"> + VAT</span></span>
@@ -1290,8 +1282,7 @@ const SURCHARGES = {
   '3days': 200,
   '5days': 150,
   '10days': 75,
-  '15days': 0,
-  'no_rush': 0
+  '15days': 0
 };
 
 // Band index: maps tree_count_band to multiplier (1-5)
@@ -1369,8 +1360,7 @@ const DEADLINE_LABELS = {
   '3days':   'Within 3 working days',
   '5days':   'Within 5 working days',
   '10days':  'Within 10 working days',
-  '15days':  'Within 15 working days or more',
-  'no_rush': 'No rush (just looking)'
+  '15days':  'Within 15 working days or more'
 };
 
 // ============================================================
@@ -1592,7 +1582,7 @@ function goToQuote() {
   hideError('deadlineError', 'deadline');
   document.querySelectorAll('#priceOptions .price-option').forEach(o => o.classList.remove('selected'));
 
-  const DEADLINE_TIERS = ['no_rush', '15days', '10days', '5days', '3days'];
+  const DEADLINE_TIERS = ['15days', '10days', '5days', '3days'];
 
   // Build quote preview
   if (treeCount === '100+') {

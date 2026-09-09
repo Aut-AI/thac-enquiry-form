@@ -95,11 +95,20 @@ serve(async (req) => {
       const daysToAdd = enquiry.deadline_tier === "3days" ? 3 :
                         enquiry.deadline_tier === "5days" ? 5 :
                         enquiry.deadline_tier === "7days" ? 7 :
-                        enquiry.deadline_tier === "15days" ? 15 :
-                        enquiry.deadline_tier === "no_rush" ? null : 10;
-      const slaDeadline = daysToAdd
-        ? new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString()
-        : null;
+                        enquiry.deadline_tier === "15days" ? 15 : 10;
+      // Every deadline option is phrased as "N working days" -- skip
+      // weekends so the SLA deadline actually lands N working days out,
+      // not N calendar days (which used to run short whenever the window
+      // crossed a weekend). Mirrors the same day-by-day skip used in
+      // admin/job-detail.html's activateStage2().
+      const slaDate = new Date(now);
+      let daysCounted = 0;
+      while (daysCounted < daysToAdd) {
+        slaDate.setDate(slaDate.getDate() + 1);
+        const day = slaDate.getDay();
+        if (day !== 0 && day !== 6) daysCounted++;
+      }
+      const slaDeadline = slaDate.toISOString();
 
       jobData = {
         enquiry_id: enquiry.id,
