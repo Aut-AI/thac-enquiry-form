@@ -1,0 +1,450 @@
+<title>THAC Field Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ink: #16321f;
+    --ink-soft: #2f4a3a;
+    --paper: #f6f8f2;
+    --card: #ffffff;
+    --line: #d8e2d3;
+    --line-soft: #e8eee4;
+    --moss: #4a6b57;
+    --moss-light: #eef3ea;
+    --amber: #a8631f;
+    --amber-light: #fbf1e2;
+    --amber-line: #eacfa0;
+    --flag: #a13a2c;
+    --flag-light: #fbeeec;
+    --flag-line: #eeccc4;
+    --accent: #1f6b45;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --serif: 'Newsreader', Georgia, serif;
+    --sans: 'Public Sans', -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eaf2ea; --ink-soft: #c3d3c6; --paper: #10190f; --card: #17221a;
+      --line: #2b3a2c; --line-soft: #223228; --moss: #9db99f; --moss-light: #1c2a1e;
+      --amber: #e0a35f; --amber-light: #2c2013; --amber-line: #4a381f;
+      --flag: #e28b7b; --flag-light: #2c1614; --flag-line: #4a2621;
+      --accent: #56b880;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eaf2ea; --ink-soft: #c3d3c6; --paper: #10190f; --card: #17221a;
+    --line: #2b3a2c; --line-soft: #223228; --moss: #9db99f; --moss-light: #1c2a1e;
+    --amber: #e0a35f; --amber-light: #2c2013; --amber-line: #4a381f;
+    --flag: #e28b7b; --flag-light: #2c1614; --flag-line: #4a2621;
+    --accent: #56b880;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--sans);
+    margin: 0; line-height: 1.55; font-size: 15.5px;
+  }
+  .wrap { display: flex; max-width: 1180px; margin: 0 auto; }
+  nav.toc {
+    width: 220px; flex-shrink: 0; position: sticky; top: 0; align-self: flex-start;
+    padding: 40px 20px 40px 32px; height: 100vh; overflow-y: auto;
+  }
+  nav.toc .toc-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--moss); margin-bottom: 14px; }
+  nav.toc a { display: block; color: var(--ink-soft); text-decoration: none; font-size: 13.5px; padding: 5px 0; border-left: 2px solid transparent; padding-left: 10px; margin-left: -12px; }
+  nav.toc a:hover { color: var(--accent); border-left-color: var(--line); }
+  nav.toc .grp { font-weight: 600; color: var(--ink); margin-top: 16px; }
+  main { flex: 1; min-width: 0; padding: 40px 40px 120px 32px; }
+
+  header.hero { margin-bottom: 40px; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--moss); margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 42px; margin: 0 0 14px; text-wrap: balance; color: var(--ink); }
+  .lede { font-size: 16.5px; color: var(--ink-soft); max-width: 62ch; margin: 0 0 18px; }
+  .how-to { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; max-width: 74ch; font-size: 14px; color: var(--ink-soft); }
+  .how-to strong { color: var(--ink); }
+
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin: 56px 0 6px; color: var(--ink); scroll-margin-top: 20px; }
+  h2 .num { color: var(--moss); font-family: var(--mono); font-size: 16px; margin-right: 10px; font-weight: 500; }
+  .section-lede { color: var(--ink-soft); font-size: 14.5px; max-width: 68ch; margin: 0 0 22px; }
+
+  h3.actor { font-family: var(--sans); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 34px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+
+  .uc { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px 24px; margin-bottom: 16px; scroll-margin-top: 20px; }
+  .uc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .uc-title { font-weight: 700; font-size: 16px; color: var(--ink); }
+  .uc-where { font-family: var(--mono); font-size: 11.5px; color: var(--moss); background: var(--moss-light); padding: 2px 8px; border-radius: 5px; white-space: nowrap; }
+  .uc-purpose { color: var(--ink-soft); font-size: 13.5px; margin: 4px 0 16px; }
+
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  ol.steps li { counter-increment: step; position: relative; padding: 8px 0 8px 34px; font-size: 14px; border-top: 1px solid var(--line-soft); }
+  ol.steps li:first-child { border-top: none; }
+  ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--moss-light); color: var(--accent); font-family: var(--mono); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .expect { color: var(--ink-soft); font-size: 13px; margin-top: 3px; }
+  .expect b { color: var(--accent); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--moss-light); padding: 1px 6px; border-radius: 4px; color: var(--ink-soft); }
+
+  .diagram-fig { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 26px 22px 18px; margin: 20px 0 40px; }
+  .diagram-fig figcaption { font-size: 13px; color: var(--moss); text-align: center; margin-top: 10px; }
+  svg text { fill: var(--ink); font-family: var(--sans); }
+  svg .muted { fill: var(--ink-soft); }
+  svg .lane-label { fill: var(--moss); font-family: var(--mono); }
+
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 14px 0; font-size: 13.5px; border: 1px solid; }
+  .callout.open { background: var(--amber-light); border-color: var(--amber-line); color: var(--ink); }
+  .callout.open b { color: var(--amber); }
+  .callout.flag { background: var(--flag-light); border-color: var(--flag-line); color: var(--ink); }
+  .callout.flag b { color: var(--flag); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } .wrap { flex-direction: column; } nav.toc { position: static; height: auto; width: auto; padding: 20px 20px 0; } main { padding: 20px 20px 80px; } h1 { font-size: 30px; } }
+
+  .openlist { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 26px; }
+  .openlist .item { padding: 16px 0; border-top: 1px solid var(--line-soft); }
+  .openlist .item:first-child { border-top: none; }
+  .openlist .item-title { font-weight: 700; font-size: 14.5px; margin-bottom: 4px; }
+  .openlist .item-body { color: var(--ink-soft); font-size: 13.5px; }
+
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--moss); font-size: 12.5px; font-family: var(--mono); }
+</style>
+
+<div class="wrap">
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <a href="#overview">Overview</a>
+    <a href="#flow">Process at a glance</a>
+    <div class="grp">Customer</div>
+    <a href="#uc1">New survey enquiry</a>
+    <a href="#uc2">Amendment request</a>
+    <a href="#uc3">On-behalf-of a client</a>
+    <a href="#uc4">Accept a quote</a>
+    <a href="#uc5">Decline a quote</a>
+    <div class="grp">Admin</div>
+    <a href="#uc6">Approve enquiry to map</a>
+    <a href="#uc7">Allocate to a surveyor</a>
+    <a href="#uc8">Edit job details</a>
+    <a href="#uc9">Report progress</a>
+    <a href="#uc10">Invoicing</a>
+    <a href="#uc11">Approve/manage surveyors</a>
+    <a href="#uc12">Manage CRM users</a>
+    <div class="grp">Surveyor app</div>
+    <a href="#uc13">Register</a>
+    <a href="#uc14">Claim a job</a>
+    <a href="#uc15">Respond to allocation</a>
+    <a href="#uc16">Field work &amp; hand-back</a>
+    <a href="#uc17">Profile &amp; coverage</a>
+    <div class="grp">Reference</div>
+    <a href="#open-items">Known behaviours</a>
+  </nav>
+
+  <main>
+    <header class="hero" id="overview">
+      <div class="eyebrow">THAC · Trevor Heaps Arboricultural Consultancy</div>
+      <h1>Field Guide</h1>
+      <p class="lede">A working reference for how the enquiry form, admin CRM, and surveyor app fit together today — and a walkthrough for every real use case, written so you can test each one directly against what's actually in the code.</p>
+      <div class="how-to"><strong>How to use this tomorrow:</strong> work through each use case in order, doing exactly what the numbered steps say. Each step has an <b style="color:var(--accent)">expected result</b> — if what you see doesn't match, that's precisely the kind of gap worth flagging back. The "Known behaviours" section at the end lists things that are correct-but-surprising, so you don't waste time on those.</div>
+    </header>
+
+    <section id="flow">
+      <h2><span class="num">01</span>Process at a glance</h2>
+      <p class="section-lede">Two separate paths from the same public form: a <b>new survey</b> gets an instant computed quote; an <b>amendment</b> to existing work never does — Trevor prices those by hand.</p>
+
+      <figure class="diagram-fig">
+        <svg viewBox="0 0 980 300" role="img" aria-label="New survey enquiries flow through submission, an automatic quote email, accept or decline, admin approval to the map, a surveyor claiming the job, field data upload, and report finalisation which invoices and archives the job. Declining at any point archives the job immediately. Amendment enquiries skip the automatic quote entirely and are reviewed and priced by Trevor by hand.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <text x="20" y="18" class="lane-label" font-size="11">NEW SURVEY</text>
+
+          <!-- main row arrows -->
+          <g stroke="currentColor" fill="none" marker-end="url(#arrow)">
+            <line x1="128" y1="49" x2="152" y2="49"/>
+            <line x1="260" y1="49" x2="284" y2="49"/>
+            <line x1="392" y1="49" x2="416" y2="49"/>
+            <line x1="524" y1="49" x2="548" y2="49"/>
+            <line x1="656" y1="49" x2="680" y2="49"/>
+            <line x1="788" y1="49" x2="812" y2="49"/>
+          </g>
+
+          <!-- main row boxes -->
+          <g font-size="11.5" text-anchor="middle">
+            <rect x="20"  y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="74" y="53">Submitted</text>
+
+            <rect x="152" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="206" y="47">Quote</text>
+            <text x="206" y="60" class="muted" font-size="10">emailed automatically</text>
+
+            <rect x="284" y="28" width="108" height="42" rx="8" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+            <text x="338" y="53" fill="var(--accent)" font-weight="600">Accepted</text>
+
+            <rect x="416" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="470" y="47">Approved</text>
+            <text x="470" y="60" class="muted" font-size="10">admin, to the map</text>
+
+            <rect x="548" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="602" y="53">Claimed</text>
+
+            <rect x="680" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="734" y="47">Data</text>
+            <text x="734" y="60" class="muted" font-size="10">uploaded, field visit</text>
+
+            <rect x="812" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="866" y="47">Finalised</text>
+            <text x="866" y="60" class="muted" font-size="10">invoiced &amp; archived</text>
+          </g>
+
+          <!-- decline branch off the "Accepted" box -->
+          <line x1="338" y1="70" x2="338" y2="100" stroke="currentColor" fill="none" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+          <g font-size="11" text-anchor="middle">
+            <rect x="258" y="100" width="160" height="34" rx="8" fill="none" stroke="var(--flag)" stroke-dasharray="3 3"/>
+            <text x="338" y="121" fill="var(--flag)">Declined → archived</text>
+          </g>
+
+          <line x1="20" y1="168" x2="960" y2="168" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <text x="20" y="192" class="lane-label" font-size="11">AMENDMENT</text>
+
+          <g stroke="currentColor" fill="none" marker-end="url(#arrow)">
+            <line x1="120" y1="222" x2="150" y2="222"/>
+            <line x1="370" y1="222" x2="400" y2="222"/>
+          </g>
+          <g font-size="11.5" text-anchor="middle">
+            <rect x="20"  y="201" width="100" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="70" y="226">Submitted</text>
+
+            <rect x="150" y="201" width="220" height="42" rx="8" fill="none" stroke="var(--amber)" stroke-width="1.6"/>
+            <text x="260" y="219" fill="var(--amber)" font-weight="600">Original job ref +</text>
+            <text x="260" y="232" fill="var(--amber)" font-weight="600">scope of change</text>
+
+            <rect x="400" y="201" width="260" height="42" rx="8" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+            <text x="530" y="219">Trevor reviews &amp; quotes</text>
+            <text x="530" y="232" class="muted" font-size="10">by hand — hourly, no auto-email</text>
+          </g>
+
+          <text x="20" y="272" class="muted" font-size="11.5">No dispatch/claim/report cycle — amendments are worked and billed directly, outside the survey pipeline.</text>
+        </svg>
+        <figcaption>The two enquiry paths from <code>enquiry-form/index.html</code> through to completion, as the code runs today.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ CUSTOMER ============ -->
+    <h2 id="customer-group"><span class="num">02</span>Customer — public enquiry form</h2>
+    <p class="section-lede"><code>enquiry-form/index.html</code> and its linked pages. No login; every action is a single anonymous visit driven by a link.</p>
+
+    <div class="uc" id="uc1">
+      <div class="uc-head"><span class="uc-title">Submit a new survey enquiry</span><span class="uc-where">enquiry-form/index.html</span></div>
+      <p class="uc-purpose">The core path: a customer describes a job and gets an instant, computed price.</p>
+      <ol class="steps">
+        <li>Open the form, choose <b>New Survey</b>, and pick a survey type (Stage 1, Stage 2, Tree Condition/Risk, Insurer/Mortgage, Subsidence, NHBC, or Site Visit).
+          <div class="expect">Expect: a short description of that survey type appears under the selected card.</div></li>
+        <li>Enter tree count (a band, or use the <code>m²</code> calculator) and a site postcode.
+          <div class="expect">Expect: postcode is checked against coverage before you can continue — a message appears if it's out of area.</div></li>
+        <li>Choose a deadline: <code>15+ days</code> (free), <code>10 days</code> (+£75), <code>5 days</code> (+£150), or <code>3 days</code> (+£200).
+          <div class="expect">Expect: the price for each option updates live as you change tree count/deadline. "No rush" no longer appears — it was retired in favour of the 15-day tier.</div></li>
+        <li>Enter contact details and submit.
+          <div class="expect">Expect: a reference number (<code>TH ####</code>) is shown, and a quote email arrives within a minute or two, with the tree icon 🌳 leading the subject line.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc2">
+      <div class="uc-head"><span class="uc-title">Submit an amendment request</span><span class="uc-where">enquiry-form/index.html → "Amend an existing report"</span></div>
+      <p class="uc-purpose">For changes to a report THAC already delivered. Never auto-priced.</p>
+      <ol class="steps">
+        <li>Choose <b>Amend Existing Report</b>, enter the original job reference (e.g. <code>TH 5291</code>) and describe the change needed.
+          <div class="expect">Expect: the form explicitly states amendments are charged at £100+VAT/hour (min £25+VAT) and that no automated quote is generated.</div></li>
+        <li>Pick a deadline (same tiers as new surveys, used only for SLA tracking — none carry a surcharge for amendments) and submit.
+          <div class="expect">Expect: a confirmation, but <b>no price and no quote-accept email</b> — Trevor reviews it directly in the CRM.</div></li>
+      </ol>
+      <div class="callout open"><b>Note:</b> there's currently no dedicated admin screen for "quote this amendment" — Trevor's response happens outside the system (email/phone) after seeing it land in the CRM as a new enquiry.</div>
+    </div>
+
+    <div class="uc" id="uc3">
+      <div class="uc-head"><span class="uc-title">Submit on behalf of a client</span><span class="uc-where">enquiry-form/index.html → "I'm enquiring on behalf of someone else"</span></div>
+      <p class="uc-purpose">For introducers/agents/brokers submitting for their own client.</p>
+      <ol class="steps">
+        <li>Tick the on-behalf-of checkbox (unchecked by default on every page load — this doesn't persist between visits).
+          <div class="expect">Expect: three extra fields appear — introducer name, email, company.</div></li>
+        <li>Complete the rest of the form as normal and submit.
+          <div class="expect">Expect: the quote email goes to the client's email <i>and</i> CCs the introducer's email.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc4">
+      <div class="uc-head"><span class="uc-title">Accept a quote</span><span class="uc-where">accept-quote.html → confirm-quote.html</span></div>
+      <p class="uc-purpose">Two pages, back to back — see the callout below on why.</p>
+      <ol class="steps">
+        <li>From the quote email, click <b>Accept Quote</b>.
+          <div class="expect">Expect: the quote details load (reference, survey type, postcode, deadline, price).</div></li>
+        <li>Fill in billing contact, end-client details, report addressee, and site access, then confirm.
+          <div class="expect">Expect: a success message, and — within a minute — a second, separate email inviting you to <b>confirm-quote.html</b> to add any remaining details.</div></li>
+        <li>(Optional) Follow that second link and fill in the same class of details again if anything was missed the first time.
+          <div class="expect">Expect: this never overwrites what you already gave with blanks — only fields you actually fill in this time are saved.</div></li>
+      </ol>
+      <div class="callout open"><b>Known overlap:</b> <code>accept-quote.html</code>'s own step 2 and <code>confirm-quote.html</code> collect substantially the same fields (billing/end-client/report/access details) — built independently, never consolidated. Both work correctly and are non-destructive of each other, but a customer who completes step 2 fully has nothing new to add on the second page. Worth a product decision on whether to keep sending the follow-up email at all.</div>
+    </div>
+
+    <div class="uc" id="uc5">
+      <div class="uc-head"><span class="uc-title">Decline a quote</span><span class="uc-where">accept-quote.html</span></div>
+      <ol class="steps">
+        <li>From the quote email, click <b>Decline</b> and optionally give a reason.
+          <div class="expect">Expect: the enquiry is marked declined and its linked job is automatically archived — it drops out of the admin pipeline entirely, no further action needed.</div></li>
+      </ol>
+    </div>
+
+    <!-- ============ ADMIN ============ -->
+    <h2 id="admin-group"><span class="num">03</span>Admin — CRM</h2>
+    <p class="section-lede"><code>admin/*.html</code>. Every action below needs a logged-in admin or user account.</p>
+
+    <div class="uc" id="uc6">
+      <div class="uc-head"><span class="uc-title">Approve an enquiry to the map</span><span class="uc-where">job-detail.html</span></div>
+      <p class="uc-purpose">The one manual gate between "customer accepted" and "surveyors can see it." Accepting a quote does <i>not</i> do this automatically.</p>
+      <ol class="steps">
+        <li>Open the job (created the moment the enquiry was submitted — it exists in <code>pending_approval</code> from the very first step, well before any quote is accepted).
+          <div class="expect">Expect: tree count, postcode, and — once accepted — the customer's billing/site details are already visible.</div></li>
+        <li>Click <b>Approve to Map</b>.
+          <div class="expect">Expect: dispatch state flips to <b>red</b> (live/unclaimed), a surveyor pay estimate is calculated if not already set, and a client row is created/linked automatically if this is the first time this contact has been seen.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc7">
+      <div class="uc-head"><span class="uc-title">Allocate a job directly to a surveyor</span><span class="uc-where">job-detail.html → "Allocate to Surveyor"</span></div>
+      <p class="uc-purpose">Bypasses the open marketplace — offers the job to one named surveyor with a response deadline.</p>
+      <ol class="steps">
+        <li>Click <b>Allocate to Surveyor</b>, choose a surveyor and a response window (default or custom hours).
+          <div class="expect">Expect: a countdown ("Allocated · Xh remaining") appears on the job.</div></li>
+      </ol>
+      <div class="callout open"><b>Note:</b> this is a real, working admin feature (RLS-correct as of this session) but currently has no matching screen in the surveyor app to accept or reject the offer — it's a database-and-CRM-only feature until that UI exists.</div>
+    </div>
+
+    <div class="uc" id="uc8">
+      <div class="uc-head"><span class="uc-title">Edit tree count, financials, and site details</span><span class="uc-where">job-detail.html</span></div>
+      <ol class="steps">
+        <li>Use the <b>Set/Edit</b> button on Tree Count Band, Financials, Site Access, or Documents.
+          <div class="expect">Expect: each saves independently and immediately reflects in the page — tree count also updates the linked enquiry, not just the job.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc9">
+      <div class="uc-head"><span class="uc-title">Track report progress</span><span class="uc-where">job-detail.html → "Report Progress" card</span></div>
+      <p class="uc-purpose">Only appears once the surveyor has marked field data as uploaded.</p>
+      <ol class="steps">
+        <li>Tick <b>Axiscape DB Prepared</b>, then <b>Report Drafted</b> as each is done.
+          <div class="expect">Expect: a timestamp appears next to each.</div></li>
+        <li>Tick <b>Report Finalised</b>.
+          <div class="expect">Expect: dispatch state advances to <b>green</b>, and — automatically, no extra click — the client receives their "report ready" email.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc10">
+      <div class="uc-head"><span class="uc-title">Raise and mark invoices</span><span class="uc-where">job-detail.html</span></div>
+      <ol class="steps">
+        <li>Click <b>Raise Invoice</b> (or <b>Invoice 1</b>/<b>2</b> for split billing), confirm the amount and date.
+          <div class="expect">Expect: for single invoicing, the job archives immediately; for split billing, only invoice 2 archives it.</div></li>
+        <li>Click <b>Mark as Paid</b> once payment lands.
+          <div class="expect">Expect: paid date is recorded per invoice, independent of the archive step.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc11">
+      <div class="uc-head"><span class="uc-title">Approve, pause, or archive a surveyor</span><span class="uc-where">surveyor-detail.html, surveyors.html</span></div>
+      <ol class="steps">
+        <li>Filter the surveyor list by <b>Pending Approval</b> to find new self-registrations.
+          <div class="expect">Expect: you should also get an email the moment someone registers — this was broken until today and is now fixed.</div></li>
+        <li>Open one and click <b>Approve &amp; Activate</b>, entering their hourly rate.
+          <div class="expect">Expect: they can now log into the app immediately, and receive an approval email.</div></li>
+        <li>Use <b>Pause Account</b> for a temporary hold, or <b>Archive</b> to remove access permanently and clear their postcode coverage.
+          <div class="expect">Expect: archiving also unlinks their login — they're locked out immediately, and their coverage stops counting toward any postcode being "served."</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc12">
+      <div class="uc-head"><span class="uc-title">Manage CRM login users</span><span class="uc-where">users.html</span></div>
+      <ol class="steps">
+        <li>Click <b>Invite User</b>, choose Admin or User role.
+          <div class="expect">Expect: they get an email invite to set their own password — you never see or set it.</div></li>
+        <li>Use <b>Disable</b>/<b>Enable</b> or <b>Remove Access</b> on an existing account as needed.
+          <div class="expect">Expect: you can't disable, demote, or delete your own account — the option is blocked.</div></li>
+      </ol>
+    </div>
+
+    <!-- ============ SURVEYOR ============ -->
+    <h2 id="surveyor-group"><span class="num">04</span>Surveyor — mobile app</h2>
+    <p class="section-lede">The actively developed app is <code>surveyor-new/</code> (self-registration, insurance/compliance tracking, coverage-area management). <code>surveyor-app/</code> is an earlier, simpler build — both talk to the same one database.</p>
+
+    <div class="uc" id="uc13">
+      <div class="uc-head"><span class="uc-title">Register a new surveyor account</span><span class="uc-where">RegisterScreen</span></div>
+      <ol class="steps">
+        <li>Open the app, tap <b>Create an account</b>, and fill in contact, coverage area, insurance, and compliance details.
+          <div class="expect">Expect: submission succeeds and you're told your account is awaiting approval — this was fully broken as of yesterday and is fixed as of today.</div></li>
+        <li>Try logging in before being approved.
+          <div class="expect">Expect: you land on a "pending approval" screen, not the job list — you cannot see or claim any job yet.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc14">
+      <div class="uc-head"><span class="uc-title">Browse and claim an available job</span><span class="uc-where">Jobs → Available tab</span></div>
+      <ol class="steps">
+        <li>Once approved, open the <b>Available</b> tab.
+          <div class="expect">Expect: only jobs within your travel radius of your home postcode appear — this depends on the job having real coordinates, which is now set automatically on submission (previously it silently never was, for any job).</div></li>
+        <li>Open a job and tap <b>Claim This Job</b>, accept the confidentiality agreement.
+          <div class="expect">Expect: your estimated pay is shown before you confirm, and the job moves to your <b>My Jobs</b> tab immediately after.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc15">
+      <div class="uc-head"><span class="uc-title">Respond to a job allocated to you</span><span class="uc-where">Job Detail — allocated-job banner</span></div>
+      <ol class="steps">
+        <li>Open a job an admin has allocated directly to you.
+          <div class="expect">Expect: a red banner with a countdown, and Claim/Reject buttons.</div></li>
+        <li>Tap <b>Claim</b> to accept it, or <b>Reject</b> to release it back for others.
+          <div class="expect">Expect: rejecting clears the allocation and returns the job to the open marketplace.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc16">
+      <div class="uc-head"><span class="uc-title">Field work and hand-back</span><span class="uc-where">Job Detail</span></div>
+      <ol class="steps">
+        <li>Add field notes as you work, and tap <b>Mark Field Data Uploaded</b> once the visit is done.
+          <div class="expect">Expect: the office is notified automatically, and admin's Report Progress checklist becomes available on this job.</div></li>
+        <li>If you need to release a job you've claimed, tap <b>Hand Back</b>.
+          <div class="expect">Expect: it returns to the open marketplace for another surveyor.</div></li>
+      </ol>
+      <div class="callout open"><b>Not yet built:</b> the file-upload button on a job ("Upload File") is a placeholder — tapping it just shows a "coming in the next release" message. There's no way to attach documents from the app yet.</div>
+    </div>
+
+    <div class="uc" id="uc17">
+      <div class="uc-head"><span class="uc-title">Manage profile, coverage, availability, insurance</span><span class="uc-where">Profile tab</span></div>
+      <ol class="steps">
+        <li>Update your home postcode and travel radius under <b>Coverage Area</b>.
+          <div class="expect">Expect: a list of matched outcodes appears below, auto-computed from that postcode and radius.</div></li>
+        <li>Mark yourself available/unavailable on the <b>Availability</b> calendar by tapping or dragging across days.
+          <div class="expect">Expect: days default to unavailable until you actively mark them — a grey day means "no answer yet," not "unavailable."</div></li>
+        <li>Upload or replace a PI/PL/DBS certificate under <b>Insurance</b>.
+          <div class="expect">Expect: only you (and admin) can see or replace your own certificates — this was a real gap (any surveyor could read or overwrite anyone else's) closed today.</div></li>
+      </ol>
+    </div>
+
+    <h2 id="open-items"><span class="num">05</span>Known behaviours, not bugs</h2>
+    <p class="section-lede">Things that are correct as designed but might look surprising while testing.</p>
+    <div class="openlist">
+      <div class="item">
+        <div class="item-title">Every email CCs nick@aut-ai.com</div>
+        <div class="item-body">Deliberate, for testing — flip <code>TESTING_CC</code> to <code>null</code> in <code>email-templates.ts</code> when ready to go fully live.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Reply-to on customer emails is nick@aut-ai.com, not Trevor's address</div>
+        <div class="item-body">Same testing-mode flag — <code>REPLY_TO_ADDRESS</code> in the same file.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Two duplicate-looking surveyor test accounts may still exist</div>
+        <div class="item-body"><code>ciaran1@gmail.com</code>, <code>ciaran@gmail.com</code>, <code>c2590murphy@gmail.com</code> — noticed during testing, never confirmed as safe to delete.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">A nested, unused GitHub Actions workflow file still exists</div>
+        <div class="item-body"><code>admin/.github/workflows/deploy-functions.yml</code> — never runs (GitHub only reads the top-level <code>.github/</code>), harmless but should eventually be deleted.</div>
+      </div>
+    </div>
+
+    <footer>THAC Field Guide — generated 2026-09-09, reflects the codebase as of commit c06283a2.</footer>
+  </main>
+</div>
