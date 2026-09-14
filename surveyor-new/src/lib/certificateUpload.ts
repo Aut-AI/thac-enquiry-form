@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
+import { File } from 'expo-file-system';
 import { supabase } from './supabase';
 
 export type CertificateType = 'pi' | 'pl' | 'dbs';
@@ -40,12 +41,14 @@ export async function uploadCertificate(
   const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
   const path = `${surveyorId}/${type}_certificate_${Date.now()}.${ext}`;
 
-  const response = await fetch(file.uri);
-  const blob = await response.blob();
+  // fetch(uri).blob() silently produces a 0-byte blob for local file://
+  // URIs on this SDK -- no error, just an empty file uploaded. Reading
+  // bytes via expo-file-system's File instead actually reads the content.
+  const bytes = await new File(file.uri).arrayBuffer();
 
   const { error } = await supabase.storage
     .from('surveyor-documents')
-    .upload(path, blob, {
+    .upload(path, bytes, {
       contentType: file.mimeType || 'application/octet-stream',
       upsert: false,
     });

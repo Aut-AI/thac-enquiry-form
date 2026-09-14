@@ -36,6 +36,14 @@ export default function InsuranceScreen() {
     }
   }, [surveyor]);
 
+  async function viewCertificate(path: string) {
+    try {
+      await openCertificate(path);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  }
+
   async function replaceCertificate(type: CertificateType) {
     if (!surveyor) return;
     const file = await pickCertificate();
@@ -151,7 +159,7 @@ export default function InsuranceScreen() {
             <Text style={styles.light}>{trafficLight(surveyor.pi_expiry_date)}</Text>
             <Text style={styles.itemLabel}>PI Insurance</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.pi_expiry_date)}</Text>
-            <TouchableOpacity onPress={() => surveyor.pi_certificate_path ? openCertificate(surveyor.pi_certificate_path) : replaceCertificate('pi')}>
+            <TouchableOpacity onPress={() => surveyor.pi_certificate_path ? viewCertificate(surveyor.pi_certificate_path) : replaceCertificate('pi')}>
               <Text style={styles.certLink}>
                 {uploadingCert === 'pi' ? 'Uploading...' : surveyor.pi_certificate_path ? 'View file' : 'Upload file'}
               </Text>
@@ -166,7 +174,7 @@ export default function InsuranceScreen() {
             <Text style={styles.light}>{trafficLight(surveyor.pl_expiry_date)}</Text>
             <Text style={styles.itemLabel}>PL Insurance</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.pl_expiry_date)}</Text>
-            <TouchableOpacity onPress={() => surveyor.pl_certificate_path ? openCertificate(surveyor.pl_certificate_path) : replaceCertificate('pl')}>
+            <TouchableOpacity onPress={() => surveyor.pl_certificate_path ? viewCertificate(surveyor.pl_certificate_path) : replaceCertificate('pl')}>
               <Text style={styles.certLink}>
                 {uploadingCert === 'pl' ? 'Uploading...' : surveyor.pl_certificate_path ? 'View file' : 'Upload file'}
               </Text>
@@ -181,7 +189,7 @@ export default function InsuranceScreen() {
             <Text style={styles.light}>{trafficLight(surveyor.dbs_expiry_date)}</Text>
             <Text style={styles.itemLabel}>DBS Check</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.dbs_expiry_date)}</Text>
-            <TouchableOpacity onPress={() => surveyor.dbs_certificate_path ? openCertificate(surveyor.dbs_certificate_path) : replaceCertificate('dbs')}>
+            <TouchableOpacity onPress={() => surveyor.dbs_certificate_path ? viewCertificate(surveyor.dbs_certificate_path) : replaceCertificate('dbs')}>
               <Text style={styles.certLink}>
                 {uploadingCert === 'dbs' ? 'Uploading...' : surveyor.dbs_certificate_path ? 'View file' : 'Upload file'}
               </Text>
