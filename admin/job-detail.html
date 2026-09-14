@@ -1172,7 +1172,7 @@ function renderLinkedJobButton() {
 async function openAllocateModal() {
   // Load surveyors for dropdown
   try {
-    const survs = await dbGet('surveyors', { 'select': 'id,full_name', 'order': 'full_name.asc' });
+    const survs = await dbGet('surveyors', { 'select': 'id,full_name', 'status': 'neq.archived', 'order': 'full_name.asc' });
     const options = survs.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('');
     document.getElementById('allocSurveyor').innerHTML = `<option value="">— Choose surveyor —</option>${options}`;
 
