@@ -222,7 +222,6 @@ function renderTable() {
             ? `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', false)">Enable</button>`
             : `<button class="btn btn-secondary btn-sm" onclick="toggleBan('${u.id}', true)">Disable</button>`
           }
-          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${(u.email || '').replace(/'/g, "\\'")}')">Delete</button>
         </div>
       </td>
     </tr>
@@ -366,24 +365,6 @@ async function toggleBan(id, banned) {
     await callApi('PATCH', { body: { id, banned } });
     showToast(`${user?.email} ${banned ? 'disabled' : 're-enabled'} \u2713`);
     await loadUsers();
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
-// ---- Delete ----
-
-async function deleteUser(id, email) {
-  if (!confirm(`Permanently delete ${email}? This can't be undone \u2014 they'll no longer be able to sign in at all.`)) return;
-
-  try {
-    await callApi('DELETE', { query: { id } });
-    showToast(`${email} deleted \u2713`);
-    // listUsers() can lag a moment behind a delete that just succeeded, so
-    // remove it from the in-memory list rather than trusting an immediate
-    // refetch to reflect it.
-    allUsers = allUsers.filter(u => u.id !== id);
-    renderTable();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
