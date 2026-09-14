@@ -37,6 +37,32 @@ export default function CoverageAreaScreen() {
 
   useFocusEffect(useCallback(() => { loadOutcodes(); }, [loadOutcodes]));
 
+  function confirmExcludeOutcode(outcode: string) {
+    Alert.alert(
+      `Remove ${outcode}?`,
+      "You won't see available jobs in this area any more. An admin can add it back from your surveyor profile.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => excludeOutcode(outcode) },
+      ]
+    );
+  }
+
+  async function excludeOutcode(outcode: string) {
+    if (!surveyor?.id) return;
+    setServiceOutcodes(prev => prev.filter(o => o.outcode !== outcode));
+    const { error } = await supabase
+      .from('surveyor_outcode_overrides')
+      .upsert(
+        { surveyor_id: surveyor.id, outcode, override_type: 'exclude' },
+        { onConflict: 'surveyor_id,outcode' }
+      );
+    if (error) {
+      Alert.alert('Error', error.message);
+      loadOutcodes();
+    }
+  }
+
   async function saveLocation() {
     if (!surveyor) return;
     setSavingLocation(true);
@@ -123,6 +149,12 @@ export default function CoverageAreaScreen() {
                   <View key={item.outcode} style={styles.outcodeTag}>
                     <Text style={styles.outcodeText}>{item.outcode}</Text>
                     <Text style={styles.outcodeDistance}>{item.distance_miles}mi</Text>
+                    <TouchableOpacity
+                      onPress={() => confirmExcludeOutcode(item.outcode)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.outcodeRemove}>×</Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -149,5 +181,6 @@ const styles = StyleSheet.create({
   outcodeTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#dbeafe', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   outcodeText: { fontSize: 13, fontWeight: '600', color: GREEN },
   outcodeDistance: { fontSize: 11, color: '#6b7280', fontWeight: '500' },
+  outcodeRemove: { fontSize: 15, fontWeight: '700', color: '#9ca3af', lineHeight: 15 },
   noOutcodes: { fontSize: 13, color: '#9ca3af', marginTop: 12, fontStyle: 'italic' },
 });
