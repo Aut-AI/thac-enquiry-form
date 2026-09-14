@@ -1720,10 +1720,10 @@ async function submitNewEnquiry() {
       introducer_email: introducerEmail,
     } : {}),
     quoted_price,
-    // Only sent in travel_cost_areas mode — the enquiries.travel_cost column
-    // arrives with the same migration as that mode, so this can't hit a
-    // database that lacks the column
-    ...(appliedTravel ? { travel_cost: appliedTravel.cost } : {}),
+    // Only sent in travel_cost_areas mode — the enquiries.travel_cost/
+    // travel_note columns arrive with the migrations for that mode, so
+    // this can't hit a database that lacks them
+    ...(appliedTravel ? { travel_cost: appliedTravel.cost, travel_note: appliedTravel.note || null } : {}),
     status: quoted_price ? 'quoted' : 'new',
     submitted_at: new Date().toISOString()
   };

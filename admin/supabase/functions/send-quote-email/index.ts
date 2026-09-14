@@ -20,7 +20,7 @@ serve(async (req) => {
     })
   }
 
-  const { enquiry_id, contact_email, contact_name, introducer_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode } = await req.json()
+  const { enquiry_id, contact_email, contact_name, introducer_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode, travel_cost, travel_note } = await req.json()
 
   if (!contact_email || !quoted_price) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -46,8 +46,15 @@ serve(async (req) => {
       detailRow('Survey Type', SURVEY_LABELS[survey_type] || survey_type || '—'),
       detailRow('Site Postcode', site_postcode || '—'),
       detailRow('Deadline', DEADLINE_LABELS[deadline_tier] || deadline_tier || '—'),
+      travel_cost ? detailRow('Travel Cost', '£' + Number(travel_cost).toLocaleString() + ' + VAT') : '',
       detailRow('Quote', `<span style="color:#1a3a2a; font-size:16px; font-weight:700;">${price}</span>`),
     ].join(''))}
+
+    ${travel_cost > 300 && travel_note ? `
+      <p style="background:#f6f4ee; border-left:3px solid #a68b5b; padding:12px 16px; margin:18px 0; font-size:13px; color:#5a5346;">
+        ${travel_note}
+      </p>
+    ` : ''}
 
     <p style="margin: 26px 0 14px;">To proceed, click one of the buttons below:</p>
 
