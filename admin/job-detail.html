@@ -418,7 +418,6 @@ function renderContactDetails() {
 
   const introducerName    = enquiry?.introducer_name;
   const introducerEmail   = enquiry?.introducer_email;
-  const introducerCompany = enquiry?.introducer_company;
 
   if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
 
@@ -466,12 +465,6 @@ function renderContactDetails() {
               <div>
                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
                 <div style="font-size:13px;"><a href="mailto:${introducerEmail}">${introducerEmail}</a></div>
-              </div>
-            ` : ''}
-            ${introducerCompany ? `
-              <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Company</div>
-                <div style="font-size:13px;color:var(--text);">${introducerCompany}</div>
               </div>
             ` : ''}
           </div>

@@ -1080,11 +1080,6 @@
           <div class="field-hint">We'll send them a copy of the quote too.</div>
           <div class="field-error" id="introducerEmailError">Please enter a valid email address.</div>
         </div>
-
-        <div class="field-group">
-          <label>Agency / Company</label>
-          <input type="text" id="introducerCompany" placeholder="Optional">
-        </div>
       </div>
 
       <div class="form-nav">
@@ -1548,7 +1543,6 @@ function toggleOnBehalfOf() {
   if (!on) {
     document.getElementById('introducerName').value = '';
     document.getElementById('introducerEmail').value = '';
-    document.getElementById('introducerCompany').value = '';
     hideError('introducerNameError', 'introducerName');
     hideError('introducerEmailError', 'introducerEmail');
   }
@@ -1683,7 +1677,6 @@ async function submitNewEnquiry() {
   const onBehalfOf = document.getElementById('onBehalfOfToggle').checked;
   const introducerName = document.getElementById('introducerName').value.trim();
   const introducerEmail = document.getElementById('introducerEmail').value.trim();
-  const introducerCompany = document.getElementById('introducerCompany').value.trim();
   if (onBehalfOf && !introducerName) { showError('introducerNameError', 'introducerName'); valid = false; }
   else { hideError('introducerNameError', 'introducerName'); }
   if (onBehalfOf && (!introducerEmail || !introducerEmail.includes('@'))) { showError('introducerEmailError', 'introducerEmail'); valid = false; }
@@ -1725,7 +1718,6 @@ async function submitNewEnquiry() {
     ...(onBehalfOf ? {
       introducer_name: introducerName,
       introducer_email: introducerEmail,
-      introducer_company: introducerCompany,
     } : {}),
     quoted_price,
     // Only sent in travel_cost_areas mode — the enquiries.travel_cost column

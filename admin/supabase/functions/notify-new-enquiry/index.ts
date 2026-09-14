@@ -54,7 +54,6 @@ serve(async (req) => {
       record.company ? detailRow('Company', record.company) : '',
       record.introducer_name ? detailRow('Introduced By', record.introducer_name) : '',
       record.introducer_email ? detailRow('Also Copied On Quote', record.introducer_email) : '',
-      record.introducer_company ? detailRow('Introducer Company', record.introducer_company) : '',
       detailRow('Type', isAmendment ? 'Amendment to existing job' : 'New survey'),
       !isAmendment ? detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—') : '',
       !isAmendment ? detailRow('Tree Count Band', record.tree_count_band ? record.tree_count_band + ' trees' : '—') : '',
