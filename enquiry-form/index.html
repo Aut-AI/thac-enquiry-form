@@ -1770,7 +1770,7 @@ async function submitAmendment() {
 
 async function geocodePostcode(postcode) {
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(postcode)}&key=AIzaSyAcI85g0gVVH1Uw-YMGVKvYYKWTXTKBbW8`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(postcode)}&key=AIzaSyASYhjvlDMi4-BXKVtXA74eUoV1gQWRmjI`;
     const response = await fetch(url);
     const data = await response.json();
     console.log('Geocoding response:', data);

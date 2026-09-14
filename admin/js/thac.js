@@ -2,8 +2,8 @@
    THAC Admin CRM — Shared Utilities
    ============================================================ */
 
-// Google Maps API key — AIzaSyBf06LywaBHDNOCzj4Z8Cm0W6XAwk7iETc
-const GOOGLE_MAPS_KEY = 'AIzaSyBf06LywaBHDNOCzj4Z8Cm0W6XAwk7iETc';
+// Google Maps API key — THAC Maps project (aut-ai.com)
+const GOOGLE_MAPS_KEY = 'AIzaSyASYhjvlDMi4-BXKVtXA74eUoV1gQWRmjI';
 
 // ============================================================
 // ICON SYSTEM — inline line icons (24x24 grid, currentColor), replacing
