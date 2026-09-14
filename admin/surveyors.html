@@ -16,7 +16,7 @@
 requireAuth();
 
 let allSurveyors = [];
-let activeFilter = 'all';
+let activeFilter = 'active';
 let searchQuery  = '';
 const ADMIN_USERS_FUNCTIONS_URL = 'https://lemppaqgpntadeylzzwn.supabase.co/functions/v1/admin-users';
 
@@ -28,7 +28,7 @@ async function init() {
         <div class="topbar-title">Surveyors</div>
         <div class="topbar-search">
           <span>${icon('search')}</span>
-          <input type="text" placeholder="Search by name, email..." oninput="handleSearch(this.value)">
+          <input type="text" id="surveyorSearch" placeholder="Search by name, email..." oninput="handleSearch(this.value)">
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.location.href='surveyor-detail.html?new=1'">+ Add Surveyor</button>
       </div>
@@ -39,9 +39,9 @@ async function init() {
             <span style="font-size:13px;font-weight:400;color:var(--text-muted)" id="surveyorCount"></span>
           </div>
           <div class="filter-bar">
-            <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+            <button class="filter-btn" id="filterAllBtn" onclick="setFilter('all', this)">All</button>
             <button class="filter-btn" onclick="setFilter('pending', this)">${icon('clock')}Pending Approval</button>
-            <button class="filter-btn" onclick="setFilter('active', this)">${icon('checkCircle')}Active</button>
+            <button class="filter-btn active" onclick="setFilter('active', this)">${icon('checkCircle')}Active</button>
             <button class="filter-btn" onclick="setFilter('paused', this)">${icon('pause')}Paused</button>
             <button class="filter-btn" onclick="setFilter('archived', this)">${icon('archive')}Archived</button>
             <button class="filter-btn" onclick="setFilter('expiring', this)">${dot('elevated')}Insurance Expiring</button>
@@ -296,11 +296,19 @@ async function renderTable() {
   document.getElementById('surveyorCount').textContent = `${filtered.length} surveyor${filtered.length !== 1 ? 's' : ''}`;
 
   if (filtered.length === 0) {
+    // The page opens on the Active filter, so an empty table usually means
+    // "none match this filter", not "none exist" -- say which.
+    const isNarrowed = activeFilter !== 'all' || searchQuery;
     document.getElementById('surveyorsTable').innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">${icon('userCheck', 48)}</div>
-        <h3>No surveyors yet</h3>
-        <p>Add a surveyor using the button in the top-right</p>
+        ${isNarrowed && allSurveyors.length > 0 ? `
+          <h3>No surveyors match this filter</h3>
+          <p><a href="#" onclick="clearFilters();return false;">Show all ${allSurveyors.length} surveyor${allSurveyors.length !== 1 ? 's' : ''}</a></p>
+        ` : `
+          <h3>No surveyors yet</h3>
+          <p>Add a surveyor using the button in the top-right</p>
+        `}
       </div>`;
     return;
   }
@@ -393,6 +401,15 @@ async function setFilter(filter, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   await renderTable();
+}
+
+// Used by the "Show all" link in the empty state -- resets the search box
+// and moves the highlight onto the All button, so the UI matches the data.
+async function clearFilters() {
+  searchQuery = '';
+  const searchBox = document.getElementById('surveyorSearch');
+  if (searchBox) searchBox.value = '';
+  await setFilter('all', document.getElementById('filterAllBtn'));
 }
 
 async function handleSearch(q) {
