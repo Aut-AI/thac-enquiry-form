@@ -2041,9 +2041,8 @@ async function loadUploadedFiles() {
 
 async function downloadFile(filePath) {
   try {
-    const { data, error } = await supabase.storage.from('THAC-CRM_Bucket').createSignedUrl(filePath, 3600);
-    if (error) throw error;
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+    const url = await storageSignedUrl('THAC-CRM_Bucket', filePath);
+    window.open(url, '_blank');
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
@@ -2060,10 +2059,12 @@ async function downloadAllFiles(jobId) {
     showToast(`Preparing ${files.length} file(s) for download...`);
 
     for (const f of files) {
-      const { data, error } = await supabase.storage.from('THAC-CRM_Bucket').createSignedUrl(f.file_path, 3600);
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+      try {
+        const url = await storageSignedUrl('THAC-CRM_Bucket', f.file_path);
+        window.open(url, '_blank');
         await new Promise(resolve => setTimeout(resolve, 200)); // Stagger opens
+      } catch (e) {
+        console.error('Could not sign', f.file_path, e);
       }
     }
 

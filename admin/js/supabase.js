@@ -64,6 +64,38 @@ async function dbDelete(table, filter) {
 }
 
 // ============================================================
+// STORAGE
+// ============================================================
+
+// Signed URL for a private bucket object. The admin CRM doesn't load the
+// supabase-js SDK at all, so supabase.storage.*() isn't available here --
+// this hits the Storage REST API directly with the signed-in admin's token,
+// which the bucket policies check the same way.
+async function storageSignedUrl(bucket, path, expiresIn = 3600) {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ expiresIn }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Could not create signed URL (${response.status})`);
+  }
+
+  // The API returns a root-relative path like "/object/sign/<bucket>/<path>?token=..."
+  const { signedURL } = await response.json();
+  return `${SUPABASE_URL}/storage/v1${signedURL.replace(/^\/storage\/v1/, '')}`;
+}
+
+// ============================================================
 // AUTH
 // ============================================================
 

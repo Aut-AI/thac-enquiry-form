@@ -50,7 +50,7 @@ async function init() {
 async function loadSurveyor() {
   try {
     const [sData, jData, oData, ovData] = await Promise.all([
-      dbGet('surveyors', { 'id': `eq.${surveyorId}`, 'limit': 1, 'select': 'id,user_id,hourly_rate,home_postcode,home_lat,home_lng,radius_miles,pi_policy_number,pi_expiry_date,pl_policy_number,pl_expiry_date,dbs_number,dbs_expiry_date,qualifications,is_paused,created_at,full_name,email,phone,notes,is_active,status' }),
+      dbGet('surveyors', { 'id': `eq.${surveyorId}`, 'limit': 1, 'select': 'id,user_id,hourly_rate,home_postcode,home_lat,home_lng,radius_miles,pi_policy_number,pi_expiry_date,pi_certificate_path,pl_policy_number,pl_expiry_date,pl_certificate_path,dbs_number,dbs_expiry_date,dbs_certificate_path,qualifications,is_paused,created_at,full_name,email,phone,notes,is_active,status' }),
       dbGet('jobs', {
         'surveyor_id': `eq.${surveyorId}`,
         'select': 'id,reference,survey_type,urgency_state,dispatch_state,survey_date,agreed_amount,surveyor_pay_amount',
@@ -131,7 +131,7 @@ function groupOutcodesByArea(outcodes) {
 
 // expiryStatus() is shared from js/thac.js
 
-function insuranceRow(label, policyNum, expiryDate) {
+function insuranceRow(label, policyNum, expiryDate, certificatePath) {
   const s = expiryStatus(expiryDate);
   return `
     <div class="detail-field">
@@ -140,8 +140,25 @@ function insuranceRow(label, policyNum, expiryDate) {
         <span class="badge ${s.cls}">${s.label}</span>
         ${policyNum ? `<div style="font-size:12px;margin-top:4px;color:var(--text-muted);">Policy: ${policyNum}</div>` : ''}
         ${s.detail   ? `<div style="font-size:12px;color:var(--text-muted);">${s.detail}</div>` : ''}
+        <div style="margin-top:6px;">
+          ${certificatePath
+            ? `<button class="btn btn-secondary btn-sm" onclick="viewCertificate('${certificatePath.replace(/'/g, "\\'")}')">${icon('document', 13)}View certificate</button>`
+            : `<span style="font-size:12px;color:var(--text-muted);">No certificate uploaded</span>`}
+        </div>
       </div>
     </div>`;
+}
+
+// Certificates are uploaded by surveyors from the mobile app into the
+// private surveyor-documents bucket; admins can read any of them per the
+// bucket policy, but only via a signed URL.
+async function viewCertificate(path) {
+  try {
+    const url = await storageSignedUrl('surveyor-documents', path);
+    window.open(url, '_blank');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 // ============================================================
@@ -262,9 +279,9 @@ function renderView() {
         <div class="card">
           <div class="card-title">Insurance & Compliance</div>
           <div class="detail-grid">
-            ${insuranceRow('Professional Indemnity', surveyor.pi_policy_number, surveyor.pi_expiry_date)}
-            ${insuranceRow('Public Liability', surveyor.pl_policy_number, surveyor.pl_expiry_date)}
-            ${insuranceRow('DBS Check', surveyor.dbs_number, surveyor.dbs_expiry_date)}
+            ${insuranceRow('Professional Indemnity', surveyor.pi_policy_number, surveyor.pi_expiry_date, surveyor.pi_certificate_path)}
+            ${insuranceRow('Public Liability', surveyor.pl_policy_number, surveyor.pl_expiry_date, surveyor.pl_certificate_path)}
+            ${insuranceRow('DBS Check', surveyor.dbs_number, surveyor.dbs_expiry_date, surveyor.dbs_certificate_path)}
           </div>
         </div>
 

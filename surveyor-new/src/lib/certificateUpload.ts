@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
+import { Linking } from 'react-native';
 import { supabase } from './supabase';
 
 export type CertificateType = 'pi' | 'pl' | 'dbs';
@@ -63,8 +64,6 @@ export async function openCertificate(path: string) {
     .from('surveyor-documents')
     .createSignedUrl(path, 3600);
   if (error) throw error;
-  if (data?.signedUrl) {
-    const { Linking } = await import('react-native');
-    await Linking.openURL(data.signedUrl);
-  }
+  if (!data?.signedUrl) throw new Error('Could not open this certificate.');
+  await Linking.openURL(data.signedUrl);
 }
