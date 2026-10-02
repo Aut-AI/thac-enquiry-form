@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "surveyor-new",
+    "name": "Heaps Arboriculture Surveyors",
     "slug": "surveyor-new",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -22,7 +22,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.trevorheaps.surveyor"
+      "package": "com.heapsarboriculture.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC1MxIdPn1eykmvi2ZgjJUM-M6cJwQY7a0"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
