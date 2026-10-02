@@ -444,6 +444,34 @@
     color: #000000;
   }
 
+  /* Turnaround options Trevor has switched off in admin settings */
+  .price-option:disabled,
+  .deadline-option:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    background: rgba(220, 218, 212, 0.5);
+    border-color: var(--border);
+  }
+
+  .price-option:disabled:hover,
+  .deadline-option:disabled:hover {
+    border-color: var(--border);
+    background: rgba(220, 218, 212, 0.5);
+  }
+
+  .deadline-notice {
+    display: none;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #5c4a00;
+    background: #fff8e1;
+    border: 1px solid #f0e0a0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+
   /* Branch selector */
   .branch-cards {
     display: grid;
@@ -903,6 +931,7 @@
           </button>
         </div>
         <input type="hidden" id="amendDeadline" value="">
+        <div class="deadline-notice" id="amendDeadlineNotice"></div>
         <div class="field-error" id="amendDeadlineError">Please select a deadline.</div>
       </div>
 
@@ -988,6 +1017,7 @@
         </div>
         <input type="hidden" id="deadline" value="">
         <div class="field-hint">Select the option that best suits your timeline.</div>
+        <div class="deadline-notice" id="deadlineNotice"></div>
         <div class="field-error" id="deadlineError">Please select a quote option.</div>
       </div>
 
@@ -1251,20 +1281,47 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // Fetch deadline surcharges (falls back to the hardcoded defaults above if
   // this fails or the table doesn't exist yet, e.g. before this migration
   // has run -- same defensive pattern as pricing_settings above)
+  // is_available (20261002000 migration) is optional: retries without it so
+  // surcharges still load if the column doesn't exist yet.
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/deadline_surcharges?select=tier,surcharge`, {
+    let res = await fetch(`${SUPABASE_URL}/rest/v1/deadline_surcharges?select=tier,surcharge,is_available`, {
       headers: { 'apikey': SUPABASE_ANON_KEY }
     });
+    if (!res.ok) {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/deadline_surcharges?select=tier,surcharge`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY }
+      });
+    }
     if (res.ok) {
       const rows = await res.json();
       if (rows?.length > 0) {
-        rows.forEach(row => { SURCHARGES[row.tier] = Number(row.surcharge); });
-        console.log('Loaded deadline surcharges:', SURCHARGES);
+        rows.forEach(row => {
+          SURCHARGES[row.tier] = Number(row.surcharge);
+          if (row.is_available === false) UNAVAILABLE_TIERS.add(row.tier);
+        });
+        console.log('Loaded deadline surcharges:', SURCHARGES, 'unavailable:', [...UNAVAILABLE_TIERS]);
       }
     }
   } catch (e) {
     console.warn('Failed to load deadline surcharges, using defaults:', e);
   }
+
+  // Trevor's customer-facing message shown under the turnaround options
+  // (e.g. explaining a backlog). Separate request so a missing column can't
+  // break the hourly-rate/coverage-mode fetch above.
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/pricing_settings?select=deadline_notice`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      deadlineNotice = (rows?.[0]?.deadline_notice || '').trim();
+    }
+  } catch (e) {
+    console.warn('Failed to load deadline notice:', e);
+  }
+
+  applyDeadlineAvailability();
 })();
 
 // Pricing data
@@ -1279,6 +1336,40 @@ const SURCHARGES = {
   '10days': 75,
   '15days': 0
 };
+
+// Turnaround tiers Trevor has switched off in admin settings, plus the
+// message shown under the options. Both fetched on page load.
+const UNAVAILABLE_TIERS = new Set();
+let deadlineNotice = '';
+
+// Greys out and disables switched-off turnaround options on both the new
+// survey quote step and the amendment step, and shows Trevor's message.
+function applyDeadlineAvailability() {
+  const groups = [
+    { container: 'priceOptions', notice: 'deadlineNotice', hidden: 'deadline' },
+    { container: 'amendDeadlineOptions', notice: 'amendDeadlineNotice', hidden: 'amendDeadline' },
+  ];
+  groups.forEach(g => {
+    document.querySelectorAll(`#${g.container} button`).forEach(btn => {
+      const tier = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+      const off = UNAVAILABLE_TIERS.has(tier);
+      btn.disabled = off;
+      btn.setAttribute('aria-disabled', off ? 'true' : 'false');
+      if (off && btn.classList.contains('selected')) {
+        btn.classList.remove('selected');
+        document.getElementById(g.hidden).value = '';
+      }
+      const priceEl = btn.querySelector('.deadline-option-price');
+      if (priceEl) {
+        if (!priceEl.dataset.price) priceEl.dataset.price = priceEl.textContent;
+        priceEl.textContent = off ? 'Unavailable' : priceEl.dataset.price;
+      }
+    });
+    const noticeEl = document.getElementById(g.notice);
+    noticeEl.textContent = deadlineNotice;
+    noticeEl.style.display = deadlineNotice ? 'block' : 'none';
+  });
+}
 
 // Band index: maps tree_count_band to multiplier (1-5)
 function bandIndex(band) {
@@ -1585,7 +1676,8 @@ function goToQuote() {
 
     // No computed price for 100+ trees — Trevor quotes these manually.
     DEADLINE_TIERS.forEach(tier => {
-      document.getElementById('priceAmount_' + tier).textContent = 'Custom quote';
+      document.getElementById('priceAmount_' + tier).textContent =
+        UNAVAILABLE_TIERS.has(tier) ? 'Unavailable' : 'Custom quote';
       document.getElementById('priceVat_' + tier).style.display = 'none';
     });
   } else {
@@ -1596,9 +1688,10 @@ function goToQuote() {
     const travel = appliedTravel ? appliedTravel.cost : 0;
 
     DEADLINE_TIERS.forEach(tier => {
+      const off = UNAVAILABLE_TIERS.has(tier);
       const total = base + travel + (SURCHARGES[tier] || 0);
-      document.getElementById('priceAmount_' + tier).textContent = '£' + total;
-      document.getElementById('priceVat_' + tier).style.display = '';
+      document.getElementById('priceAmount_' + tier).textContent = off ? 'Unavailable' : '£' + total;
+      document.getElementById('priceVat_' + tier).style.display = off ? 'none' : '';
     });
 
     const noteEl = document.getElementById('qTravelNote');

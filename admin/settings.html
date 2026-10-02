@@ -71,11 +71,20 @@ async function init() {
         </div>
 
         <div class="card">
-          <div class="card-title">Deadline Surcharges</div>
-          <div class="field-hint" style="margin-bottom: 16px;">Added on top of the base quote for faster turnaround, shown as options on the public form.</div>
+          <div class="card-title">Turnaround Options</div>
+          <div class="field-hint" style="margin-bottom: 16px;">
+            The surcharge is added on top of the base quote for faster turnaround. Untick <strong>Available</strong> to grey an option out on the public form
+            (new surveys and amendments) so customers can't pick it.
+          </div>
           <div id="surchargesTable"></div>
+          <label style="display: block; margin: 20px 0 8px; font-weight: 600; color: #666; text-transform: uppercase; font-size: 12px;" for="deadlineNotice">
+            Message to customers
+          </label>
+          <textarea id="deadlineNotice" class="pricing-input" rows="3" maxlength="500"
+            placeholder="e.g. Due to high demand, our 3 and 5 day options are temporarily unavailable. We expect to reopen them in November."></textarea>
+          <div class="field-hint">Shown under the turnaround options on the public form. Leave blank to show nothing.</div>
           <button class="btn btn-primary" onclick="saveSurcharges()" style="margin-top: 16px;">
-            Save Surcharges
+            Save Turnaround Options
           </button>
         </div>
 
@@ -189,8 +198,10 @@ async function saveSurveyTypes() {
 
 async function loadSurcharges() {
   try {
-    surchargesData = await dbGet('deadline_surcharges', { 'select': 'tier,label,surcharge', 'order': 'surcharge.desc' }) || [];
+    surchargesData = await dbGet('deadline_surcharges', { 'select': 'tier,label,surcharge,is_available', 'order': 'surcharge.desc' }) || [];
     renderSurchargesTable();
+    const settings = await dbGet('pricing_settings', { 'select': 'deadline_notice', 'limit': 1 });
+    document.getElementById('deadlineNotice').value = settings?.[0]?.deadline_notice || '';
   } catch (e) {
     document.getElementById('surchargesTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
   }
@@ -206,30 +217,42 @@ function renderSurchargesTable() {
           <input class="pricing-input" type="number" step="1" min="0" data-tier="${s.tier}" value="${s.surcharge}">
         </div>
       </td>
+      <td>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" data-available-tier="${s.tier}" ${s.is_available !== false ? 'checked' : ''}>
+          <span>Available</span>
+        </label>
+      </td>
     </tr>
   `).join('');
 
   document.getElementById('surchargesTable').innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Deadline</th><th>Surcharge</th></tr></thead>
+      <thead><tr><th>Deadline</th><th>Surcharge</th><th>On the form</th></tr></thead>
       <tbody id="surchargesBody">${rows}</tbody>
     </table>`;
 }
 
 async function saveSurcharges() {
-  const inputs = document.querySelectorAll('#surchargesBody input');
   const updates = [];
-  inputs.forEach(input => {
+  document.querySelectorAll('#surchargesBody input[data-tier]').forEach(input => {
     const val = parseFloat(input.value);
     if (isNaN(val) || val < 0) return;
-    updates.push({ tier: input.dataset.tier, surcharge: val });
+    const available = document.querySelector(`#surchargesBody input[data-available-tier="${input.dataset.tier}"]`).checked;
+    updates.push({ tier: input.dataset.tier, surcharge: val, is_available: available });
   });
 
+  if (updates.length && updates.every(u => !u.is_available) &&
+      !confirm('All turnaround options are switched off, so customers won\'t be able to get a quote or request an amendment until one is switched back on. Save anyway?')) {
+    return;
+  }
+
   try {
-    await Promise.all(
-      updates.map(u => dbUpdate('deadline_surcharges', `tier=eq.${u.tier}`, { surcharge: u.surcharge }))
-    );
-    showToast('Surcharges saved');
+    await Promise.all([
+      ...updates.map(u => dbUpdate('deadline_surcharges', `tier=eq.${u.tier}`, { surcharge: u.surcharge, is_available: u.is_available })),
+      dbUpdate('pricing_settings', 'id=eq.1', { deadline_notice: document.getElementById('deadlineNotice').value.trim() || null }),
+    ]);
+    showToast('Turnaround options saved');
     await loadSurcharges();
   } catch (e) {
     showToast('Error saving: ' + e.message, 'error');
