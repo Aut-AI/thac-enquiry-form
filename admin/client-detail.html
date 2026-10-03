@@ -19,6 +19,7 @@ const params = new URLSearchParams(window.location.search);
 const clientId = params.get('id');
 let client = null;
 let clientJobs = [];
+let introducedJobs = [];
 
 if (!clientId) window.location.href = 'clients.html';
 
@@ -40,11 +41,16 @@ async function init() {
 
 async function loadClient() {
   try {
-    const [clientData, jobsData] = await Promise.all([
+    const [clientData, jobsData, introducedData] = await Promise.all([
       dbGet('clients', { 'id': `eq.${clientId}`, 'limit': 1 }),
       dbGet('jobs', {
         'arranging_client_id': `eq.${clientId}`,
         'select': 'id,reference,survey_type,urgency_state,dispatch_state,survey_date,agreed_amount',
+        'order': 'created_at.desc'
+      }),
+      dbGet('jobs', {
+        'introducer_client_id': `eq.${clientId}`,
+        'select': 'id,reference,survey_type,site_postcode,billing_contact_name,dispatch_state,survey_date,agreed_amount',
         'order': 'created_at.desc'
       })
     ]);
@@ -56,6 +62,7 @@ async function loadClient() {
 
     client = clientData[0];
     clientJobs = jobsData || [];
+    introducedJobs = introducedData || [];
     const name = client.company_name || client.full_name || '—';
     document.getElementById('pageTitle').textContent = name;
     renderView();
@@ -160,6 +167,26 @@ function renderView() {
           </table>` : `<div class="empty-state" style="padding:24px"><p>No jobs yet</p></div>`}
         </div>
 
+        ${introducedJobs.length > 0 ? `
+        <div class="card">
+          <div class="card-title">Jobs Introduced (${introducedJobs.length})
+            <span style="font-size:13px;font-weight:400;color:var(--text-muted)">£${introducedJobs.reduce((t, j) => t + Number(j.agreed_amount || 0), 0).toLocaleString()} total</span>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Ref</th><th>Client</th><th>Postcode</th><th>Type</th><th>Survey Date</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody>${introducedJobs.map(j => `
+              <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
+                <td><div class="ref">${j.reference || '—'}</div></td>
+                <td>${escapeHtml(j.billing_contact_name) || '—'}</td>
+                <td>${j.site_postcode || '—'}</td>
+                <td>${getSurveyLabel(j.survey_type)}</td>
+                <td>${formatDate(j.survey_date)}</td>
+                <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
+                <td>${statusBadge(j.dispatch_state)}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>` : ''}
+
       </div>
 
       <div style="display:flex;flex-direction:column;gap:20px;">
@@ -221,7 +248,7 @@ function renderEdit() {
                 <option value="">— Select —</option>
                 <option value="individual" ${client.client_type === 'individual' ? 'selected' : ''}>Individual</option>
                 <option value="company"    ${client.client_type === 'company'    ? 'selected' : ''}>Company</option>
-                <option value="agent"      ${client.client_type === 'agent'      ? 'selected' : ''}>Agent</option>
+                <option value="agent"      ${client.client_type === 'agent'      ? 'selected' : ''}>Introducer / Agent</option>
                 <option value="developer"  ${client.client_type === 'developer'  ? 'selected' : ''}>Developer</option>
               </select>
             </div>

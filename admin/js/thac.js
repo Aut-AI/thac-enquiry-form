@@ -493,3 +493,48 @@ async function findOrCreateClient({ full_name, email, phone, address }) {
   });
   return inserted?.[0]?.id || null;
 }
+
+// ============================================================
+// INTRODUCERS
+// ============================================================
+
+// Introducers (who sent the work -- Trinity Claims, Plus Rooms, Heritage
+// Trees...) are `clients` rows with client_type 'agent', linked from
+// jobs.introducer_client_id / enquiries.introducer_client_id.
+async function loadIntroducers() {
+  const rows = await dbGet('clients', {
+    'select': 'id,full_name,company_name,email',
+    'client_type': 'eq.agent',
+  });
+  return (rows || []).sort((a, b) => introducerLabel(a).localeCompare(introducerLabel(b)));
+}
+
+function escapeHtml(val) {
+  if (val == null) return '';
+  return String(val).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function introducerLabel(c) {
+  if (!c) return '';
+  if (c.company_name && c.full_name) return `${c.company_name} (${c.full_name})`;
+  return c.company_name || c.full_name || c.email || 'Unnamed introducer';
+}
+
+// Reuses an existing client with the same email (whatever its type) so an
+// introducer never gets a duplicate row; otherwise creates an 'agent'.
+async function createIntroducer({ full_name, company_name, email }) {
+  if (email) {
+    const existing = await dbGet('clients', { 'select': 'id', 'email': `ilike.${email}`, 'limit': 1 });
+    if (existing?.[0]) return existing[0].id;
+  }
+  const user = getUser();
+  const inserted = await dbInsert('clients', {
+    client_type: 'agent',
+    client_category: 'other',
+    full_name: full_name || null,
+    company_name: company_name || null,
+    email: email || null,
+    created_by_user_id: user?.id || null,
+  });
+  return inserted?.[0]?.id || null;
+}

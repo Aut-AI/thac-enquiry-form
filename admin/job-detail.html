@@ -178,6 +178,8 @@ const params = new URLSearchParams(window.location.search);
 const jobId = params.get('id');
 let job = null;
 let enquiry = null;
+let introducers = [];
+let addingIntroducer = false;
 let stage2Job = null; // child job if this is a Stage 1 two-stage job
 let invoiceTarget = 1;
 let paidTarget = 1;
@@ -213,6 +215,7 @@ async function loadJob() {
     }
     job = data[0];
     document.getElementById('pageTitle').textContent = job.reference || 'Job Detail';
+    introducers = await loadIntroducers();
 
     // Load linked enquiry for acceptance details
     if (job.enquiry_id) {
@@ -402,6 +405,74 @@ function displayParkingMap() {
       console.error('Error displaying parking map:', err);
     }
   }, 200);
+}
+
+function renderIntroducer() {
+  const current = introducers.find(i => i.id === job.introducer_client_id);
+  return `
+    <div class="card">
+      <div class="card-title">
+        Introducer
+        ${current ? `<a href="client-detail.html?id=${current.id}" class="btn btn-secondary btn-sm">View all their jobs →</a>` : ''}
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Who sent this work in (insurer, architect, agent). Used to group jobs by source.</div>
+      ${addingIntroducer ? `
+        <div class="detail-grid">
+          <div class="detail-field"><label>Company</label><input type="text" class="form-control" id="newIntroCompany" placeholder="e.g. Trinity Claims"></div>
+          <div class="detail-field"><label>Contact name</label><input type="text" class="form-control" id="newIntroName"></div>
+          <div class="detail-field" style="grid-column:1/-1"><label>Email</label><input type="email" class="form-control" id="newIntroEmail"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary btn-sm" onclick="saveNewIntroducer()">Add &amp; link</button>
+          <button class="btn btn-secondary btn-sm" onclick="addingIntroducer=false;renderJob()">Cancel</button>
+        </div>
+      ` : `
+        <select class="form-control" onchange="changeIntroducer(this.value)">
+          <option value="">None (came direct)</option>
+          ${introducers.map(i => `<option value="${i.id}" ${i.id === job.introducer_client_id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}
+          <option value="__new">+ Add new introducer…</option>
+        </select>
+      `}
+    </div>
+  `;
+}
+
+async function changeIntroducer(value) {
+  if (value === '__new') {
+    addingIntroducer = true;
+    renderJob();
+    return;
+  }
+  await setIntroducer(value || null);
+}
+
+async function setIntroducer(id) {
+  try {
+    await dbUpdate('jobs', `id=eq.${jobId}`, { introducer_client_id: id });
+    job.introducer_client_id = id;
+    showToast(id ? 'Introducer linked' : 'Introducer removed');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function saveNewIntroducer() {
+  const company_name = document.getElementById('newIntroCompany').value.trim();
+  const full_name = document.getElementById('newIntroName').value.trim();
+  const email = document.getElementById('newIntroEmail').value.trim();
+  if (!company_name && !full_name) {
+    showToast('Enter a company or contact name', 'error');
+    return;
+  }
+  try {
+    const id = await createIntroducer({ full_name, company_name, email });
+    introducers = await loadIntroducers();
+    addingIntroducer = false;
+    await setIntroducer(id);
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 function renderContactDetails() {
@@ -745,6 +816,7 @@ function renderJob() {
 
         <!-- Contact Details -->
         ${renderContactDetails()}
+        ${renderIntroducer()}
 
         <!-- Survey & Site Details -->
         ${renderSurveyAndSiteDetails()}
@@ -1641,6 +1713,7 @@ async function createStage2() {
       agreed_amount:     job.agreed_amount,
       is_two_stage:      true,
       arranging_client_id: job.arranging_client_id,
+      introducer_client_id: job.introducer_client_id,
       internal_notes:    'Stage 2 — awaiting revised plans from architect.',
     });
     const newJob = Array.isArray(result) ? result[0] : result;
@@ -2150,6 +2223,7 @@ async function createStage2Job() {
       sla_deadline: slaDeadline.toISOString(),
       is_two_stage: false,
       arranging_client_id: job.arranging_client_id,
+      introducer_client_id: job.introducer_client_id,
       end_client_name: job.end_client_name,
       end_client_email: job.end_client_email,
       billing_contact_name: job.billing_contact_name,

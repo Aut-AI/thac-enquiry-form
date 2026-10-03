@@ -19,6 +19,8 @@ let allJobs = [];
 let activeFilter = 'all';
 let activeUrgency = 'all';
 let searchQuery = '';
+let activeIntroducer = 'all';
+let introducerById = {};
 
 // Read urgency param from dashboard stat card links
 const _urlParams = new URLSearchParams(window.location.search);
@@ -32,7 +34,7 @@ async function init() {
         <div class="topbar-title">Jobs</div>
         <div class="topbar-search">
           <span>${icon('search')}</span>
-          <input type="text" placeholder="Search by ref, postcode..." oninput="handleSearch(this.value)">
+          <input type="text" placeholder="Search by ref, postcode, name, introducer..." oninput="handleSearch(this.value)">
         </div>
       </div>
       <div class="page-body">
@@ -59,6 +61,11 @@ async function init() {
             <button class="filter-btn ${activeUrgency==='yellow'?'active':''}" onclick="setUrgency('yellow',this)">${dot('standard')}Standard</button>
             <button class="filter-btn ${activeUrgency==='grey'?'active':''}" onclick="setUrgency('grey',this)">${dot('low')}Low</button>
           </div>
+          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+            <select class="form-control" id="introducerFilter" style="max-width:320px;" onchange="setIntroducer(this.value)">
+              <option value="all">All introducers</option>
+            </select>
+          </div>
           <div id="jobsTable"><div class="loading"><div class="spinner"></div><br>Loading jobs...</div></div>
         </div>
       </div>
@@ -71,12 +78,21 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id',
       'order': 'created_at.desc',
-      'limit': 100
+      'limit': 1000
     });
 
-    const surveyors = await dbGet('surveyors', { 'select': 'id,full_name' });
+    const [surveyors, introducers] = await Promise.all([
+      dbGet('surveyors', { 'select': 'id,full_name' }),
+      loadIntroducers(),
+    ]);
+    introducerById = {};
+    introducers.forEach(i => { introducerById[i.id] = i; });
+    document.getElementById('introducerFilter').innerHTML = `
+      <option value="all">All introducers</option>
+      <option value="none" ${activeIntroducer === 'none' ? 'selected' : ''}>Direct (no introducer)</option>
+      ${introducers.map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}`;
     const surveyorNameById = {};
     (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
 
@@ -108,11 +124,19 @@ function renderTable() {
     filtered = filtered.filter(j => j.urgency_state === activeUrgency);
   }
 
+  if (activeIntroducer === 'none') {
+    filtered = filtered.filter(j => !j.introducer_client_id);
+  } else if (activeIntroducer !== 'all') {
+    filtered = filtered.filter(j => j.introducer_client_id === activeIntroducer);
+  }
+
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     filtered = filtered.filter(j =>
       (j.reference || '').toLowerCase().includes(q) ||
-      (j.site_postcode || '').toLowerCase().includes(q)
+      (j.site_postcode || '').toLowerCase().includes(q) ||
+      (j.billing_contact_name || '').toLowerCase().includes(q) ||
+      introducerLabel(introducerById[j.introducer_client_id]).toLowerCase().includes(q)
     );
   }
 
@@ -137,6 +161,7 @@ function renderTable() {
     <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
       <td><div class="ref">${j.reference || j.id.slice(0,8).toUpperCase()}</div></td>
       <td>${j.billing_contact_name || '<span class="muted">—</span>'}</td>
+      <td>${j.introducer_client_id ? escapeHtml(introducerLabel(introducerById[j.introducer_client_id])) : '<span class="muted">Direct</span>'}</td>
       <td>${j.created_at ? formatDate(j.created_at) : '<span class="muted">—</span>'}</td>
       <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
       <td>${j.site_postcode || '—'}</td>
@@ -155,6 +180,7 @@ function renderTable() {
         <tr>
           <th>Reference</th>
           <th>Name</th>
+          <th>Introducer</th>
           <th>Date Created</th>
           <th>Survey Type</th>
           <th>Postcode</th>
@@ -172,16 +198,21 @@ function renderTable() {
 
 function setFilter(filter, btn) {
   activeFilter = filter;
-  // Only reset active state on dispatch filter buttons (first filter-bar)
-  document.querySelectorAll('.filter-bar:first-of-type .filter-btn').forEach(b => b.classList.remove('active'));
+  // Only reset active state within this button's own filter row
+  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderTable();
 }
 
 function setUrgency(urgency, btn) {
   activeUrgency = urgency;
-  document.querySelectorAll('.filter-bar:last-of-type .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  renderTable();
+}
+
+function setIntroducer(value) {
+  activeIntroducer = value;
   renderTable();
 }
 
