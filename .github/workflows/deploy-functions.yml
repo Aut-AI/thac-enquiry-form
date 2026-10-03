@@ -42,6 +42,7 @@ jobs:
           supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy notify-surveyor-approved --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy admin-users --project-ref lemppaqgpntadeylzzwn
+          supabase functions deploy delete-surveyor-account --project-ref lemppaqgpntadeylzzwn
 
       - name: Set secrets
         env:

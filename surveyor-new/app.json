@@ -13,7 +13,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.trevorheaps.surveyor"
+      "bundleIdentifier": "com.trevorheaps.surveyor",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Heaps Arboriculture Surveyors uses your location to show your position on the job map and when confirming parking details on site."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -33,7 +36,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Heaps Arboriculture Surveyors uses your location to show your position on the job map and when confirming parking details on site."
+        }
+      ]
     ],
     "extra": {
       "eas": {

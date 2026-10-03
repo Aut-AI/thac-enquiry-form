@@ -4,6 +4,7 @@ import {
   Alert, ActivityIndicator, Linking, TextInput, Clipboard, Dimensions, Platform,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { supabase } from '../lib/supabase';
 import { Job, RootStackParamList } from '../types';
 import NDAModal from './NDAModal';
@@ -72,6 +73,10 @@ export default function JobDetailScreen() {
   const [showNDA, setShowNDA] = useState(false);
 
   useEffect(() => { loadData(); }, []);
+
+  // The parking map's showsUserLocation only draws the blue dot once this
+  // has been granted.
+  useEffect(() => { Location.requestForegroundPermissionsAsync(); }, []);
 
   useEffect(() => {
     if (!job?.allocated_surveyor_id || job?.allocation_rejected_at) return;

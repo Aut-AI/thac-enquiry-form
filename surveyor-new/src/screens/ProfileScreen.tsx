@@ -54,6 +54,34 @@ export default function ProfileScreen() {
     ]);
   }
 
+  function deleteAccount() {
+    Alert.alert(
+      'Delete Account',
+      'This permanently removes your personal details and certificates and signs you out. ' +
+        'Job history stays on file for Trevor\'s records, but with no name or contact details attached. ' +
+        'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const { error } = await supabase.functions.invoke('delete-surveyor-account', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (error) {
+              Alert.alert('Something went wrong', 'Please try again, or email trevor@heapsarboriculture.co.uk to request deletion.');
+              return;
+            }
+            await supabase.auth.signOut();
+          },
+        },
+      ],
+    );
+  }
+
   if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1a3c2e" /></View>;
   if (!surveyor) return (
     <View style={s.center}>
@@ -101,6 +129,10 @@ export default function ProfileScreen() {
       <TouchableOpacity style={s.signOutBtn} onPress={signOut}>
         <Text style={s.signOutText}>Sign Out</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={rowStyles.deleteAccountBtn} onPress={deleteAccount}>
+        <Text style={rowStyles.deleteAccountText}>Delete Account</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -117,4 +149,6 @@ const rowStyles = StyleSheet.create({
   title: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
   subtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   chevron: { fontSize: 22, color: '#c0c0c0', fontWeight: '300' },
+  deleteAccountBtn: { alignItems: 'center', padding: 12, marginTop: 4 },
+  deleteAccountText: { color: '#9ca3af', fontSize: 13, textDecorationLine: 'underline' },
 });

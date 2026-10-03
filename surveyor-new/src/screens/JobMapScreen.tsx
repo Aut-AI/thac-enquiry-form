@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Alert, Modal, ScrollView } from 'react-native';
 import MapView, { Marker, Callout, Region } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
@@ -34,6 +35,11 @@ export default function JobMapScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useFocusEffect(useCallback(() => { loadJobs(); }, []));
+
+  // showsUserLocation below only draws the blue dot once this has been
+  // granted -- without requesting it, iOS/Android just never show it, no
+  // error either way, so this was silently doing nothing before.
+  useEffect(() => { Location.requestForegroundPermissionsAsync(); }, []);
 
   async function loadJobs() {
     setLoading(true);
