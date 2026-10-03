@@ -16,17 +16,29 @@ interface PostcodesIOResponse {
 
 serve(async (req) => {
   try {
-    const { postcode, surveyor_id } = await req.json();
+    const { surveyor_id } = await req.json();
 
-    if (!postcode) {
-      return new Response(JSON.stringify({ error: "Postcode required" }), {
+    if (!surveyor_id || !/^[0-9a-f-]{36}$/i.test(surveyor_id)) {
+      return new Response(JSON.stringify({ error: "Surveyor ID required" }), {
         status: 400,
       });
     }
 
-    if (!surveyor_id) {
-      return new Response(JSON.stringify({ error: "Surveyor ID required" }), {
-        status: 400,
+    // Geocode the postcode stored on the surveyor's row, never one supplied
+    // in the request. This function is called by the
+    // geocode_surveyor_postcode trigger and has to accept unauthenticated
+    // calls (--no-verify-jwt), so trusting a caller-supplied postcode would
+    // let anyone move any surveyor's home location -- and with it their
+    // coverage area and which jobs they're offered. The trigger fires via
+    // pg_net after commit, so the row already holds the new postcode.
+    const surveyorRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/surveyors?id=eq.${surveyor_id}&select=home_postcode&limit=1`,
+      { headers: serviceKeyHeaders(SUPABASE_SERVICE_ROLE_KEY!) }
+    );
+    const postcode = (await surveyorRes.json())?.[0]?.home_postcode;
+    if (!postcode) {
+      return new Response(JSON.stringify({ error: "Surveyor or postcode not found" }), {
+        status: 404,
       });
     }
 
