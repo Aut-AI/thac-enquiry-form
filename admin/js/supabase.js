@@ -14,7 +14,7 @@ async function supabaseRequest(endpoint, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
     'apikey': SUPABASE_ANON_KEY,
-    'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers
   };
 
@@ -80,7 +80,7 @@ async function storageSignedUrl(bucket, path, expiresIn = 3600) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ expiresIn }),
     }
