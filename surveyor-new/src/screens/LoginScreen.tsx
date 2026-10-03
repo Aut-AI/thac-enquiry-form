@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput, TouchableOpacity, Image,
   StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -24,8 +24,8 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.card}>
-        <Text style={s.tree}>🌳</Text>
-        <Text style={s.brand}>Trevor Heaps Arboricultural</Text>
+        <Image source={require('../../assets/logo-tree.png')} style={s.logo} resizeMode="contain" />
+        <Text style={s.brand}>Heaps Arboriculture</Text>
         <Text style={s.title}>Surveyor Portal</Text>
 
         <TextInput
@@ -67,7 +67,7 @@ const GREEN = '#1a3c2e';
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f7f4', justifyContent: 'center', padding: 24 },
   card:      { backgroundColor: '#fff', borderRadius: 16, padding: 32, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
-  tree:      { fontSize: 40, textAlign: 'center', marginBottom: 8 },
+  logo:      { width: 96, height: 83, alignSelf: 'center', marginBottom: 10 },
   brand:     { fontSize: 13, fontWeight: '600', color: GREEN, textAlign: 'center', marginBottom: 4, letterSpacing: 0.3 },
   title:     { fontSize: 22, fontWeight: '700', color: GREEN, textAlign: 'center', marginBottom: 28 },
   input:     { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 14, color: '#111' },
