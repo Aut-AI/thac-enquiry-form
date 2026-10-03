@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serviceKeyHeaders } from "../_shared/service-key.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY");
 
 interface PostcodesIOResponse {
   status: number;
@@ -50,8 +51,7 @@ serve(async (req) => {
       {
         method: "PATCH",
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY!,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          ...serviceKeyHeaders(SUPABASE_SERVICE_ROLE_KEY!),
           "Content-Type": "application/json",
           Prefer: "return=minimal",
         },

@@ -9,6 +9,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { sendEmail, emailWrapper, detailBlock, detailRow, SURVEY_LABELS, ADMIN_EMAIL } from '../_shared/email-templates.ts';
+import { serviceKeyHeaders } from "../_shared/service-key.ts";
 
 const CRM_URL = 'https://thac-enquiry-form-production.up.railway.app/admin';
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
@@ -21,7 +22,7 @@ async function getLinkedJobId(enquiryId: string): Promise<string | null> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`,
-      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      { headers: serviceKeyHeaders(SUPABASE_SERVICE_KEY) }
     );
     const rows = await res.json();
     return rows?.[0]?.id || null;

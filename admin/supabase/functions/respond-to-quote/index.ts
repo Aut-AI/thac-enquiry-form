@@ -23,6 +23,7 @@
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serviceKeyHeaders } from "../_shared/service-key.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
@@ -45,8 +46,7 @@ async function sbFetch(path: string, init: RequestInit = {}) {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "apikey": SERVICE_ROLE_KEY,
-      "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+      ...serviceKeyHeaders(SERVICE_ROLE_KEY),
       ...(init.headers || {}),
     },
   });

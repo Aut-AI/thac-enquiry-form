@@ -17,8 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // breaking that.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -36,7 +35,6 @@ function json(body: unknown, status = 200) {
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("OK", { headers: CORS_HEADERS });
@@ -46,7 +44,7 @@ serve(async (req) => {
   const token = authHeader.replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Missing Authorization header" }, 401);
 
-  const { data: { user: caller }, error: authError } = await anon.auth.getUser(token);
+  const { data: { user: caller }, error: authError } = await admin.auth.getUser(token);
   if (authError || !caller) return json({ error: "Invalid or expired session" }, 401);
 
   try {

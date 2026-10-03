@@ -26,21 +26,27 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         working-directory: admin
         run: |
-          supabase functions deploy notify-new-enquiry --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-job-created --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-job-approved --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-surveyor-claimed --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-field-data-uploaded --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-report-sent --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-quote-accepted --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-quote-accepted-to-customer --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-quote-declined --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy send-quote-email --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy submit-enquiry --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy respond-to-quote --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy geocode-postcode --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn
-          supabase functions deploy notify-surveyor-approved --project-ref lemppaqgpntadeylzzwn
+          # --no-verify-jwt: these are called by database triggers and the
+          # public enquiry/quote pages with the publishable key, which isn't
+          # a JWT (Supabase's new key system). admin-users and
+          # delete-surveyor-account keep the gateway check: they're only
+          # ever called with a logged-in user's session token, and also
+          # verify it themselves.
+          supabase functions deploy notify-new-enquiry --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-job-created --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-job-approved --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-surveyor-claimed --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-field-data-uploaded --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-report-sent --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-quote-accepted --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-quote-accepted-to-customer --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-quote-declined --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy send-quote-email --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy submit-enquiry --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy respond-to-quote --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy geocode-postcode --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy notify-surveyor-approved --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy admin-users --project-ref lemppaqgpntadeylzzwn
           supabase functions deploy delete-surveyor-account --project-ref lemppaqgpntadeylzzwn
 

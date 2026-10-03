@@ -14,8 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // accounts is itself an admin-only action, same as Settings).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
 // Where invite/recovery email links land -- set-password.html reads the
 // session token Supabase puts in the URL fragment and lets the user choose
 // a password, since inviteUserByEmail() deliberately never generates one.
@@ -37,7 +36,6 @@ function json(body: unknown, status = 200) {
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 interface AppUserRow {
   id: string;
@@ -66,7 +64,7 @@ serve(async (req) => {
   const token = authHeader.replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Missing Authorization header" }, 401);
 
-  const { data: { user: caller }, error: authError } = await anon.auth.getUser(token);
+  const { data: { user: caller }, error: authError } = await admin.auth.getUser(token);
   if (authError || !caller) return json({ error: "Invalid or expired session" }, 401);
 
   try {
