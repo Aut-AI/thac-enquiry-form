@@ -376,15 +376,17 @@ function handleGlobalSearch(q) {
 async function runGlobalSearch(q) {
   const box = document.getElementById('searchResults');
   try {
+    // PostgREST's or=(...) uses commas and parentheses as syntax, so strip them from the term
+    const term = q.replace(/[,()*]/g, ' ').trim();
     const [jobs, clients] = await Promise.all([
       dbGet('jobs', {
-        'select': 'id,reference,survey_type,site_postcode,dispatch_state',
-        'or': `reference.ilike.*${q}*,site_postcode.ilike.*${q}*`,
+        'select': 'id,reference,survey_type,site_postcode,dispatch_state,end_client_name',
+        'or': `(reference.ilike.*${term}*,job_number.ilike.*${term}*,site_postcode.ilike.*${term}*,end_client_name.ilike.*${term}*,site_street.ilike.*${term}*)`,
         'limit': 5
       }),
       dbGet('clients', {
         'select': 'id,full_name,company_name,email',
-        'or': `full_name.ilike.*${q}*,company_name.ilike.*${q}*,email.ilike.*${q}*`,
+        'or': `(full_name.ilike.*${term}*,company_name.ilike.*${term}*,email.ilike.*${term}*)`,
         'limit': 5
       }),
     ]);
@@ -398,7 +400,7 @@ async function runGlobalSearch(q) {
           <span style="display:flex;color:var(--text-muted);">${icon('briefcase', 16)}</span>
           <div>
             <div style="font-weight:600;font-size:13px;">${j.reference || '—'}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${getSurveyLabel(j.survey_type)} · ${j.site_postcode || '—'}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${getSurveyLabel(j.survey_type)} · ${j.site_postcode || '—'}${j.end_client_name ? ' · ' + escapeHtml(j.end_client_name) : ''}</div>
           </div>
         </a>`);
       });
