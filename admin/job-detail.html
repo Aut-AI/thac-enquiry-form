@@ -1001,7 +1001,6 @@ function renderJob() {
             ${renderNDAStatus()}
             ${renderLinkedJobButton()}
             ${renderDispatchButton()}
-            ${renderStage2Button()}
             ${job.enquiry_id && enquiry?.contact_email ? `
               <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="sendQuoteEmailFromJob()">
                 ${icon('mail', 14)}Resend Quote Email
@@ -1020,23 +1019,23 @@ function renderJob() {
           <div class="card-title">Invoicing Configuration</div>
           <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
             <div style="padding:10px;background:var(--amber-light);border-radius:8px;line-height:1.5;">
-              <strong>Current Method:</strong> ${job.invoicing_method === 'split' ? '50/50 Split on Survey Fee' : 'Single Invoice'}
-              <br><span style="font-size:12px;color:var(--text-muted);">${job.invoicing_method === 'split'
+              <strong>Current Method:</strong> ${job.billing_mode === 'staged' ? '50/50 Split on Survey Fee' : 'Single Invoice'}
+              <br><span style="font-size:12px;color:var(--text-muted);">${job.billing_mode === 'staged'
                 ? 'Invoice 1: Surveyor cost + ½ survey fee + urgency fee. Invoice 2: ½ survey fee (only if report generated)'
                 : 'Single invoice: Full job cost in one payment'}</span>
             </div>
             <div style="font-size:12px;color:var(--text-muted);">
               Report generated: <strong>${job.report_generated ? 'Yes' : 'No'}</strong>
-              ${job.invoicing_method === 'split' ? ' — decides whether invoice 2 is issued. Set it in the Report card above.' : ''}
+              ${job.billing_mode === 'staged' ? ' — decides whether invoice 2 is issued. Set it in the Report card above.' : ''}
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn w-100" onclick="changeInvoicingMethod('split')"
-                style="justify-content:center;${job.invoicing_method === 'split' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.invoicing_method === 'split' ? icon('checkCircle', 13) : ''}50/50 Split
+                style="justify-content:center;${job.billing_mode === 'staged' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
+                ${job.billing_mode === 'staged' ? icon('checkCircle', 13) : ''}50/50 Split
               </button>
               <button class="btn w-100" onclick="changeInvoicingMethod('single')"
-                style="justify-content:center;${job.invoicing_method === 'single' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.invoicing_method === 'single' ? icon('checkCircle', 13) : ''}Single Invoice
+                style="justify-content:center;${job.billing_mode !== 'staged' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
+                ${job.billing_mode !== 'staged' ? icon('checkCircle', 13) : ''}Single Invoice
               </button>
             </div>
           </div>
@@ -1132,6 +1131,23 @@ function openInvoiceModal(num) {
   document.getElementById('invoiceModal').style.display = 'flex';
 }
 
+// A job is finished once its report has been sent AND it is fully invoiced
+// (single: invoice 1; staged: invoices 1 and 2). Adds the archive fields to
+// `updates` when that's true after applying them.
+function archiveIfComplete(updates) {
+  const after = { ...job, ...updates };
+  const reportSent = after.report_finalised || after.dispatch_state === 'green';
+  const invoiced = after.billing_mode === 'staged'
+    ? !!(after.invoice1_date && after.invoice2_date)
+    : !!after.invoice1_date;
+  if (reportSent && invoiced && after.dispatch_state !== 'archived') {
+    updates.is_archived    = true;
+    updates.dispatch_state = 'archived';
+    updates.urgency_state  = 'green';
+  }
+  return updates;
+}
+
 function closeInvoiceModal() {
   document.getElementById('invoiceModal').style.display = 'none';
 }
@@ -1154,25 +1170,18 @@ async function submitInvoice() {
     if (invoiceTarget === 1) {
       updates.invoice1_date   = date;
       updates.invoice1_amount = amount;
-      // Single invoice or staged invoice 2 not yet raised: don't archive yet for staged
-      if (!isStaged) {
-        updates.is_archived    = true;
-        updates.dispatch_state = 'archived';
-        updates.urgency_state  = 'green';
-      }
     } else {
       updates.invoice2_date   = date;
       updates.invoice2_amount = amount;
-      // Raising Invoice 2 completes the staged billing — archive the job
-      updates.is_archived    = true;
-      updates.dispatch_state = 'archived';
-      updates.urgency_state  = 'green';
     }
+    // Raising an invoice never archives a job on its own -- only once the
+    // report has been sent as well (an invoice can go out before the survey).
+    archiveIfComplete(updates);
 
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
     closeInvoiceModal();
-    showToast(invoiceTarget === 1 ? 'Invoice raised' : 'Invoice 2 raised — job archived');
+    showToast((invoiceTarget === 1 ? 'Invoice raised' : 'Invoice 2 raised') + (updates.is_archived ? ' — job complete and archived' : ''));
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1555,6 +1564,15 @@ async function toggleChecklist(field, atField, advancesDispatchTo) {
   try {
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
+    // Report sent on an already fully-invoiced job: archive it. Done as a
+    // separate save so the report-sent email trigger sees its own update.
+    if (field === 'report_finalised' && !isDone) {
+      const archive = archiveIfComplete({});
+      if (archive.is_archived) {
+        await dbUpdate('jobs', `id=eq.${jobId}`, archive);
+        Object.assign(job, archive);
+      }
+    }
     if (!isDone && advancesDispatchTo && updates.dispatch_state) {
       const labels = { yellow: 'Attended', green: 'Report Sent' };
       showToast(`Saved — dispatch state advanced to ${labels[advancesDispatchTo]}`);
@@ -1646,10 +1664,13 @@ async function toggleTwoStage(checked) {
 }
 
 async function changeInvoicingMethod(method) {
-  if (job.invoicing_method === method) return;
+  // billing_mode is what the invoice modals and report-sent email read;
+  // invoicing_method is kept in step so the two can't disagree.
+  const billing_mode = method === 'split' ? 'staged' : 'single';
+  if (job.billing_mode === billing_mode) return;
   try {
-    await dbUpdate('jobs', `id=eq.${jobId}`, { invoicing_method: method });
-    job.invoicing_method = method;
+    await dbUpdate('jobs', `id=eq.${jobId}`, { billing_mode, invoicing_method: method });
+    Object.assign(job, { billing_mode, invoicing_method: method });
     const methodName = method === 'split' ? '50/50 Split invoicing' : 'Single Invoice';
     showToast(`Changed to ${methodName}`);
     renderJob();
@@ -1705,7 +1726,7 @@ function renderTwoStageActions() {
           Stage 1 complete. Create the Stage 2 job when the architect sends revised plans.
           It will sit in <strong>Waiting for Plans</strong> until you activate it.
         </p>
-        <button class="btn btn-primary w-100" style="justify-content:center;" onclick="createStage2()">
+        <button class="btn btn-primary w-100" style="justify-content:center;" onclick="showCreateStage2Modal()">
           ${icon('plus', 14)}Create Stage 2 Job
         </button>
       </div>`;
@@ -1727,36 +1748,8 @@ function renderTwoStageActions() {
   return '';
 }
 
-async function createStage2() {
-  if (!confirm('Create a Stage 2 job linked to this one? It will start in "Waiting for Plans" status.')) return;
-  try {
-    const stage2Reference = job.reference ? `${job.reference}-1` : null;
-    const result = await dbInsert('jobs', {
-      reference:         stage2Reference,
-      parent_job_id:     jobId,
-      survey_type:       job.survey_type,
-      site_postcode:     job.site_postcode,
-      urgency_state:     job.urgency_state,
-      dispatch_state:    'waiting_for_plans',
-      billing_mode:      'staged',
-      quoted_amount:     job.quoted_amount,
-      agreed_amount:     job.agreed_amount,
-      is_two_stage:      true,
-      arranging_client_id: job.arranging_client_id,
-      introducer_client_id: job.introducer_client_id,
-      internal_notes:    'Stage 2 — awaiting revised plans from architect.',
-    });
-    const newJob = Array.isArray(result) ? result[0] : result;
-    stage2Job = { id: newJob.id, reference: newJob.reference, dispatch_state: 'waiting_for_plans' };
-    showToast('Stage 2 job created — ' + (newJob.reference || 'no reference yet'));
-    renderJob();
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
 async function activateStage2() {
-  if (!confirm('Activate this Stage 2 job? SLA timer will start from today and the job will go live on the map.')) return;
+  if (!confirm('Activate this Stage 2 job? The SLA timer starts from today and the job moves to Pending Approval, ready for Approve to Map.')) return;
   try {
     const tier = URGENCY_TIERS[job.urgency_state] || URGENCY_TIERS.grey;
     const sla_deadline = addWorkingDays(new Date(), tier.days);
@@ -1774,19 +1767,9 @@ async function activateStage2() {
 // DISPATCH TO MAP
 // ============================================================
 
-function renderStage2Button() {
-  // Show button only on Stage 1 jobs that have field data uploaded
-  if (!job.is_two_stage || job.parent_job_id || !job.field_data_uploaded) return '';
-
-  // Check if Stage 2 already exists
-  if (stage2Job) return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>${icon('checkCircle', 14)}Stage 2 Created</button>`;
-
-  return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--amber);" onclick="showCreateStage2Modal()">${icon('plus', 14)}Create Stage 2 Job</button>`;
-}
-
 function renderDispatchButton() {
   const d = job.dispatch_state;
-  if (d === 'pending_approval' || d === 'yellow') {
+  if (d === 'pending_approval') {
     return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="approveToMap()">
       ${icon('checkCircle', 14)}Approve to Map
     </button>`;
@@ -1880,12 +1863,13 @@ async function approveToMap() {
 }
 
 async function removeFromMap() {
-  if (!confirm('Remove this job from the surveyor map? It will no longer be visible to surveyors.')) return;
+  if (!confirm('Remove this job from the surveyor map? It goes back to Pending Approval and is no longer visible to surveyors.')) return;
   try {
+    // Back to pending (was 'yellow', which is Attended and wrongly counted as a site visit)
     await dbUpdate('jobs', `id=eq.${jobId}`, {
-      dispatch_state: 'yellow'
+      dispatch_state: 'pending_approval'
     });
-    job.dispatch_state = 'yellow';
+    job.dispatch_state = 'pending_approval';
     showToast('Job removed from map');
     renderJob();
   } catch (e) {
@@ -1902,10 +1886,11 @@ async function handBackJob() {
       surveyor_id:      null,
       dispatch_state:   'red',
       claimed_at:       null,
+      allocated_surveyor_id: null,   // withdraw any offer still sitting with them
       handed_back_at:   new Date().toISOString(),
       handed_back_note: note.trim() || null,
     });
-    Object.assign(job, { surveyor_id: null, dispatch_state: 'red', claimed_at: null });
+    Object.assign(job, { surveyor_id: null, dispatch_state: 'red', claimed_at: null, allocated_surveyor_id: null });
     showToast('Surveyor unassigned — job back on map');
     renderJob();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
@@ -2178,13 +2163,13 @@ function showCreateStage2Modal() {
   modal.innerHTML = `
     <div class="modal">
       <div class="modal-title">Create Stage 2 Report Job</div>
-      <div class="modal-sub">Generate a report job from this completed survey</div>
+      <div class="modal-sub">Creates the Stage 2 job in Waiting for Plans. The SLA starts when you activate it (plans received).</div>
 
       <div class="field-group">
         <label>Report Type <span class="required">*</span></label>
         <select id="stage2SurveyType">
           <option value="">Select report type...</option>
-          <option value="bc">BS5837 Stage 2 (AIA/AMS/TPP)</option>
+          <option value="planning_stage2">Planning — Stage 2 (AIA/AMS/TPP)</option>
           <option value="other">Other Report Type</option>
         </select>
       </div>
@@ -2224,7 +2209,6 @@ async function createStage2Job() {
     const surchargeMap = { '3days': 200, '5days': 150, '10days': 75, '15days': 0 };
     const urgency_surcharge = surchargeMap[deadline] || 0;
     const urgency_state = urgencyFromTier(deadline);
-    const slaDeadline = addWorkingDays(new Date(), URGENCY_TIERS[urgency_state].days);
 
     const stage2Reference = job.reference ? `${job.reference}-1` : null;
     const stage2Data = await dbInsert('jobs', {
@@ -2233,13 +2217,22 @@ async function createStage2Job() {
       survey_type: surveyType,
       job_type: 'new',
       site_postcode: job.site_postcode,
-      dispatch_state: 'red',
+      // Location + access copied so the job can appear on the surveyor map
+      site_lat: job.site_lat,
+      site_lng: job.site_lng,
+      site_street: job.site_street,
+      site_city: job.site_city,
+      site_access_notes: job.site_access_notes,
+      parking_details: job.parking_details,
+      parking_lat: job.parking_lat,
+      parking_lng: job.parking_lng,
+      dispatch_state: 'waiting_for_plans',
       urgency_state,
       deadline_tier: deadline,
       billing_mode: job.billing_mode,
       urgency_surcharge,
-      sla_deadline: slaDeadline,
-      is_two_stage: false,
+      is_two_stage: true,
+      internal_notes: 'Stage 2 — awaiting revised plans from architect.',
       arranging_client_id: job.arranging_client_id,
       introducer_client_id: job.introducer_client_id,
       end_client_name: job.end_client_name,
@@ -2253,7 +2246,7 @@ async function createStage2Job() {
 
     const stage2Id = stage2Data[0].id;
     document.getElementById('stage2Modal').remove();
-    showToast('Stage 2 job created');
+    showToast('Stage 2 job created — waiting for plans');
     setTimeout(() => {
       window.location.href = `job-detail.html?id=${stage2Id}`;
     }, 1000);

@@ -210,7 +210,8 @@ serve(async (req) => {
       if (jobId) {
         const jobRes = await sbFetch(`jobs?id=eq.${jobId}`, {
           method: "PATCH",
-          body: JSON.stringify({ dispatch_state: "archived" }),
+          // is_archived too: the jobs list hides archived jobs by this flag
+          body: JSON.stringify({ dispatch_state: "archived", is_archived: true }),
         });
         if (!jobRes.ok) console.error("Decline: job archive failed:", await jobRes.text());
       }
