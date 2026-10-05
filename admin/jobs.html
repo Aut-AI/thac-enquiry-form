@@ -21,10 +21,14 @@ let activeUrgency = 'all';
 let searchQuery = '';
 let activeIntroducer = 'all';
 let introducerById = {};
+let activeReports = 'all';   // all | to_generate | generated
+let sort = { key: 'created', dir: 'desc' };
 
 // Read urgency param from dashboard stat card links
 const _urlParams = new URLSearchParams(window.location.search);
 if (_urlParams.get('urgency')) activeUrgency = _urlParams.get('urgency');
+if (_urlParams.get('dispatch')) activeFilter = _urlParams.get('dispatch');
+if (_urlParams.get('reports')) activeReports = _urlParams.get('reports');
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -62,6 +66,12 @@ async function init() {
             <button class="filter-btn ${activeUrgency==='grey'?'active':''}" onclick="setUrgency('grey',this)">${dot('low')}Low</button>
           </div>
           <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+            <span style="font-size:12px;color:var(--text-muted);padding:4px 2px;">Reports (allocated jobs):</span>
+            <button class="filter-btn ${activeReports==='all'?'active':''}" onclick="setReports('all',this)">All</button>
+            <button class="filter-btn ${activeReports==='to_generate'?'active':''}" onclick="setReports('to_generate',this)">To Generate</button>
+            <button class="filter-btn ${activeReports==='generated'?'active':''}" onclick="setReports('generated',this)">Generated</button>
+          </div>
+          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
             <select class="form-control" id="introducerFilter" style="max-width:320px;" onchange="setIntroducer(this.value)">
               <option value="all">All introducers</option>
             </select>
@@ -78,7 +88,7 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,report_to_generate,report_generated',
       'order': 'created_at.desc',
       'limit': 1000
     });
@@ -130,6 +140,13 @@ function renderTable() {
     filtered = filtered.filter(j => j.introducer_client_id === activeIntroducer);
   }
 
+  // Report flags only count once a job is allocated (same rule as the dashboard)
+  if (activeReports === 'to_generate') {
+    filtered = filtered.filter(j => j.surveyor_id && j.report_to_generate && !j.report_generated);
+  } else if (activeReports === 'generated') {
+    filtered = filtered.filter(j => j.surveyor_id && j.report_generated);
+  }
+
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     filtered = filtered.filter(j =>
@@ -152,6 +169,22 @@ function renderTable() {
     return;
   }
 
+  filtered = sortRows(filtered, sort, {
+    ref:         j => j.reference || j.id,
+    name:        j => j.billing_contact_name,
+    introducer:  j => introducerLabel(introducerById[j.introducer_client_id]),
+    created:     j => j.created_at,
+    type:        j => getSurveyLabel(j.survey_type || j.job_type),
+    postcode:    j => j.site_postcode,
+    surveyDate:  j => j.survey_date,
+    urgency:     j => URGENCY_ORDER[j.urgency_state] ?? 99,
+    dispatch:    j => DISPATCH_ORDER[j.dispatch_state] ?? 99,
+    info:        j => j.extended_info_received ? 1 : 0,
+    surveyor:    j => j.surveyor_name,
+    generated:   j => j.report_generated ? 1 : 0,
+    value:       j => j.agreed_amount == null ? null : Number(j.agreed_amount),
+  });
+
   const rows = filtered.map(j => {
     const surveyorCell = j.surveyor_name
       ? `<span class="badge badge-accepted">${j.surveyor_name}</span>`
@@ -170,6 +203,7 @@ function renderTable() {
       <td>${dispatchBadge(j.dispatch_state)}</td>
       <td>${infoStatus}</td>
       <td>${surveyorCell}</td>
+      <td class="tick-cell" onclick="event.stopPropagation()">${reportTick(j, 'report_generated')}</td>
       <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '<span class="muted">—</span>'}</td>
     </tr>`;
   }).join('');
@@ -178,18 +212,19 @@ function renderTable() {
     <table class="data-table">
       <thead>
         <tr>
-          <th>Reference</th>
-          <th>Name</th>
-          <th>Introducer</th>
-          <th>Date Created</th>
-          <th>Survey Type</th>
-          <th>Postcode</th>
-          <th>Survey Date</th>
-          <th>Urgency</th>
-          <th>Dispatch</th>
-          <th>Info</th>
-          <th>Surveyor</th>
-          <th>Value</th>
+          ${sortTh('Reference', 'ref', sort)}
+          ${sortTh('Name', 'name', sort)}
+          ${sortTh('Introducer', 'introducer', sort)}
+          ${sortTh('Date Created', 'created', sort)}
+          ${sortTh('Survey Type', 'type', sort)}
+          ${sortTh('Postcode', 'postcode', sort)}
+          ${sortTh('Survey Date', 'surveyDate', sort)}
+          ${sortTh('Urgency', 'urgency', sort)}
+          ${sortTh('Dispatch', 'dispatch', sort)}
+          ${sortTh('Info', 'info', sort)}
+          ${sortTh('Surveyor', 'surveyor', sort)}
+          ${sortTh('Report Generated', 'generated', sort)}
+          ${sortTh('Value', 'value', sort)}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -209,6 +244,40 @@ function setUrgency(urgency, btn) {
   btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderTable();
+}
+
+function setReports(value, btn) {
+  activeReports = value;
+  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function setSort(key) {
+  sort = nextSort(sort, key);
+  renderTable();
+}
+
+// Report tickboxes: only available once a surveyor is allocated to the job.
+function reportTick(j, field) {
+  const allocated = !!j.surveyor_id;
+  return `<input type="checkbox" ${j[field] ? 'checked' : ''} ${allocated ? '' : 'disabled'}
+    title="${allocated ? '' : 'Available once the job is allocated to a surveyor'}"
+    onchange="toggleReport('${j.id}', '${field}', this)">`;
+}
+
+async function toggleReport(id, field, el) {
+  const job = allJobs.find(j => j.id === id);
+  const checked = el.checked;
+  try {
+    await dbUpdate('jobs', `id=eq.${id}`, { [field]: checked });
+    job[field] = checked;
+    showToast(`${field === 'report_generated' ? 'Report generated' : 'Report to generate'}: ${checked ? 'ticked' : 'unticked'}`);
+    if (activeReports !== 'all') renderTable();
+  } catch (e) {
+    el.checked = !checked;
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 function setIntroducer(value) {

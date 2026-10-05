@@ -1010,6 +1010,8 @@ function renderJob() {
           </div>
         </div>
 
+        ${renderReportFlags()}
+
         ${renderReportProgress()}
 
         <!-- Invoicing Configuration -->
@@ -1022,13 +1024,9 @@ function renderJob() {
                 ? 'Invoice 1: Surveyor cost + ½ survey fee + urgency fee. Invoice 2: ½ survey fee (only if report generated)'
                 : 'Single invoice: Full job cost in one payment'}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;margin:0;font-weight:400;">
-                <input type="checkbox" id="reportGeneratedCheckbox" ${job.report_generated ? 'checked' : ''}
-                  onchange="updateReportGenerated(this.checked)">
-                Survey report generated
-              </label>
-              <span style="font-size:11px;color:var(--text-muted);">Determines if 2nd invoice is issued</span>
+            <div style="font-size:12px;color:var(--text-muted);">
+              Report generated: <strong>${job.report_generated ? 'Yes' : 'No'}</strong>
+              ${job.invoicing_method === 'split' ? ' — decides whether invoice 2 is issued. Set it in the Report card above.' : ''}
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn w-100" onclick="changeInvoicingMethod('split')"
@@ -1650,11 +1648,33 @@ async function changeInvoicingMethod(method) {
   }
 }
 
-async function updateReportGenerated(checked) {
+// Report tickboxes. Disabled until a surveyor is allocated: before that there
+// has been no site visit, so there is nothing to report on.
+function renderReportFlags() {
+  const allocated = !!job.surveyor_id;
+  const box = (field, label, hint) => `
+    <label style="display:flex;align-items:center;gap:8px;margin:0;font-weight:400;font-size:13px;${allocated ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:0.55;'}">
+      <input type="checkbox" ${job[field] ? 'checked' : ''} ${allocated ? '' : 'disabled'}
+        onchange="updateReportFlag('${field}', this.checked)">
+      <span>${label}<br><span style="font-size:11px;color:var(--text-muted);">${hint}</span></span>
+    </label>`;
+  return `
+    <div class="card">
+      <div class="card-title">Report</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${box('report_to_generate', 'Report to generate', 'This job needs a report producing')}
+        ${box('report_generated', 'Report generated', 'The report has been produced')}
+        ${allocated ? '' : '<div style="font-size:12px;color:var(--text-muted);">Available once the job is allocated to a surveyor.</div>'}
+      </div>
+    </div>`;
+}
+
+async function updateReportFlag(field, checked) {
   try {
-    await dbUpdate('jobs', `id=eq.${jobId}`, { report_generated: checked });
-    job.report_generated = checked;
-    showToast(checked ? 'Report marked as generated' : 'Report generation unmarked');
+    await dbUpdate('jobs', `id=eq.${jobId}`, { [field]: checked });
+    job[field] = checked;
+    const label = field === 'report_generated' ? 'Report generated' : 'Report to generate';
+    showToast(`${label}: ${checked ? 'ticked' : 'unticked'}`);
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');

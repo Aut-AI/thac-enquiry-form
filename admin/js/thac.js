@@ -538,3 +538,37 @@ async function createIntroducer({ full_name, company_name, email }) {
   });
   return inserted?.[0]?.id || null;
 }
+
+// ============================================================
+// SORTABLE TABLE COLUMNS
+// A page keeps `let sort = { key, dir }`, renders headers with sortTh() and
+// rows through sortRows(), and sets `sort = nextSort(sort, key)` in its
+// onclick handler. Blank values always sort last, whatever the direction.
+// ============================================================
+
+const URGENCY_ORDER  = { red: 0, orange: 1, yellow: 2, grey: 3, green: 4 };
+const DISPATCH_ORDER = { pending_approval: 0, waiting_for_plans: 1, red: 2, orange: 3, yellow: 4, green: 5, archived: 6 };
+
+function sortRows(rows, sort, getters) {
+  const get = getters[sort.key];
+  if (!get) return rows;
+  const dir = sort.dir === 'desc' ? -1 : 1;
+  return rows.map((r, i) => [r, i]).sort(([a, ai], [b, bi]) => {
+    const x = get(a), y = get(b);
+    const xBlank = x == null || x === '', yBlank = y == null || y === '';
+    if (xBlank || yBlank) return xBlank && yBlank ? ai - bi : (xBlank ? 1 : -1);
+    const c = (typeof x === 'number' && typeof y === 'number')
+      ? x - y
+      : String(x).localeCompare(String(y), 'en', { numeric: true, sensitivity: 'base' });
+    return c ? c * dir : ai - bi;
+  }).map(([r]) => r);
+}
+
+function sortTh(label, key, sort, handler = 'setSort') {
+  const cls = sort.key === key ? ` sorted-${sort.dir}` : '';
+  return `<th class="sortable${cls}" onclick="${handler}('${key}')" title="Sort by ${label}">${label}</th>`;
+}
+
+function nextSort(sort, key, firstDir = 'asc') {
+  return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir };
+}

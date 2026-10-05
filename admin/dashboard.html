@@ -15,6 +15,9 @@
 <script>
 requireAuth();
 
+let sort = { key: 'urgency', dir: 'asc' };
+let dashJobs = [];
+
 async function init() {
   document.getElementById('app').innerHTML = `
     ${renderSidebar('dashboard')}
@@ -36,25 +39,50 @@ async function init() {
 
         <!-- Stat Cards -->
         <div class="stat-grid" id="statGrid">
-          <div class="stat-card urgent" onclick="window.location.href='jobs.html?urgency=red'" style="cursor:pointer;">
-            <div class="stat-label">${dot('urgent')}Urgent Jobs</div>
-            <div class="stat-value" id="statUrgent">—</div>
-            <div class="stat-sub">Due within 3 working days</div>
+          <div class="stat-card multi">
+            <div class="stat-label">Job Urgency</div>
+            <div class="stat-rows">
+              <div class="stat-row" onclick="window.location.href='jobs.html?urgency=red'">
+                <span class="stat-row-label">${dot('urgent')}Urgent <span class="muted-sub">3 working days</span></span><span class="stat-row-count" id="statUrgent">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?urgency=orange'">
+                <span class="stat-row-label">${dot('elevated')}Elevated <span class="muted-sub">5 working days</span></span><span class="stat-row-count" id="statElevated">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?urgency=yellow'">
+                <span class="stat-row-label">${dot('standard')}Standard <span class="muted-sub">7 working days</span></span><span class="stat-row-count" id="statStandard">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?urgency=grey'">
+                <span class="stat-row-label">${dot('low')}Low <span class="muted-sub">10+ working days</span></span><span class="stat-row-count" id="statLow">—</span></div>
+            </div>
           </div>
-          <div class="stat-card elevated" onclick="window.location.href='jobs.html?urgency=orange'" style="cursor:pointer;">
-            <div class="stat-label">${dot('elevated')}Elevated Jobs</div>
-            <div class="stat-value" id="statElevated">—</div>
-            <div class="stat-sub">Due within 5 working days</div>
+          <div class="stat-card multi">
+            <div class="stat-label">Dispatch</div>
+            <div class="stat-rows">
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=pending_approval'">
+                <span class="stat-row-label">${icon('clock', 12)}Pending approval</span><span class="stat-row-count" id="statPending">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=waiting_for_plans'">
+                <span class="stat-row-label">${icon('clock', 12)}Waiting for plans</span><span class="stat-row-count" id="statWaiting">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=red'">
+                <span class="stat-row-label">${dot('urgent')}Unallocated</span><span class="stat-row-count" id="statUnallocated">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=orange'">
+                <span class="stat-row-label">${dot('elevated')}Claimed</span><span class="stat-row-count" id="statClaimed">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=yellow'">
+                <span class="stat-row-label">${dot('standard')}Attended</span><span class="stat-row-count" id="statAttended">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=green'">
+                <span class="stat-row-label">${dot('complete')}Report sent</span><span class="stat-row-count" id="statSent">—</span></div>
+            </div>
           </div>
-          <div class="stat-card standard" onclick="window.location.href='jobs.html?urgency=yellow'" style="cursor:pointer;">
-            <div class="stat-label">${dot('standard')}Standard Jobs</div>
-            <div class="stat-value" id="statStandard">—</div>
-            <div class="stat-sub">Due within 7 working days</div>
+          <div class="stat-card multi">
+            <div class="stat-label">Reports <span class="muted-sub">allocated jobs</span></div>
+            <div class="stat-rows">
+              <div class="stat-row" onclick="window.location.href='jobs.html?reports=to_generate'">
+                <span class="stat-row-label">${icon('clock', 12)}To generate</span><span class="stat-row-count" id="statToGenerate">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?reports=generated'">
+                <span class="stat-row-label">${icon('checkCircle', 12)}Generated</span><span class="stat-row-count" id="statGenerated">—</span></div>
+            </div>
+            <div class="stat-sub">Counted once a surveyor is allocated</div>
           </div>
-          <div class="stat-card complete" onclick="window.location.href='jobs.html?urgency=grey'" style="cursor:pointer;">
-            <div class="stat-label">${dot('low')}Low Priority Jobs</div>
-            <div class="stat-value" id="statLow">—</div>
-            <div class="stat-sub">10+ working days</div>
+          <div class="stat-card multi">
+            <div class="stat-label">Overdue</div>
+            <div class="stat-value" id="statOverdue">—</div>
+            <div class="stat-sub">Past SLA deadline, report not yet sent</div>
           </div>
         </div>
 
@@ -95,18 +123,43 @@ async function init() {
 // STATS — job counts by urgency state
 // ============================================================
 async function loadStats() {
+  const set = (id, n) => { document.getElementById(id).textContent = n; };
   try {
-    const [urgent, elevated, standard, low] = await Promise.all([
-      dbGet('jobs', { 'urgency_state': 'eq.red',    'is_archived': 'not.eq.true', 'select': 'id' }),
-      dbGet('jobs', { 'urgency_state': 'eq.orange', 'is_archived': 'not.eq.true', 'select': 'id' }),
-      dbGet('jobs', { 'urgency_state': 'eq.yellow', 'is_archived': 'not.eq.true', 'select': 'id' }),
-      dbGet('jobs', { 'urgency_state': 'eq.grey',   'is_archived': 'not.eq.true', 'select': 'id' }),
-    ]);
+    // One fetch, counted here. The report flags need the report_to_generate
+    // column (migration 20261005000); if it isn't there yet, retry without it.
+    const base = 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,report_generated';
+    let jobs, flagsOk = true;
+    try {
+      jobs = await dbGet('jobs', { 'select': base + ',report_to_generate', 'is_archived': 'not.eq.true', 'limit': 5000 });
+    } catch (e) {
+      flagsOk = false;
+      jobs = await dbGet('jobs', { 'select': base, 'is_archived': 'not.eq.true', 'limit': 5000 });
+    }
+    jobs = (jobs || []).filter(j => j.dispatch_state !== 'archived');
+    const n = fn => jobs.filter(fn).length;
 
-    document.getElementById('statUrgent').textContent   = urgent?.length   || 0;
-    document.getElementById('statElevated').textContent = elevated?.length || 0;
-    document.getElementById('statStandard').textContent = standard?.length || 0;
-    document.getElementById('statLow').textContent      = low?.length      || 0;
+    set('statUrgent',   n(j => j.urgency_state === 'red'));
+    set('statElevated', n(j => j.urgency_state === 'orange'));
+    set('statStandard', n(j => j.urgency_state === 'yellow'));
+    set('statLow',      n(j => j.urgency_state === 'grey'));
+
+    set('statPending',     n(j => j.dispatch_state === 'pending_approval'));
+    set('statWaiting',     n(j => j.dispatch_state === 'waiting_for_plans'));
+    set('statUnallocated', n(j => j.dispatch_state === 'red'));
+    set('statClaimed',     n(j => j.dispatch_state === 'orange'));
+    set('statAttended',    n(j => j.dispatch_state === 'yellow'));
+    set('statSent',        n(j => j.dispatch_state === 'green'));
+
+    // Reports: only meaningful once a surveyor is allocated. Before that there
+    // has been no site visit, so there is nothing to report on and counting
+    // unallocated jobs would just add noise.
+    if (flagsOk) {
+      set('statToGenerate', n(j => j.surveyor_id && j.report_to_generate && !j.report_generated));
+      set('statGenerated',  n(j => j.surveyor_id && j.report_generated));
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    set('statOverdue', n(j => j.sla_deadline && j.sla_deadline < today && j.dispatch_state !== 'green'));
   } catch (e) {
     console.error('Stats error:', e);
   }
@@ -205,10 +258,10 @@ function dispatchBadge(state) {
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,report_generated',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
-      'limit': 50
+      'limit': 500
     });
 
     if (!jobs || jobs.length === 0) {
@@ -221,9 +274,53 @@ async function loadUrgencyDashboard() {
       return;
     }
 
-    // Sort red → orange → yellow → grey → green
-    const order = { red: 0, orange: 1, yellow: 2, grey: 3, green: 4 };
-    jobs.sort((a, b) => (order[a.urgency_state] ?? 99) - (order[b.urgency_state] ?? 99));
+    dashJobs = jobs;
+    renderUrgencyTable();
+  } catch (e) {
+    document.getElementById('urgencyDashboard').innerHTML = `<div class="empty-state"><p>Error loading jobs: ${e.message}</p></div>`;
+  }
+}
+
+// Report Generated tickbox: only available once a surveyor is allocated.
+function reportTick(j) {
+  const allocated = !!j.surveyor_id;
+  return `<input type="checkbox" ${j.report_generated ? 'checked' : ''} ${allocated ? '' : 'disabled'}
+    title="${allocated ? '' : 'Available once the job is allocated to a surveyor'}"
+    onchange="toggleReportGenerated('${j.id}', this)">`;
+}
+
+async function toggleReportGenerated(id, el) {
+  const job = dashJobs.find(j => j.id === id);
+  const checked = el.checked;
+  try {
+    await dbUpdate('jobs', `id=eq.${id}`, { report_generated: checked });
+    job.report_generated = checked;
+    showToast(`Report generated: ${checked ? 'ticked' : 'unticked'}`);
+    loadStats();   // keep the Reports box in step
+  } catch (e) {
+    el.checked = !checked;
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+function setSort(key) {
+  sort = nextSort(sort, key);
+  renderUrgencyTable();
+}
+
+function renderUrgencyTable() {
+  {
+    // Default view is red → orange → yellow → grey → green; any column header re-sorts it
+    const jobs = sortRows(dashJobs, sort, {
+      ref:      j => j.reference,
+      type:     j => getSurveyLabel(j.survey_type || j.job_type),
+      postcode: j => j.site_postcode,
+      sla:      j => j.sla_deadline,
+      value:    j => j.agreed_amount == null ? null : Number(j.agreed_amount),
+      dispatch: j => DISPATCH_ORDER[j.dispatch_state] ?? 99,
+      urgency:  j => URGENCY_ORDER[j.urgency_state] ?? 99,
+      generated: j => j.report_generated ? 1 : 0,
+    });
 
     const rows = jobs.map(j => `
       <tr class="${jobUrgencyRowClass(j.urgency_state)}"
@@ -237,6 +334,8 @@ async function loadUrgencyDashboard() {
         <td>${slaCountdown(j.sla_deadline)}</td>
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
         <td>${dispatchBadge(j.dispatch_state)}</td>
+        <td>${urgencyColorBadge(j.urgency_state)}</td>
+        <td class="tick-cell" onclick="event.stopPropagation()">${reportTick(j)}</td>
       </tr>
     `).join('');
 
@@ -244,18 +343,18 @@ async function loadUrgencyDashboard() {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Reference</th>
-            <th>Survey Type</th>
-            <th>Postcode</th>
-            <th>SLA Deadline</th>
-            <th>Value</th>
-            <th>Dispatch</th>
+            ${sortTh('Reference', 'ref', sort)}
+            ${sortTh('Survey Type', 'type', sort)}
+            ${sortTh('Postcode', 'postcode', sort)}
+            ${sortTh('SLA Deadline', 'sla', sort)}
+            ${sortTh('Value', 'value', sort)}
+            ${sortTh('Dispatch', 'dispatch', sort)}
+            ${sortTh('Urgency', 'urgency', sort)}
+            ${sortTh('Report Generated', 'generated', sort)}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>`;
-  } catch (e) {
-    document.getElementById('urgencyDashboard').innerHTML = `<div class="empty-state"><p>Error loading jobs: ${e.message}</p></div>`;
   }
 }
 

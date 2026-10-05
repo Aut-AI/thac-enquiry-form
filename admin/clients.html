@@ -18,6 +18,7 @@ requireAuth();
 let allClients = [];
 let activeFilter = 'all';
 let searchQuery = '';
+let sort = { key: null, dir: 'asc' };   // null = newest first, as loaded
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -56,7 +57,7 @@ async function loadClients() {
     const data = await dbGet('clients', {
       'select': 'id,client_type,client_category,full_name,company_name,email,phone,address_city,address_county,created_at',
       'order': 'created_at.desc',
-      'limit': 200
+      'limit': 1000
     });
     allClients = data || [];
     renderTable();
@@ -97,6 +98,14 @@ function renderTable() {
     return;
   }
 
+  filtered = sortRows(filtered, sort, {
+    name:     getClientName,
+    email:    c => c.email,
+    phone:    c => c.phone,
+    location: c => [c.address_city, c.address_county].filter(Boolean).join(', '),
+    type:     c => c.client_category || c.client_type,
+  });
+
   const rows = filtered.map(c => `
     <tr onclick="window.location.href='client-detail.html?id=${c.id}'" style="cursor:pointer">
       <td>
@@ -114,11 +123,11 @@ function renderTable() {
     <table class="data-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Location</th>
-          <th>Type</th>
+          ${sortTh('Name', 'name', sort)}
+          ${sortTh('Email', 'email', sort)}
+          ${sortTh('Phone', 'phone', sort)}
+          ${sortTh('Location', 'location', sort)}
+          ${sortTh('Type', 'type', sort)}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -129,6 +138,11 @@ function setFilter(filter, btn) {
   activeFilter = filter;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  renderTable();
+}
+
+function setSort(key) {
+  sort = nextSort(sort, key);
   renderTable();
 }
 
