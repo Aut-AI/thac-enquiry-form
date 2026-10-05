@@ -970,12 +970,13 @@ function renderJob() {
           <div class="form-group">
             <label>Urgency State</label>
             <select class="form-control" id="urgencySelect">
-              <option value="red"    ${job.urgency_state==='red'    ?'selected':''}>Urgent</option>
-              <option value="orange" ${job.urgency_state==='orange' ?'selected':''}>Elevated</option>
-              <option value="yellow" ${job.urgency_state==='yellow' ?'selected':''}>Standard</option>
-              <option value="grey"   ${job.urgency_state==='grey'   ?'selected':''}>Low</option>
+              ${Object.entries(URGENCY_TIERS).map(([u, t]) =>
+                `<option value="${u}" ${job.urgency_state===u?'selected':''}>${t.label} (${t.days} working days)</option>`).join('')}
               <option value="green"  ${job.urgency_state==='green'  ?'selected':''}>Complete</option>
             </select>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+              Changing urgency resets the SLA deadline to that many working days from today.
+            </div>
           </div>
           <div class="form-group">
             <label>Dispatch State</label>
@@ -1090,11 +1091,20 @@ function renderJob() {
 async function updateStates() {
   const urgency_state = document.getElementById('urgencySelect').value;
   const dispatch_state = document.getElementById('dispatchSelect').value;
+  const updates = { urgency_state, dispatch_state };
+  // Urgency is the enquiry-form deadline option: changing it moves the
+  // deadline tier and restarts the SLA from today (same rule as the form).
+  const tier = URGENCY_TIERS[urgency_state];
+  if (tier && urgency_state !== job.urgency_state) {
+    updates.deadline_tier = tier.tier;
+    updates.sla_deadline  = addWorkingDays(new Date(), tier.days);
+  }
   try {
-    await dbUpdate('jobs', `id=eq.${jobId}`, { urgency_state, dispatch_state });
-    job.urgency_state = urgency_state;
-    job.dispatch_state = dispatch_state;
-    showToast('Job updated successfully');
+    await dbUpdate('jobs', `id=eq.${jobId}`, updates);
+    Object.assign(job, updates);
+    showToast(updates.sla_deadline
+      ? `Job updated — SLA now ${formatDate(updates.sla_deadline)}`
+      : 'Job updated successfully');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1748,14 +1758,8 @@ async function createStage2() {
 async function activateStage2() {
   if (!confirm('Activate this Stage 2 job? SLA timer will start from today and the job will go live on the map.')) return;
   try {
-    const slaMap   = { red: 1, orange: 3, yellow: 5, grey: 10 };
-    const days     = slaMap[job.urgency_state] || 5;
-    let count = 0, date = new Date();
-    while (count < days) {
-      date.setDate(date.getDate() + 1);
-      if (date.getDay() !== 0 && date.getDay() !== 6) count++;
-    }
-    const sla_deadline = date.toISOString().slice(0, 10);
+    const tier = URGENCY_TIERS[job.urgency_state] || URGENCY_TIERS.grey;
+    const sla_deadline = addWorkingDays(new Date(), tier.days);
     await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'pending_approval', sla_deadline });
     job.dispatch_state = 'pending_approval';
     job.sla_deadline   = sla_deadline;
@@ -2190,9 +2194,9 @@ function showCreateStage2Modal() {
         <select id="stage2Deadline">
           <option value="">Select deadline...</option>
           <option value="3days">Within 3 working days (+£200 surcharge)</option>
-          <option value="5days">Within 5 working days (+£100 surcharge)</option>
-          <option value="7days">Within 7 working days (+£50 surcharge)</option>
-          <option value="10days">Within 10 working days / No rush (as quoted)</option>
+          <option value="5days">Within 5 working days (+£150 surcharge)</option>
+          <option value="10days">Within 10 working days (+£75 surcharge)</option>
+          <option value="15days">Within 15 working days or more (as quoted)</option>
         </select>
       </div>
 
@@ -2216,18 +2220,11 @@ async function createStage2Job() {
   }
 
   try {
-    const surchargeMap = { '3days': 200, '5days': 100, '7days': 50, '10days': 0 };
-    const urgency_surcharge = surchargeMap[deadline] || null;
-    // Skip weekends so the SLA deadline lands N working days out, not N
-    // calendar days -- matches activateStage2()'s day-by-day skip just above.
-    const daysMap = { '3days': 3, '5days': 5, '7days': 7, '10days': 10 };
-    const slaDeadline = new Date();
-    let daysCounted = 0;
-    while (daysCounted < daysMap[deadline]) {
-      slaDeadline.setDate(slaDeadline.getDate() + 1);
-      const day = slaDeadline.getDay();
-      if (day !== 0 && day !== 6) daysCounted++;
-    }
+    // Same options and surcharges as the enquiry form
+    const surchargeMap = { '3days': 200, '5days': 150, '10days': 75, '15days': 0 };
+    const urgency_surcharge = surchargeMap[deadline] || 0;
+    const urgency_state = urgencyFromTier(deadline);
+    const slaDeadline = addWorkingDays(new Date(), URGENCY_TIERS[urgency_state].days);
 
     const stage2Reference = job.reference ? `${job.reference}-1` : null;
     const stage2Data = await dbInsert('jobs', {
@@ -2237,10 +2234,11 @@ async function createStage2Job() {
       job_type: 'new',
       site_postcode: job.site_postcode,
       dispatch_state: 'red',
-      urgency_state: deadline === '3days' ? 'red' : deadline === '5days' ? 'orange' : deadline === '7days' ? 'yellow' : 'grey',
+      urgency_state,
+      deadline_tier: deadline,
       billing_mode: job.billing_mode,
-      urgency_surcharge: urgency_surcharge || 0,
-      sla_deadline: slaDeadline.toISOString(),
+      urgency_surcharge,
+      sla_deadline: slaDeadline,
       is_two_stage: false,
       arranging_client_id: job.arranging_client_id,
       introducer_client_id: job.introducer_client_id,

@@ -24,6 +24,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { serviceKeyHeaders } from "../_shared/service-key.ts";
+import { addWorkingDays, daysForTier, urgencyFromTier } from "../_shared/urgency.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
@@ -168,9 +169,8 @@ serve(async (req) => {
         // Defensive fallback -- submit-enquiry always creates the job
         // immediately now, so this should be unreachable in practice.
         console.error("Accept: no linked job found for enquiry", id, "-- creating fallback job");
-        const urgency = body.deadline_tier === "3days" ? "red"
-          : body.deadline_tier === "5days" ? "orange"
-          : body.deadline_tier === "7days" ? "yellow" : "grey";
+        const tier = enquiry.deadline_tier ?? body.deadline_tier;
+        const urgency = urgencyFromTier(tier);
         await sbFetch("jobs", {
           method: "POST",
           body: JSON.stringify({
@@ -179,6 +179,8 @@ serve(async (req) => {
             site_postcode: enquiry.site_postcode,
             dispatch_state: "pending_approval",
             urgency_state: urgency,
+            deadline_tier: tier,
+            sla_deadline: addWorkingDays(new Date(), daysForTier(tier)),
             quoted_amount: enquiry.quoted_price,
             agreed_amount: enquiry.quoted_price,
             ...jobUpdate,

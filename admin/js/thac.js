@@ -131,26 +131,20 @@ function timeAgo(dateStr) {
 // URGENCY CALCULATION
 // ============================================================
 
+// Badge/row styling for a deadline option, via the shared URGENCY_TIERS mapping below
+const _URGENCY_STYLE = {
+  red:    { tier: 'urgent',   label: 'Urgent',   class: 'badge-urgent' },
+  orange: { tier: 'elevated', label: 'Elevated', class: 'badge-elevated' },
+  yellow: { tier: 'standard', label: 'Standard', class: 'badge-standard' },
+  grey:   { tier: 'low',      label: 'Low',      class: 'badge-low' },
+};
+
 function getUrgencyTier(deadlineTier) {
-  switch (deadlineTier) {
-    case '3days':   return { tier: 'urgent',   label: 'Urgent',    class: 'badge-urgent' };
-    case '5days':   return { tier: 'elevated', label: 'Elevated',  class: 'badge-elevated' };
-    case '7days':   return { tier: 'standard', label: 'Standard',  class: 'badge-standard' };
-    case '10days':  return { tier: 'low',      label: 'Low',       class: 'badge-low' };
-    case 'no_rush': return { tier: 'low',      label: 'Low',       class: 'badge-low' };
-    default:        return { tier: 'low',      label: 'Low',       class: 'badge-low' };
-  }
+  return _URGENCY_STYLE[urgencyFromTier(deadlineTier)];
 }
 
 function getUrgencyRowClass(deadlineTier) {
-  switch (deadlineTier) {
-    case '3days':   return 'urgency-urgent';
-    case '5days':   return 'urgency-elevated';
-    case '7days':   return 'urgency-standard';
-    case '10days':  return 'urgency-low';
-    case 'no_rush': return 'urgency-low';
-    default:        return 'urgency-low';
-  }
+  return 'urgency-' + getUrgencyTier(deadlineTier).tier;
 }
 
 // ============================================================
@@ -198,6 +192,38 @@ const DEADLINE_LABELS = {
   '15days':  'Within 15 working days or more',
   'no_rush': 'No rush (just looking)',
 };
+
+// ============================================================
+// URGENCY <-> ENQUIRY-FORM DEADLINE <-> SLA
+// One table for the whole admin. The enquiry form offers 3 / 5 / 10 / 15
+// working days; each option is one urgency, and the SLA deadline is that many
+// working days out. Keep in step with supabase/functions/_shared/urgency.ts.
+// ============================================================
+
+const URGENCY_TIERS = {
+  red:    { tier: '3days',  days: 3,  label: 'Urgent' },
+  orange: { tier: '5days',  days: 5,  label: 'Elevated' },
+  yellow: { tier: '10days', days: 10, label: 'Standard' },
+  grey:   { tier: '15days', days: 15, label: 'Low' },
+};
+
+function urgencyFromTier(tier) {
+  if (tier === '3days') return 'red';
+  if (tier === '5days') return 'orange';
+  if (tier === '7days' || tier === '10days') return 'yellow';   // 7days: retired option, still on old rows
+  return 'grey';
+}
+
+// N working days (Mon-Fri) after `from`, as YYYY-MM-DD
+function addWorkingDays(from, n) {
+  const d = new Date(from);
+  let counted = 0;
+  while (counted < n) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) counted++;
+  }
+  return d.toISOString().slice(0, 10);
+}
 
 function getDeadlineLabel(tier) {
   return DEADLINE_LABELS[tier] || tier || '—';

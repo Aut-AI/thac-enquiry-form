@@ -27,6 +27,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { serviceKeyHeaders } from "../_shared/service-key.ts";
+import { addWorkingDays, daysForTier, urgencyFromTier } from "../_shared/urgency.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
@@ -121,24 +122,9 @@ serve(async (req) => {
         }
       }
 
-      const now = new Date();
-      const daysToAdd = enquiry.deadline_tier === "3days" ? 3 :
-                        enquiry.deadline_tier === "5days" ? 5 :
-                        enquiry.deadline_tier === "7days" ? 7 :
-                        enquiry.deadline_tier === "15days" ? 15 : 10;
-      // Every deadline option is phrased as "N working days" -- skip
-      // weekends so the SLA deadline actually lands N working days out,
-      // not N calendar days (which used to run short whenever the window
-      // crossed a weekend). Mirrors the same day-by-day skip used in
-      // admin/job-detail.html's activateStage2().
-      const slaDate = new Date(now);
-      let daysCounted = 0;
-      while (daysCounted < daysToAdd) {
-        slaDate.setDate(slaDate.getDate() + 1);
-        const day = slaDate.getDay();
-        if (day !== 0 && day !== 6) daysCounted++;
-      }
-      const slaDeadline = slaDate.toISOString();
+      // Deadline option -> SLA (N working days out) and urgency, from the
+      // shared table in _shared/urgency.ts (mirrored in admin/js/thac.js).
+      const slaDeadline = addWorkingDays(new Date(), daysForTier(enquiry.deadline_tier));
 
       jobData = {
         enquiry_id: enquiry.id,
@@ -149,9 +135,8 @@ serve(async (req) => {
         site_lng: siteLng,
         tree_count_band: enquiry.tree_count_band,
         dispatch_state: "pending_approval",
-        urgency_state: enquiry.deadline_tier === "3days" ? "red" :
-                       enquiry.deadline_tier === "5days" ? "orange" :
-                       enquiry.deadline_tier === "7days" ? "yellow" : "grey",
+        urgency_state: urgencyFromTier(enquiry.deadline_tier),
+        deadline_tier: enquiry.deadline_tier,
         sla_deadline: slaDeadline,
         quoted_amount: enquiry.quoted_price,
         agreed_amount: enquiry.quoted_price,
@@ -167,6 +152,10 @@ serve(async (req) => {
         // recognised SURVEY_TYPE_LABELS entry in the admin CRM.
         survey_type: "amendment",
         dispatch_state: "pending_approval",
+        // Amendments carry the same deadline choice (3/5/10/15 working days)
+        urgency_state: urgencyFromTier(enquiry.deadline_tier),
+        deadline_tier: enquiry.deadline_tier,
+        sla_deadline: addWorkingDays(new Date(), daysForTier(enquiry.deadline_tier)),
         internal_notes: `Amendment request — customer-provided original job ref: "${enquiry.original_job_ref}". Scope: ${enquiry.amendment_scope}`,
       };
     }
