@@ -14,6 +14,19 @@ const SURVEY_LABELS: Record<string, string> = {
   bs5837: 'BS5837 Tree Survey (Planning)', vta: 'Visual Tree Assessment',
   bc: 'BS5837 Stage 2 (AIA/AMS/TPP)', subs: 'Subsidence / Building Damage',
   mortgage: 'Mortgage / Insurer Report', amendment: 'Amendment', other: 'Other',
+  // enquiry-form keys
+  planning_stage1: 'Planning — Stage 1 (BS5837)',
+  planning_stage2: 'Planning — Stage 2 (AIA/AMS/TPP)',
+  health_safety: 'Tree Condition / Risk Survey',
+  insurer_mortgage: 'Insurer / Mortgage Lender',
+  subsidence: 'Building Damage / Subsidence',
+  nhbc: 'Foundation Depths (NHBC)',
+  site_visit: 'Site Visit & Advice',
+  resistograph: 'Resistograph Testing',
+  bs_survey: 'BS Survey',
+  supervision: 'Site Supervision',
+  lscp: 'Landscaping Plans',
+  tpo: 'TPO Application',
 };
 
 function ParkingLocationMap({ parkingLat, parkingLng }: { parkingLat: number; parkingLng: number }) {
@@ -240,11 +253,7 @@ export default function JobDetailScreen() {
       { text: 'Hand Back', style: 'destructive', onPress: async () => {
         try {
           Alert.alert('Processing', 'Updating job...');
-          const { data, error } = await supabase
-            .from('jobs')
-            .update({ surveyor_id: null, dispatch_state: 'red' })
-            .eq('id', jobId)
-            .select();
+          const { error } = await supabase.rpc('hand_back_job', { p_job_id: jobId });
 
           if (error) {
             Alert.alert('Update Error', error.message);
@@ -295,10 +304,8 @@ export default function JobDetailScreen() {
       if (ndaError) throw ndaError;
 
       // Claim the allocated job
-      const { error } = await supabase.from('jobs').update({
-        surveyor_id: surveyorId,
-        dispatch_state: 'orange',
-      }).eq('id', jobId);
+      // claim_job, like a normal claim: sets pay and claimed_at, and checks the job is still available
+      const { error } = await supabase.rpc('claim_job', { p_job_id: jobId, p_surveyor_id: surveyorId });
       if (error) Alert.alert('Error', error.message);
       else { Alert.alert('✅ Claimed!', 'Job is assigned to you.'); loadData(); }
     } catch (err: any) {

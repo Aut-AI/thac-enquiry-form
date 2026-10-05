@@ -15,6 +15,19 @@ const URGENCY_COLORS: Record<string, string> = {
 const SURVEY_LABELS: Record<string, string> = {
   bs5837: 'BS5837', vta: 'VTA', bc: 'BS5837 Stage 2', subs: 'Subsidence',
   mortgage: 'Mortgage', amendment: 'Amendment', other: 'Other',
+  // enquiry-form keys
+  planning_stage1: 'Planning — Stage 1 (BS5837)',
+  planning_stage2: 'Planning — Stage 2 (AIA/AMS/TPP)',
+  health_safety: 'Tree Condition / Risk Survey',
+  insurer_mortgage: 'Insurer / Mortgage Lender',
+  subsidence: 'Building Damage / Subsidence',
+  nhbc: 'Foundation Depths (NHBC)',
+  site_visit: 'Site Visit & Advice',
+  resistograph: 'Resistograph Testing',
+  bs_survey: 'BS Survey',
+  supervision: 'Site Supervision',
+  lscp: 'Landscaping Plans',
+  tpo: 'TPO Application',
 };
 
 const URGENCY_LABELS: Record<string, string> = {
@@ -78,7 +91,7 @@ export default function JobMapScreen() {
           .from('jobs')
           .select(JOB_FIELDS)
           .eq('surveyor_id', surveyorId)
-          .in('dispatch_state', ['orange', 'yellow'])
+          .in('dispatch_state', ['waiting_for_plans', 'orange', 'yellow'])
           .not('site_lat', 'is', null)
           .not('site_lng', 'is', null)
       : null;
