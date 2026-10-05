@@ -886,3 +886,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .w-100 { width: 100%; }
 
 .muted-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+
+/* Dashboard active-jobs table: whole row tinted with the light shade of its urgency colour */
+.data-table.urgency-tinted tr.urgency-urgent td   { background: var(--urgent-bg); }
+.data-table.urgency-tinted tr.urgency-elevated td { background: var(--elevated-bg); }
+.data-table.urgency-tinted tr.urgency-standard td { background: var(--standard-bg); }
+.data-table.urgency-tinted tr.urgency-low td      { background: var(--low-bg); }
+.data-table.urgency-tinted tr.urgency-complete td { background: var(--complete-bg); }
+.data-table.urgency-tinted tbody tr:hover td      { filter: brightness(0.96); }

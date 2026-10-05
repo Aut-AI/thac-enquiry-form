@@ -223,6 +223,7 @@ function jobUrgencyRowClass(state) {
     case 'red':    return 'urgency-urgent';
     case 'orange': return 'urgency-elevated';
     case 'yellow': return 'urgency-standard';
+    case 'green':  return 'urgency-complete';
     default:       return 'urgency-low';
   }
 }
@@ -345,7 +346,7 @@ function renderUrgencyTable() {
     `).join('');
 
     document.getElementById('urgencyDashboard').innerHTML = `
-      <table class="data-table">
+      <table class="data-table urgency-tinted">
         <thead>
           <tr>
             ${sortTh('Reference', 'ref', sort)}
