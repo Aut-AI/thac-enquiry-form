@@ -88,7 +88,7 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,report_to_generate,report_generated',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,report_to_generate,report_generated,end_client_name',
       'order': 'created_at.desc',
       'limit': 1000
     });
@@ -152,7 +152,7 @@ function renderTable() {
     filtered = filtered.filter(j =>
       (j.reference || '').toLowerCase().includes(q) ||
       (j.site_postcode || '').toLowerCase().includes(q) ||
-      (j.billing_contact_name || '').toLowerCase().includes(q) ||
+      jobName(j).toLowerCase().includes(q) ||
       introducerLabel(introducerById[j.introducer_client_id]).toLowerCase().includes(q)
     );
   }
@@ -171,7 +171,7 @@ function renderTable() {
 
   filtered = sortRows(filtered, sort, {
     ref:         j => j.reference || j.id,
-    name:        j => j.billing_contact_name,
+    name:        j => jobName(j),
     introducer:  j => introducerLabel(introducerById[j.introducer_client_id]),
     created:     j => j.created_at,
     type:        j => getSurveyLabel(j.survey_type || j.job_type),
@@ -193,7 +193,7 @@ function renderTable() {
     return `
     <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
       <td><div class="ref">${j.reference || j.id.slice(0,8).toUpperCase()}</div></td>
-      <td>${j.billing_contact_name || '<span class="muted">—</span>'}</td>
+      <td>${jobName(j) ? escapeHtml(jobName(j)) : '<span class="muted">—</span>'}</td>
       <td>${j.introducer_client_id ? escapeHtml(introducerLabel(introducerById[j.introducer_client_id])) : '<span class="muted">Direct</span>'}</td>
       <td>${j.created_at ? formatDate(j.created_at) : '<span class="muted">—</span>'}</td>
       <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
@@ -244,6 +244,11 @@ function setUrgency(urgency, btn) {
   btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderTable();
+}
+
+// Who the job is for: the billing contact (form jobs) or the end client (imported jobs)
+function jobName(j) {
+  return j.billing_contact_name || j.end_client_name || '';
 }
 
 function setReports(value, btn) {

@@ -20,6 +20,7 @@ const clientId = params.get('id');
 let client = null;
 let clientJobs = [];
 let introducedJobs = [];
+let introducerById = {};
 
 if (!clientId) window.location.href = 'clients.html';
 
@@ -41,13 +42,14 @@ async function init() {
 
 async function loadClient() {
   try {
-    const [clientData, jobsData, introducedData] = await Promise.all([
+    const [clientData, jobsData, introducerList, introducedData] = await Promise.all([
       dbGet('clients', { 'id': `eq.${clientId}`, 'limit': 1 }),
       dbGet('jobs', {
         'arranging_client_id': `eq.${clientId}`,
-        'select': 'id,reference,survey_type,urgency_state,dispatch_state,survey_date,agreed_amount',
+        'select': 'id,reference,survey_type,urgency_state,dispatch_state,survey_date,agreed_amount,introducer_client_id',
         'order': 'created_at.desc'
       }),
+      loadIntroducers(),
       dbGet('jobs', {
         'introducer_client_id': `eq.${clientId}`,
         'select': 'id,reference,survey_type,site_postcode,billing_contact_name,dispatch_state,survey_date,agreed_amount',
@@ -63,6 +65,8 @@ async function loadClient() {
     client = clientData[0];
     clientJobs = jobsData || [];
     introducedJobs = introducedData || [];
+    introducerById = {};
+    (introducerList || []).forEach(i => { introducerById[i.id] = i; });
     const name = client.company_name || client.full_name || '—';
     document.getElementById('pageTitle').textContent = name;
     renderView();
@@ -75,6 +79,28 @@ async function loadClient() {
 // VIEW MODE
 // ============================================================
 
+// Introducers who have sent this client's jobs (introducers live on each job)
+function renderIntroducedBy() {
+  const counts = {};
+  clientJobs.forEach(j => { if (j.introducer_client_id) counts[j.introducer_client_id] = (counts[j.introducer_client_id] || 0) + 1; });
+  const ids = Object.keys(counts);
+  const direct = clientJobs.length - ids.reduce((t, id) => t + counts[id], 0);
+  if (!clientJobs.length) return '';
+  return `
+        <div class="card">
+          <div class="card-title">Introduced By</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+            ${ids.map(id => `
+              <div style="display:flex;justify-content:space-between;gap:8px;">
+                <a href="client-detail.html?id=${id}">${escapeHtml(introducerLabel(introducerById[id]))}</a>
+                <span class="muted">${counts[id]} job${counts[id] !== 1 ? 's' : ''}</span>
+              </div>`).join('')}
+            ${direct ? `<div style="display:flex;justify-content:space-between;gap:8px;"><span>Direct</span><span class="muted">${direct} job${direct !== 1 ? 's' : ''}</span></div>` : ''}
+            <div style="font-size:11px;color:var(--text-muted);">Set per job on the job page.</div>
+          </div>
+        </div>`;
+}
+
 function renderView() {
   const name = client.company_name || client.full_name || '—';
 
@@ -86,7 +112,8 @@ function renderView() {
         <td>${getSurveyLabel(j.survey_type)}</td>
         <td>${formatDate(j.survey_date)}</td>
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
-        <td>${statusBadge(j.dispatch_state)}</td>
+        <td>${j.introducer_client_id ? `<a href="client-detail.html?id=${j.introducer_client_id}" onclick="event.stopPropagation()">${escapeHtml(introducerLabel(introducerById[j.introducer_client_id]))}</a>` : '<span class="muted">Direct</span>'}</td>
+        <td>${dispatchBadge(j.dispatch_state)}</td>
       </tr>`).join('');
 
   document.getElementById('pageBody').innerHTML = `
@@ -162,7 +189,7 @@ function renderView() {
           <div class="card-title">Jobs (${clientJobs.length})</div>
           ${clientJobs.length > 0 ? `
           <table class="data-table">
-            <thead><tr><th>Ref</th><th>Type</th><th>Survey Date</th><th>Value</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ref</th><th>Type</th><th>Survey Date</th><th>Value</th><th>Introducer</th><th>Status</th></tr></thead>
             <tbody>${jobRows}</tbody>
           </table>` : `<div class="empty-state" style="padding:24px"><p>No jobs yet</p></div>`}
         </div>
@@ -190,6 +217,8 @@ function renderView() {
       </div>
 
       <div style="display:flex;flex-direction:column;gap:20px;">
+        ${renderIntroducedBy()}
+
         <div class="card">
           <div class="card-title">Quick Actions</div>
           <div style="display:flex;flex-direction:column;gap:8px;">

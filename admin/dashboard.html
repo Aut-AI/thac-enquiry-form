@@ -17,6 +17,7 @@ requireAuth();
 
 let sort = { key: 'urgency', dir: 'asc' };
 let dashJobs = [];
+let introducerById = {};
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -26,7 +27,7 @@ async function init() {
         <div class="topbar-title">Dashboard</div>
         <div class="topbar-search" style="position:relative;">
           <span>${icon('search')}</span>
-          <input type="text" placeholder="Search jobs, clients, enquiries..." id="globalSearch"
+          <input type="text" placeholder="Search jobs, clients, introducers..." id="globalSearch"
             oninput="handleGlobalSearch(this.value)" autocomplete="off">
           <div id="searchResults" style="display:none;position:absolute;top:100%;left:0;right:0;
             background:white;border:1px solid var(--border);border-radius:10px;
@@ -258,7 +259,7 @@ function dispatchBadge(state) {
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,report_generated',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,report_generated,introducer_client_id,end_client_name,billing_contact_name',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
       'limit': 500
@@ -274,6 +275,8 @@ async function loadUrgencyDashboard() {
       return;
     }
 
+    introducerById = {};
+    (await loadIntroducers()).forEach(i => { introducerById[i.id] = i; });
     dashJobs = jobs;
     renderUrgencyTable();
   } catch (e) {
@@ -313,6 +316,7 @@ function renderUrgencyTable() {
     // Default view is red → orange → yellow → grey → green; any column header re-sorts it
     const jobs = sortRows(dashJobs, sort, {
       ref:      j => j.reference,
+      introducer: j => introducerLabel(introducerById[j.introducer_client_id]),
       type:     j => getSurveyLabel(j.survey_type || j.job_type),
       postcode: j => j.site_postcode,
       sla:      j => j.sla_deadline,
@@ -330,6 +334,7 @@ function renderUrgencyTable() {
           <div class="muted">${j.survey_date ? formatDate(j.survey_date) : 'No date set'}</div>
         </td>
         <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
+        <td>${j.introducer_client_id ? escapeHtml(introducerLabel(introducerById[j.introducer_client_id])) : '<span class="muted">Direct</span>'}</td>
         <td>${j.site_postcode || '—'}</td>
         <td>${slaCountdown(j.sla_deadline)}</td>
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
@@ -345,6 +350,7 @@ function renderUrgencyTable() {
           <tr>
             ${sortTh('Reference', 'ref', sort)}
             ${sortTh('Survey Type', 'type', sort)}
+            ${sortTh('Introducer', 'introducer', sort)}
             ${sortTh('Postcode', 'postcode', sort)}
             ${sortTh('SLA Deadline', 'sla', sort)}
             ${sortTh('Value', 'value', sort)}
@@ -380,27 +386,39 @@ async function runGlobalSearch(q) {
     const term = q.replace(/[,()*]/g, ' ').trim();
     const [jobs, clients] = await Promise.all([
       dbGet('jobs', {
-        'select': 'id,reference,survey_type,site_postcode,dispatch_state,end_client_name',
+        'select': 'id,reference,survey_type,site_postcode,dispatch_state,end_client_name,introducer_client_id',
         'or': `(reference.ilike.*${term}*,job_number.ilike.*${term}*,site_postcode.ilike.*${term}*,end_client_name.ilike.*${term}*,site_street.ilike.*${term}*)`,
         'limit': 5
       }),
       dbGet('clients', {
-        'select': 'id,full_name,company_name,email',
+        'select': 'id,full_name,company_name,email,client_type',
         'or': `(full_name.ilike.*${term}*,company_name.ilike.*${term}*,email.ilike.*${term}*)`,
         'limit': 5
       }),
     ]);
 
+    // Jobs sent by a matching introducer (introducers are 'agent' clients)
+    const introIds = (clients || []).filter(c => c.client_type === 'agent').map(c => c.id);
+    const introducedJobs = introIds.length ? await dbGet('jobs', {
+      'select': 'id,reference,survey_type,site_postcode,dispatch_state,end_client_name,introducer_client_id',
+      'introducer_client_id': `in.(${introIds.join(',')})`,
+      'order': 'created_at.desc',
+      'limit': 8
+    }) : [];
+    const seen = new Set((jobs || []).map(j => j.id));
+    const allJobs = [...(jobs || []), ...(introducedJobs || []).filter(j => !seen.has(j.id))];
+    const introName = id => { const c = (clients || []).find(x => x.id === id); return c ? (c.company_name || c.full_name) : ''; };
+
     const sections = [];
 
-    if (jobs?.length) {
+    if (allJobs.length) {
       sections.push(`<div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Jobs</div>`);
-      jobs.forEach(j => {
+      allJobs.forEach(j => {
         sections.push(`<a href="job-detail.html?id=${j.id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:var(--text);" class="hover-row">
           <span style="display:flex;color:var(--text-muted);">${icon('briefcase', 16)}</span>
           <div>
             <div style="font-weight:600;font-size:13px;">${j.reference || '—'}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${getSurveyLabel(j.survey_type)} · ${j.site_postcode || '—'}${j.end_client_name ? ' · ' + escapeHtml(j.end_client_name) : ''}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${getSurveyLabel(j.survey_type)} · ${j.site_postcode || '—'}${j.end_client_name ? ' · ' + escapeHtml(j.end_client_name) : ''}${j.introducer_client_id && introName(j.introducer_client_id) ? ' · via ' + escapeHtml(introName(j.introducer_client_id)) : ''}</div>
           </div>
         </a>`);
       });
@@ -413,7 +431,7 @@ async function runGlobalSearch(q) {
           <span style="display:flex;color:var(--text-muted);">${icon('user', 16)}</span>
           <div>
             <div style="font-weight:600;font-size:13px;">${c.company_name || c.full_name || '—'}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${c.email || ''}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${c.client_type === 'agent' ? 'Introducer' + (c.email ? ' · ' : '') : ''}${c.email || ''}</div>
           </div>
         </a>`);
       });

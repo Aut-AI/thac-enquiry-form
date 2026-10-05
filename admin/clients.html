@@ -18,7 +18,11 @@ requireAuth();
 let allClients = [];
 let activeFilter = 'all';
 let searchQuery = '';
-let sort = { key: null, dir: 'asc' };   // null = newest first, as loaded
+let sort = { key: null, dir: 'asc' };
+let activeIntroducer = 'all';
+let introducerById = {};
+let introducersByClient = {};   // client id -> Set of introducer ids, from their jobs
+let introducedCount = {};       // introducer id -> number of jobs introduced   // null = newest first, as loaded
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -28,7 +32,7 @@ async function init() {
         <div class="topbar-title">Clients</div>
         <div class="topbar-search">
           <span style="display:flex;">${icon('search', 16)}</span>
-          <input type="text" placeholder="Search by name, email, company..." oninput="handleSearch(this.value)">
+          <input type="text" placeholder="Search by name, email, company, introducer..." oninput="handleSearch(this.value)">
         </div>
       </div>
       <div class="page-body">
@@ -43,6 +47,11 @@ async function init() {
             <button class="filter-btn" onclick="setFilter('company', this)">Company</button>
             <button class="filter-btn" onclick="setFilter('agent', this)">Introducers</button>
             <button class="filter-btn" onclick="setFilter('developer', this)">Developer</button>
+          </div>
+          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+            <select class="form-control" id="introducerFilter" style="max-width:320px;" onchange="setIntroducer(this.value)">
+              <option value="all">Introduced by: anyone</option>
+            </select>
           </div>
           <div id="clientsTable"><div class="loading"><div class="spinner"></div><br>Loading clients...</div></div>
         </div>
@@ -60,6 +69,24 @@ async function loadClients() {
       'limit': 1000
     });
     allClients = data || [];
+
+    // Introducers sit on jobs, so derive each client's introducer(s) from their jobs
+    const [jobs, introducers] = await Promise.all([
+      dbGet('jobs', { 'select': 'arranging_client_id,introducer_client_id', 'introducer_client_id': 'not.is.null', 'limit': 5000 }),
+      loadIntroducers(),
+    ]);
+    introducerById = {}; introducersByClient = {}; introducedCount = {};
+    introducers.forEach(i => { introducerById[i.id] = i; });
+    (jobs || []).forEach(j => {
+      introducedCount[j.introducer_client_id] = (introducedCount[j.introducer_client_id] || 0) + 1;
+      if (j.arranging_client_id) {
+        (introducersByClient[j.arranging_client_id] ||= new Set()).add(j.introducer_client_id);
+      }
+    });
+    document.getElementById('introducerFilter').innerHTML = `
+      <option value="all">Introduced by: anyone</option>
+      <option value="none" ${activeIntroducer === 'none' ? 'selected' : ''}>Direct (no introducer)</option>
+      ${introducers.map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}`;
     renderTable();
   } catch (e) {
     document.getElementById('clientsTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
@@ -70,8 +97,23 @@ function getClientName(c) {
   return c.company_name || c.full_name || '—';
 }
 
+// Introducer text for a client row: who introduced them, or (for an introducer) how many jobs they sent
+function introducerText(c) {
+  if (c.client_type === 'agent') {
+    const n = introducedCount[c.id] || 0;
+    return `Introducer · ${n} job${n !== 1 ? 's' : ''}`;
+  }
+  return [...(introducersByClient[c.id] || [])].map(id => introducerLabel(introducerById[id])).join(', ');
+}
+
 function renderTable() {
   let filtered = allClients;
+
+  if (activeIntroducer === 'none') {
+    filtered = filtered.filter(c => c.client_type !== 'agent' && !introducersByClient[c.id]);
+  } else if (activeIntroducer !== 'all') {
+    filtered = filtered.filter(c => introducersByClient[c.id]?.has(activeIntroducer));
+  }
 
   if (activeFilter !== 'all') {
     filtered = filtered.filter(c => c.client_type === activeFilter);
@@ -82,7 +124,8 @@ function renderTable() {
     filtered = filtered.filter(c =>
       getClientName(c).toLowerCase().includes(q) ||
       (c.email || '').toLowerCase().includes(q) ||
-      (c.phone || '').includes(q)
+      (c.phone || '').includes(q) ||
+      introducerText(c).toLowerCase().includes(q)
     );
   }
 
@@ -104,6 +147,7 @@ function renderTable() {
     phone:    c => c.phone,
     location: c => [c.address_city, c.address_county].filter(Boolean).join(', '),
     type:     c => c.client_category || c.client_type,
+    introducer: c => introducerText(c),
   });
 
   const rows = filtered.map(c => `
@@ -115,6 +159,7 @@ function renderTable() {
       <td>${c.email ? `<a href="mailto:${c.email}" onclick="event.stopPropagation()">${c.email}</a>` : '—'}</td>
       <td>${c.phone ? `<a href="tel:${c.phone}" onclick="event.stopPropagation()">${c.phone}</a>` : '—'}</td>
       <td>${[c.address_city, c.address_county].filter(Boolean).join(', ') || '—'}</td>
+      <td>${introducerText(c) ? escapeHtml(introducerText(c)) : '<span class="muted">Direct</span>'}</td>
       <td><span class="badge badge-accepted">${c.client_category || c.client_type || '—'}</span></td>
     </tr>
   `).join('');
@@ -127,6 +172,7 @@ function renderTable() {
           ${sortTh('Email', 'email', sort)}
           ${sortTh('Phone', 'phone', sort)}
           ${sortTh('Location', 'location', sort)}
+          ${sortTh('Introducer', 'introducer', sort)}
           ${sortTh('Type', 'type', sort)}
         </tr>
       </thead>
@@ -136,8 +182,13 @@ function renderTable() {
 
 function setFilter(filter, btn) {
   activeFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  renderTable();
+}
+
+function setIntroducer(value) {
+  activeIntroducer = value;
   renderTable();
 }
 
