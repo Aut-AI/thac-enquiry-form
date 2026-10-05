@@ -12,7 +12,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.trevorheaps.surveyor",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Heaps Arboriculture Surveyors uses your location to show your position on the job map and when confirming parking details on site."
