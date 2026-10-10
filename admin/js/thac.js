@@ -567,34 +567,68 @@ async function createIntroducer({ full_name, company_name, email }) {
 
 // ============================================================
 // SORTABLE TABLE COLUMNS
-// A page keeps `let sort = { key, dir }`, renders headers with sortTh() and
-// rows through sortRows(), and sets `sort = nextSort(sort, key)` in its
-// onclick handler. Blank values always sort last, whatever the direction.
+// A page keeps `let sort = { key, dir }` (or an array of those, one per sort
+// level), renders headers with sortTh() and rows through sortRows(), and sets
+// `sort = nextSort(sort, key, 'asc', isAddLevel(event))` in its onclick handler.
+// Click sorts by one column; Shift-click adds further levels, like Excel's
+// "Sort by... then by...". Blank values always sort last, whatever the direction.
 // ============================================================
 
 const URGENCY_ORDER  = { red: 0, orange: 1, yellow: 2, grey: 3, green: 4 };
 const DISPATCH_ORDER = { pending_approval: 0, waiting_for_plans: 1, red: 2, orange: 3, yellow: 4, green: 5, archived: 6 };
 
+function sortLevels(sort) {
+  if (Array.isArray(sort)) return sort.filter(l => l && l.key);
+  return sort && sort.key ? [sort] : [];
+}
+
 function sortRows(rows, sort, getters) {
-  const get = getters[sort.key];
-  if (!get) return rows;
-  const dir = sort.dir === 'desc' ? -1 : 1;
+  const levels = sortLevels(sort).filter(l => getters[l.key]);
+  if (!levels.length) return rows;
   return rows.map((r, i) => [r, i]).sort(([a, ai], [b, bi]) => {
-    const x = get(a), y = get(b);
-    const xBlank = x == null || x === '', yBlank = y == null || y === '';
-    if (xBlank || yBlank) return xBlank && yBlank ? ai - bi : (xBlank ? 1 : -1);
-    const c = (typeof x === 'number' && typeof y === 'number')
-      ? x - y
-      : String(x).localeCompare(String(y), 'en', { numeric: true, sensitivity: 'base' });
-    return c ? c * dir : ai - bi;
+    for (const { key, dir } of levels) {
+      const get = getters[key];
+      const x = get(a), y = get(b);
+      const xBlank = x == null || x === '', yBlank = y == null || y === '';
+      if (xBlank || yBlank) {
+        if (xBlank && yBlank) continue;
+        return xBlank ? 1 : -1;
+      }
+      const c = (typeof x === 'number' && typeof y === 'number')
+        ? x - y
+        : String(x).localeCompare(String(y), 'en', { numeric: true, sensitivity: 'base' });
+      if (c) return c * (dir === 'desc' ? -1 : 1);
+    }
+    return ai - bi;
   }).map(([r]) => r);
 }
 
 function sortTh(label, key, sort, handler = 'setSort') {
-  const cls = sort.key === key ? ` sorted-${sort.dir}` : '';
-  return `<th class="sortable${cls}" onclick="${handler}('${key}')" title="Sort by ${label}">${label}</th>`;
+  const levels = sortLevels(sort);
+  const idx = levels.findIndex(l => l.key === key);
+  const cls = idx >= 0 ? ` sorted-${levels[idx].dir}` : '';
+  const badge = idx >= 0 && levels.length > 1 ? `<sup class="sort-level">${idx + 1}</sup>` : '';
+  return `<th class="sortable${cls}" onclick="${handler}('${key}', event)" title="Click to sort by ${label}. Shift-click to add it as another sort level.">${label}${badge}</th>`;
 }
 
-function nextSort(sort, key, firstDir = 'asc') {
-  return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir };
+function isAddLevel(ev) {
+  return !!(ev && (ev.shiftKey || ev.ctrlKey || ev.metaKey));
+}
+
+function nextSort(sort, key, firstDir = 'asc', addLevel = false) {
+  const levels = sortLevels(sort).map(l => ({ ...l }));
+  const idx = levels.findIndex(l => l.key === key);
+  const flip = d => (d === 'asc' ? 'desc' : 'asc');
+  if (addLevel) {
+    if (idx >= 0) levels[idx].dir = flip(levels[idx].dir);
+    else levels.push({ key, dir: firstDir });
+    return levels;
+  }
+  return [{ key, dir: idx === 0 ? flip(levels[0].dir) : firstDir }];
+}
+
+// Small hint shown above sortable tables.
+function sortHint(sort) {
+  const n = sortLevels(sort).length;
+  return `<div class="sort-hint">${n > 1 ? `Sorted by ${n} columns. ` : ''}Tip: hold Shift and click more column headers to sort by several columns at once.</div>`;
 }

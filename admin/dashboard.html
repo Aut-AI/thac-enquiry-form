@@ -307,8 +307,8 @@ async function toggleReportGenerated(id, el) {
   }
 }
 
-function setSort(key) {
-  sort = nextSort(sort, key);
+function setSort(key, ev) {
+  sort = nextSort(sort, key, 'asc', isAddLevel(ev));
   renderUrgencyTable();
 }
 
@@ -346,6 +346,7 @@ function renderUrgencyTable() {
     `).join('');
 
     document.getElementById('urgencyDashboard').innerHTML = `
+      ${sortHint(sort)}
       <table class="data-table urgency-tinted">
         <thead>
           <tr>

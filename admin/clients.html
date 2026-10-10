@@ -165,6 +165,7 @@ function renderTable() {
   `).join('');
 
   document.getElementById('clientsTable').innerHTML = `
+    ${sortHint(sort)}
     <table class="data-table">
       <thead>
         <tr>
@@ -192,8 +193,8 @@ function setIntroducer(value) {
   renderTable();
 }
 
-function setSort(key) {
-  sort = nextSort(sort, key);
+function setSort(key, ev) {
+  sort = nextSort(sort, key, 'asc', isAddLevel(ev));
   renderTable();
 }
 
