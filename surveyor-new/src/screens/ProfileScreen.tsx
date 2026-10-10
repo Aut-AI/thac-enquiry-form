@@ -6,10 +6,12 @@ import { supabase } from '../lib/supabase';
 import { useSurveyorProfile } from '../lib/useSurveyorProfile';
 import { RootStackParamList, Surveyor } from '../types';
 import { sharedStyles as s, GREEN } from '../lib/profileStyles';
+import StatusDot, { DotColor } from '../components/StatusDot';
+import { Ionicons } from '@expo/vector-icons';
 
 // Worst-case traffic light across the three compliance dates, so the menu
 // row can flag "something needs attention" without opening the page.
-function worstInsuranceLight(surveyor: Surveyor): string {
+function worstInsuranceLight(surveyor: Surveyor): DotColor {
   const dates = [surveyor.pi_expiry_date, surveyor.pl_expiry_date, surveyor.dbs_expiry_date];
   const rank = (dateStr: string | null) => {
     if (!dateStr) return 1; // not set -- worth a look, but not urgent like an expiry
@@ -20,11 +22,11 @@ function worstInsuranceLight(surveyor: Surveyor): string {
     return 0;
   };
   const worst = Math.max(...dates.map(rank));
-  return ['🟢', '🟡', '🟠', '🔴'][worst];
+  return (['green', 'yellow', 'orange', 'red'] as DotColor[])[worst];
 }
 
 interface MenuRowProps {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -33,7 +35,7 @@ interface MenuRowProps {
 function MenuRow({ icon, title, subtitle, onPress }: MenuRowProps) {
   return (
     <TouchableOpacity style={rowStyles.row} onPress={onPress}>
-      <Text style={rowStyles.icon}>{icon}</Text>
+      <View style={rowStyles.icon}>{icon}</View>
       <View style={rowStyles.textGroup}>
         <Text style={rowStyles.title}>{title}</Text>
         <Text style={rowStyles.subtitle}>{subtitle}</Text>
@@ -99,27 +101,27 @@ export default function ProfileScreen() {
         <Text style={rowStyles.name}>{surveyor.full_name}</Text>
         <Text style={rowStyles.email}>{surveyor.email}</Text>
         {surveyor.phone ? <Text style={rowStyles.detail}>{surveyor.phone}</Text> : null}
-        {surveyor.home_postcode ? <Text style={rowStyles.detail}>📍 {surveyor.home_postcode} · {surveyor.radius_miles} mile radius</Text> : null}
+        {surveyor.home_postcode ? <Text style={rowStyles.detail}><Ionicons name="location-outline" size={14} color="#555" /> {surveyor.home_postcode} · {surveyor.radius_miles} mile radius</Text> : null}
         {surveyor.hourly_rate ? <Text style={rowStyles.detail}>£{surveyor.hourly_rate}/hr <Text style={{ fontSize: 12, color: '#999' }}>(set by admin)</Text></Text> : null}
       </View>
 
       <View style={[s.card, { padding: 0 }]}>
         <MenuRow
-          icon="📍"
+          icon={<Ionicons name="location-outline" size={24} color="#1a3c2e" />}
           title="Coverage Area"
           subtitle={surveyor.home_postcode ? `${surveyor.home_postcode} · ${surveyor.radius_miles} mile radius` : 'Set your postcode and travel radius'}
           onPress={() => nav.navigate('CoverageArea')}
         />
         <View style={rowStyles.rowDivider} />
         <MenuRow
-          icon={worstInsuranceLight(surveyor)}
+          icon={<StatusDot color={worstInsuranceLight(surveyor)} size={22} />}
           title="Insurance & Compliance"
           subtitle="PI, PL, DBS expiry dates and certificates"
           onPress={() => nav.navigate('Insurance')}
         />
         <View style={rowStyles.rowDivider} />
         <MenuRow
-          icon="📅"
+          icon={<Ionicons name="calendar-outline" size={24} color="#1a3c2e" />}
           title="Availability Calendar"
           subtitle="Mark days you're available for work"
           onPress={() => nav.navigate('Availability')}
@@ -144,7 +146,7 @@ const rowStyles = StyleSheet.create({
   noProfile: { fontSize: 18, fontWeight: '600', color: GREEN, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
   rowDivider: { height: 1, backgroundColor: '#f0f0f0', marginLeft: 16 },
-  icon: { fontSize: 22, width: 28, textAlign: 'center' },
+  icon: { width: 28, alignItems: 'center', justifyContent: 'center' },
   textGroup: { flex: 1 },
   title: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
   subtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },

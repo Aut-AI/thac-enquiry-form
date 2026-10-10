@@ -1,5 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import StatusDot from '../components/StatusDot';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useSurveyorProfile } from '../lib/useSurveyorProfile';
@@ -104,7 +106,7 @@ export default function AvailabilityScreen() {
             you yet — tap or drag to mark it available.
           </Text>
         </View>
-        <Text style={s.hint}>🟢 Available · ⬜ Unavailable (or not yet updated) · Drag across days to set a range at once</Text>
+        <Text style={s.hint}><StatusDot color="green" size={12} /> Available · <Ionicons name="square-outline" size={12} color="#9ca3af" /> Unavailable (or not yet updated) · Drag across days to set a range at once</Text>
         <AvailabilityCalendar
           availability={availability}
           onCommitDays={commitAvailabilityDays}

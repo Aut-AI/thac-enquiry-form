@@ -8,6 +8,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import { fetchServiceOutcodes, extractOutcode } from '../lib/outcode';
 import { Job, RootStackParamList } from '../types';
+import StatusDot from '../components/StatusDot';
+import { Ionicons } from '@expo/vector-icons';
 
 const URGENCY_COLORS: Record<string, string> = {
   red: '#dc2626', orange: '#ea580c', yellow: '#ca8a04', grey: '#9ca3af',
@@ -110,7 +112,7 @@ export default function JobListScreen() {
           <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
           {daysLeft !== null && (
             <Text style={[s.sla, { color: daysLeft < 2 ? '#dc2626' : daysLeft < 4 ? '#ea580c' : '#6b7280' }]}>
-              {daysLeft <= 0 ? '⚠️ Overdue' : `${daysLeft}d remaining`}
+              {daysLeft <= 0 ? <><Ionicons name="warning-outline" size={13} color="#dc2626" /> Overdue</> : `${daysLeft}d remaining`}
             </Text>
           )}
         </View>
@@ -125,7 +127,7 @@ export default function JobListScreen() {
         {(['available', 'mine'] as Filter[]).map(f => (
           <TouchableOpacity key={f} style={[s.tab, filter === f && s.tabActive]} onPress={() => setFilter(f)}>
             <Text style={[s.tabText, filter === f && s.tabTextActive]}>
-              {f === 'available' ? '🔴 Available' : '🟠 My Jobs'}
+              {f === 'available' ? <><StatusDot color="red" size={11} /> Available</> : <><StatusDot color="orange" size={11} /> My Jobs</>}
             </Text>
           </TouchableOpacity>
         ))}
@@ -141,7 +143,7 @@ export default function JobListScreen() {
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSurveyorAndJobs} />}
             ListEmptyComponent={
               <View style={s.empty}>
-                <Text style={s.emptyIcon}>{filter === 'available' ? '🎉' : '📋'}</Text>
+                <Ionicons name={filter === 'available' ? 'checkmark-circle-outline' : 'clipboard-outline'} size={44} color="#9ca3af" style={{ marginBottom: 12 }} />
                 <Text style={s.emptyText}>
                   {filter === 'available' ? 'No available jobs right now' : 'No active jobs assigned to you'}
                 </Text>

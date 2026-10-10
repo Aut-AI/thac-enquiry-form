@@ -5,14 +5,15 @@ import { isValidDate } from '../lib/date';
 import { useSurveyorProfile } from '../lib/useSurveyorProfile';
 import { pickCertificate, uploadCertificate, openCertificate, CertificateType, certificateLabel } from '../lib/certificateUpload';
 import { sharedStyles as s } from '../lib/profileStyles';
+import StatusDot, { DotColor } from '../components/StatusDot';
 
-function trafficLight(dateStr: string | null): string {
-  if (!dateStr) return '⚪';
+function trafficLight(dateStr: string | null): DotColor {
+  if (!dateStr) return 'grey';
   const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
-  if (days < 0)  return '🔴';
-  if (days < 30) return '🟠';
-  if (days < 90) return '🟡';
-  return '🟢';
+  if (days < 0)  return 'red';
+  if (days < 30) return 'orange';
+  if (days < 90) return 'yellow';
+  return 'green';
 }
 
 function formatDate(dateStr: string | null): string {
@@ -156,7 +157,7 @@ export default function InsuranceScreen() {
 
         <View style={styles.row}>
           <View style={styles.item}>
-            <Text style={styles.light}>{trafficLight(surveyor.pi_expiry_date)}</Text>
+            <Text style={styles.light}><StatusDot color={trafficLight(surveyor.pi_expiry_date)} size={22} /></Text>
             <Text style={styles.itemLabel}>PI Insurance</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.pi_expiry_date)}</Text>
             <TouchableOpacity onPress={() => surveyor.pi_certificate_path ? viewCertificate(surveyor.pi_certificate_path) : replaceCertificate('pi')}>
@@ -171,7 +172,7 @@ export default function InsuranceScreen() {
             ) : null}
           </View>
           <View style={styles.item}>
-            <Text style={styles.light}>{trafficLight(surveyor.pl_expiry_date)}</Text>
+            <Text style={styles.light}><StatusDot color={trafficLight(surveyor.pl_expiry_date)} size={22} /></Text>
             <Text style={styles.itemLabel}>PL Insurance</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.pl_expiry_date)}</Text>
             <TouchableOpacity onPress={() => surveyor.pl_certificate_path ? viewCertificate(surveyor.pl_certificate_path) : replaceCertificate('pl')}>
@@ -186,7 +187,7 @@ export default function InsuranceScreen() {
             ) : null}
           </View>
           <View style={styles.item}>
-            <Text style={styles.light}>{trafficLight(surveyor.dbs_expiry_date)}</Text>
+            <Text style={styles.light}><StatusDot color={trafficLight(surveyor.dbs_expiry_date)} size={22} /></Text>
             <Text style={styles.itemLabel}>DBS Check</Text>
             <Text style={styles.itemDate}>{formatDate(surveyor.dbs_expiry_date)}</Text>
             <TouchableOpacity onPress={() => surveyor.dbs_certificate_path ? viewCertificate(surveyor.dbs_certificate_path) : replaceCertificate('dbs')}>

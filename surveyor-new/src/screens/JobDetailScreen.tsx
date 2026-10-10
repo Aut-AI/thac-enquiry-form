@@ -7,6 +7,8 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { supabase } from '../lib/supabase';
 import { Job, RootStackParamList } from '../types';
+import { Ionicons } from '@expo/vector-icons';
+import StatusDot from '../components/StatusDot';
 import NDAModal from './NDAModal';
 
 type RouteProps = RouteProp<RootStackParamList, 'JobDetail'>;
@@ -275,7 +277,7 @@ export default function JobDetailScreen() {
       // claim_job, like a normal claim: sets pay and claimed_at, and checks the job is still available
       const { error } = await supabase.rpc('claim_job', { p_job_id: jobId, p_surveyor_id: surveyorId });
       if (error) Alert.alert('Error', error.message);
-      else { Alert.alert('✅ Claimed!', 'Job is assigned to you.'); loadData(); }
+      else { Alert.alert('Claimed', 'Job is assigned to you.'); loadData(); }
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to claim job');
     }
@@ -322,15 +324,15 @@ export default function JobDetailScreen() {
       {/* Allocated Job Alert */}
       {job.allocated_surveyor_id && !job.allocation_rejected_at && job.dispatch_state !== 'orange' && (
         <View style={s.allocatedBanner}>
-          <Text style={s.allocatedTitle}>🚨 ALLOCATED TO YOU - ACTION REQUIRED</Text>
+          <Text style={s.allocatedTitle}><Ionicons name="alert-circle" size={16} color="#991b1b" /> ALLOCATED TO YOU - ACTION REQUIRED</Text>
           <Text style={s.allocatedText}>This job has been specifically assigned to you. You must claim or reject it.</Text>
           <Text style={s.allocatedCountdown}>⏱ Respond within: {timeRemaining || 'calculating...'}</Text>
           <View style={s.allocatedActions}>
             <TouchableOpacity style={s.allocatedClaimBtn} onPress={claimAllocatedJob}>
-              <Text style={s.allocatedClaimText}>✅ CLAIM JOB</Text>
+              <Text style={s.allocatedClaimText}><Ionicons name="checkmark-circle-outline" size={15} color="#fff" /> CLAIM JOB</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.allocatedRejectBtn} onPress={rejectAllocatedJob}>
-              <Text style={s.allocatedRejectText}>❌ REJECT</Text>
+              <Text style={s.allocatedRejectText}><Ionicons name="close-circle-outline" size={15} color="#dc2626" /> REJECT</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -344,7 +346,7 @@ export default function JobDetailScreen() {
 
         {isMine && job.site_lat && job.site_lng ? (
           <View style={{marginVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8}}>
-            <Text style={s.body}>📍 {Number(job.site_lat).toFixed(5)}, {Number(job.site_lng).toFixed(5)}</Text>
+            <Text style={s.body}><Ionicons name="location-outline" size={14} color="#374151" /> {Number(job.site_lat).toFixed(5)}, {Number(job.site_lng).toFixed(5)}</Text>
             <TouchableOpacity
               onPress={() => {
                 const coords = `${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}`;
@@ -360,7 +362,7 @@ export default function JobDetailScreen() {
 
         {(job.tree_count_band || enquiry?.tree_count_band) && (
           <View style={s.treeCountBadge}>
-            <Text style={s.treeCountText}>🌳 {job.tree_count_band || enquiry?.tree_count_band} trees</Text>
+            <Text style={s.treeCountText}><Ionicons name="leaf-outline" size={15} color="#15803d" /> {job.tree_count_band || enquiry?.tree_count_band} trees</Text>
           </View>
         )}
 
@@ -432,7 +434,7 @@ export default function JobDetailScreen() {
           <ParkingLocationMap parkingLat={job.parking_lat || enquiry?.parking_lat} parkingLng={job.parking_lng || enquiry?.parking_lng} />
         </View>
       ) : isMine ? (
-        <Text style={{padding: 16, color: '#999', fontSize: 12}}>📍 No parking location set</Text>
+        <Text style={{padding: 16, color: '#999', fontSize: 12}}><Ionicons name="location-outline" size={13} color="#999" /> No parking location set</Text>
       ) : null}
 
       {/* Survey Date */}
@@ -441,7 +443,7 @@ export default function JobDetailScreen() {
           <Text style={s.sectionTitle}>Survey Date</Text>
           <Text style={s.body}>
             {new Date(job.survey_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            {' '}{job.survey_date_confirmed ? '✅ Confirmed' : '🟠 Proposed'}
+            {' '}{job.survey_date_confirmed ? <><Ionicons name="checkmark-circle-outline" size={13} color="#16a34a" /> Confirmed</> : <><StatusDot color="orange" size={11} /> Proposed</>}
           </Text>
         </View>
       ) : null}
@@ -452,12 +454,12 @@ export default function JobDetailScreen() {
           <Text style={s.sectionTitle}>Documents</Text>
           {job.doc_block_plan_url
             ? <TouchableOpacity style={s.docBtn} onPress={() => Linking.openURL(job.doc_block_plan_url!)}>
-                <Text style={s.docBtnText}>📄 Block Plan</Text>
+                <Text style={s.docBtnText}><Ionicons name="document-text-outline" size={15} color="#1a3c2e" /> Block Plan</Text>
               </TouchableOpacity>
             : null}
           {job.doc_topo_survey_url
             ? <TouchableOpacity style={s.docBtn} onPress={() => Linking.openURL(job.doc_topo_survey_url!)}>
-                <Text style={s.docBtnText}>📄 Topo Survey</Text>
+                <Text style={s.docBtnText}><Ionicons name="document-text-outline" size={15} color="#1a3c2e" /> Topo Survey</Text>
               </TouchableOpacity>
             : null}
           {job.doc_other_urls
@@ -498,13 +500,13 @@ export default function JobDetailScreen() {
                   <Text style={s.fileDate}>{new Date(f.uploaded_at).toLocaleDateString('en-GB')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => deleteFile(f.file_path)}>
-                  <Text style={s.fileDelete}>🗑</Text>
+                  <Text style={s.fileDelete}><Ionicons name="trash-outline" size={18} color="#dc2626" /></Text>
                 </TouchableOpacity>
               </View>
             ))
           )}
           <TouchableOpacity style={s.uploadBtn} onPress={uploadFile} disabled={uploading}>
-            <Text style={s.uploadBtnText}>{uploading ? 'Uploading…' : '📤 Upload File'}</Text>
+            <Text style={s.uploadBtnText}>{uploading ? 'Uploading…' : <><Ionicons name="cloud-upload-outline" size={15} color="#1a3c2e" /> Upload File</>}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -513,14 +515,14 @@ export default function JobDetailScreen() {
       <View style={s.actions}>
         {isAvailable && (
           <TouchableOpacity style={s.btnPrimary} onPress={claimJob}>
-            <Text style={s.btnPrimaryText}>✅ Claim This Job</Text>
+            <Text style={s.btnPrimaryText}><Ionicons name="checkmark-circle-outline" size={17} color="#fff" /> Claim This Job</Text>
           </TouchableOpacity>
         )}
         {isMine && (
           <>
             {job.dispatch_state === 'orange' && (
               <TouchableOpacity style={s.btnPrimary} onPress={markFieldDataUploaded}>
-                <Text style={s.btnPrimaryText}>📤 Mark Field Data Uploaded</Text>
+                <Text style={s.btnPrimaryText}><Ionicons name="cloud-upload-outline" size={17} color="#fff" /> Mark Field Data Uploaded</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={s.btnSecondary} onPress={handBack}>
@@ -530,7 +532,7 @@ export default function JobDetailScreen() {
         )}
         {isMine && job.dispatch_state === 'yellow' && (
           <View style={s.infoBox}>
-            <Text style={s.infoText}>🟡 Field data uploaded. Awaiting report finalisation.</Text>
+            <Text style={s.infoText}><StatusDot color="yellow" size={12} /> Field data uploaded. Awaiting report finalisation.</Text>
           </View>
         )}
       </View>

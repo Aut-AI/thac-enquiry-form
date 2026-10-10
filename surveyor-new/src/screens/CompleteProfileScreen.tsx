@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { isValidDate } from '../lib/date';
@@ -256,7 +257,7 @@ export function CompleteProfileScreen({ session, onComplete }: Props) {
             />
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                💡 A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
+                <Ionicons name="bulb-outline" size={14} color="#6b7280" /> A larger radius helps you discover nearby jobs to group together — you're never obligated to accept any work
               </Text>
             </View>
           </View>

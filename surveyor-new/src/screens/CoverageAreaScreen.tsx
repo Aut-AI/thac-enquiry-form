@@ -21,7 +21,7 @@ export default function CoverageAreaScreen() {
   useEffect(() => {
     if (surveyor) {
       setEditPostcode(surveyor.home_postcode || '');
-      setEditRadius(String(surveyor.radius_miles || 25));
+      setEditRadius(String(surveyor.radius_miles ?? 25));
     }
   }, [surveyor]);
 
@@ -68,7 +68,9 @@ export default function CoverageAreaScreen() {
     setSavingLocation(true);
 
     try {
-      const radius = parseInt(editRadius) || 25;
+      // A blank field defaults to 25 miles, but an explicit 0 is kept.
+      const parsed = parseInt(editRadius, 10);
+      const radius = Number.isNaN(parsed) ? 25 : Math.max(0, parsed);
       const { error } = await supabase
         .from('surveyors')
         .update({ home_postcode: editPostcode, radius_miles: radius })
