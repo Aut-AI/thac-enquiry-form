@@ -53,6 +53,7 @@ const ICON_PATHS = {
   arrowLeft: '<line x1="20" y1="12" x2="5" y2="12"/><polyline points="10.5 6.5 5 12 10.5 17.5"/>',
   chevronUp: '<polyline points="5.5 15.5 12 9 18.5 15.5"/>',
   chevronDown: '<polyline points="5.5 8.5 12 15 18.5 8.5"/>',
+  filter: '<path d="M4 5.5h16l-6.2 7.3v5.2l-3.6 1.8v-7Z"/>',
 };
 
 function icon(name, size = 16) {

@@ -22,6 +22,8 @@ let activeUrgency = 'all';
 let searchQuery = '';
 let activeIntroducer = 'all';
 let introducerById = {};
+let introducerList = [];
+let filterOpen = false;
 let activeReports = 'all';   // all | to_generate | generated
 let sort = { key: 'created', dir: 'desc' };
 
@@ -49,35 +51,7 @@ async function init() {
             All Jobs
             <span style="font-size:13px;font-weight:400;color:var(--text-muted)" id="jobCount"></span>
           </div>
-          <div class="filter-bar">
-            <button class="filter-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all',this)">All</button>
-            <button class="filter-btn ${activeFilter==='pending_approval'?'active':''}" onclick="setFilter('pending_approval',this)">${icon('clock')}Pending</button>
-            <button class="filter-btn ${activeFilter==='waiting_for_plans'?'active':''}" onclick="setFilter('waiting_for_plans',this)">${icon('clock')}Waiting</button>
-            <button class="filter-btn ${activeFilter==='red'?'active':''}" onclick="setFilter('red',this)">${dot('urgent')}Unallocated</button>
-            <button class="filter-btn ${activeFilter==='orange'?'active':''}" onclick="setFilter('orange',this)">${dot('elevated')}Claimed</button>
-            <button class="filter-btn ${activeFilter==='yellow'?'active':''}" onclick="setFilter('yellow',this)">${dot('standard')}Attended</button>
-            <button class="filter-btn ${activeFilter==='green'?'active':''}" onclick="setFilter('green',this)">${dot('complete')}Report Sent</button>
-            <button class="filter-btn ${activeFilter==='archived'?'active':''}" onclick="setFilter('archived',this)">${icon('archive')}Archived</button>
-          </div>
-          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-            <span style="font-size:12px;color:var(--text-muted);padding:4px 2px;">Urgency:</span>
-            <button class="filter-btn ${activeUrgency==='all'?'active':''}" onclick="setUrgency('all',this)">All</button>
-            <button class="filter-btn ${activeUrgency==='red'?'active':''}" onclick="setUrgency('red',this)">${dot('urgent')}Urgent</button>
-            <button class="filter-btn ${activeUrgency==='orange'?'active':''}" onclick="setUrgency('orange',this)">${dot('elevated')}Elevated</button>
-            <button class="filter-btn ${activeUrgency==='yellow'?'active':''}" onclick="setUrgency('yellow',this)">${dot('standard')}Standard</button>
-            <button class="filter-btn ${activeUrgency==='grey'?'active':''}" onclick="setUrgency('grey',this)">${dot('low')}Low</button>
-          </div>
-          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-            <span style="font-size:12px;color:var(--text-muted);padding:4px 2px;">Reports (allocated jobs):</span>
-            <button class="filter-btn ${activeReports==='all'?'active':''}" onclick="setReports('all',this)">All</button>
-            <button class="filter-btn ${activeReports==='to_generate'?'active':''}" onclick="setReports('to_generate',this)">To Generate</button>
-            <button class="filter-btn ${activeReports==='generated'?'active':''}" onclick="setReports('generated',this)">Generated</button>
-          </div>
-          <div class="filter-bar" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-            <select class="form-control" id="introducerFilter" style="max-width:320px;" onchange="setIntroducer(this.value)">
-              <option value="all">All introducers</option>
-            </select>
-          </div>
+          <div id="filterBar"></div>
           <div id="jobsTable"><div class="loading"><div class="spinner"></div><br>Loading jobs...</div></div>
         </div>
       </div>
@@ -101,10 +75,7 @@ async function loadJobs() {
     ]);
     introducerById = {};
     introducers.forEach(i => { introducerById[i.id] = i; });
-    document.getElementById('introducerFilter').innerHTML = `
-      <option value="all">All introducers</option>
-      <option value="none" ${activeIntroducer === 'none' ? 'selected' : ''}>Direct (no introducer)</option>
-      ${introducers.map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}`;
+    introducerList = introducers;
     const surveyorNameById = {};
     (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
 
@@ -120,6 +91,7 @@ async function loadJobs() {
 }
 
 function renderTable() {
+  renderFilterBar();
   let filtered = allJobs;
 
   if (activeFilter !== 'all') {
@@ -211,7 +183,6 @@ function renderTable() {
   }).join('');
 
   document.getElementById('jobsTable').innerHTML = `
-    ${sortHint(sort)}
     <table class="data-table">
       <thead>
         <tr>
@@ -234,31 +205,110 @@ function renderTable() {
     </table>`;
 }
 
-function setFilter(filter, btn) {
-  activeFilter = filter;
-  // Only reset active state within this button's own filter row
-  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+const STATUS_FILTERS = [
+  ['all', 'All', null],
+  ['pending_approval', 'Pending', 'clock'],
+  ['waiting_for_plans', 'Waiting', 'clock'],
+  ['red', 'Unallocated', 'urgent'],
+  ['orange', 'Claimed', 'elevated'],
+  ['yellow', 'Attended', 'standard'],
+  ['green', 'Report Sent', 'complete'],
+  ['archived', 'Archived', 'archive'],
+];
+const URGENCY_FILTERS = [['all', 'Any', null], ['red', 'Urgent', 'urgent'], ['orange', 'Elevated', 'elevated'], ['yellow', 'Standard', 'standard'], ['grey', 'Low', 'low']];
+const REPORT_FILTERS = [['all', 'Any'], ['to_generate', 'To generate'], ['generated', 'Generated']];
+
+function statusCount(key) {
+  if (key === 'all') return allJobs.filter(j => !j.is_archived).length;
+  return allJobs.filter(j => j.dispatch_state === key).length;
+}
+
+function activeFilterChips() {
+  const chips = [];
+  if (activeUrgency !== 'all') chips.push(['urgency', 'Urgency: ' + (URGENCY_FILTERS.find(u => u[0] === activeUrgency)?.[1] || activeUrgency)]);
+  if (activeReports !== 'all') chips.push(['reports', 'Reports: ' + (REPORT_FILTERS.find(r => r[0] === activeReports)?.[1] || activeReports)]);
+  if (activeIntroducer === 'none') chips.push(['introducer', 'Direct, no introducer']);
+  else if (activeIntroducer !== 'all') chips.push(['introducer', 'Introducer: ' + introducerLabel(introducerById[activeIntroducer])]);
+  return chips;
+}
+
+function renderFilterBar() {
+  const el = document.getElementById('filterBar');
+  if (!el) return;
+  const chips = activeFilterChips();
+  const pill = (on, onclick, inner) => `<button type="button" class="fpill${on ? ' on' : ''}" onclick="${onclick}">${inner}</button>`;
+  el.innerHTML = `
+    <div class="fbar">
+      <div class="seg" role="group" aria-label="Job status">
+        ${STATUS_FILTERS.map(([key, label, ic]) => `
+          <button type="button" class="${activeFilter === key ? 'on' : ''}" onclick="setFilter('${key}')">
+            ${ic ? (['urgent','elevated','standard','complete','low'].includes(ic) ? dot(ic) : icon(ic, 14)) : ''}${label}
+            <span class="seg-n">${statusCount(key)}</span>
+          </button>`).join('')}
+      </div>
+      <div class="fwrap">
+        <button type="button" class="fbtn${filterOpen ? ' open' : ''}${chips.length ? ' has' : ''}" onclick="toggleFilters(event)" aria-expanded="${filterOpen}">
+          ${icon('filter', 15)}Filters${chips.length ? `<span class="fbadge">${chips.length}</span>` : ''}
+        </button>
+        <div class="fpop" ${filterOpen ? '' : 'hidden'} onclick="event.stopPropagation()">
+          <div class="fgroup"><div class="flabel">Urgency</div><div class="fpills">
+            ${URGENCY_FILTERS.map(([k, l, ic]) => pill(activeUrgency === k, `setUrgency('${k}')`, (ic ? dot(ic) : '') + l)).join('')}
+          </div></div>
+          <div class="fgroup"><div class="flabel">Reports <span>(allocated jobs)</span></div><div class="fpills">
+            ${REPORT_FILTERS.map(([k, l]) => pill(activeReports === k, `setReports('${k}')`, l)).join('')}
+          </div></div>
+          <div class="fgroup"><div class="flabel">Introducer</div>
+            <select class="form-control" onchange="setIntroducer(this.value)">
+              <option value="all">All introducers</option>
+              <option value="none" ${activeIntroducer === 'none' ? 'selected' : ''}>Direct (no introducer)</option>
+              ${introducerList.map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}
+            </select></div>
+          <div class="ffoot"><button type="button" class="flink" onclick="clearFilters()" ${chips.length ? '' : 'disabled'}>Clear filters</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="toggleFilters(event)">Done</button></div>
+        </div>
+      </div>
+      ${chips.map(([key, text]) => `<span class="fchip">${escapeHtml(text)}<button type="button" aria-label="Remove filter" onclick="clearOne('${key}')">&times;</button></span>`).join('')}
+      <span class="fhint">Shift-click column headers to sort by several</span>
+    </div>`;
+  // Keep the popover on screen: if it would run off the right edge, line it up with the button's right edge instead.
+  if (filterOpen) {
+    const pop = el.querySelector('.fpop');
+    if (pop && pop.getBoundingClientRect().right > window.innerWidth - 12) { pop.style.left = 'auto'; pop.style.right = '0'; }
+  }
+}
+
+function toggleFilters(ev) {
+  if (ev) ev.stopPropagation();
+  filterOpen = !filterOpen;
+  renderFilterBar();
+}
+
+function setFilter(filter) { activeFilter = filter; renderTable(); }
+function setUrgency(urgency) { activeUrgency = urgency; renderTable(); }
+function setReports(value) { activeReports = value; renderTable(); }
+
+function clearOne(key) {
+  if (key === 'urgency') activeUrgency = 'all';
+  if (key === 'reports') activeReports = 'all';
+  if (key === 'introducer') activeIntroducer = 'all';
   renderTable();
 }
 
-function setUrgency(urgency, btn) {
-  activeUrgency = urgency;
-  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function clearFilters() {
+  activeUrgency = 'all'; activeReports = 'all'; activeIntroducer = 'all';
   renderTable();
 }
+
+document.addEventListener('click', (e) => {
+  if (filterOpen && !e.target.closest('.fwrap')) { filterOpen = false; renderFilterBar(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && filterOpen) { filterOpen = false; renderFilterBar(); }
+});
 
 // Who the job is for: the billing contact (form jobs) or the end client (imported jobs)
 function jobName(j) {
   return j.billing_contact_name || j.end_client_name || '';
-}
-
-function setReports(value, btn) {
-  activeReports = value;
-  btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTable();
 }
 
 function setSort(key, ev) {

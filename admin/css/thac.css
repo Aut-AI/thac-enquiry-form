@@ -604,6 +604,49 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* ============================================================
+   COMPACT FILTER TOOLBAR (jobs page): status segments + Filters popover
+   ============================================================ */
+.fbar { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 3px; gap: 2px;
+  max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.seg button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; font-family: inherit;
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted); padding: 6px 11px; border-radius: 9px; cursor: pointer;
+  white-space: nowrap; transition: background .15s, color .15s; }
+.seg button:hover { color: var(--green-dark); }
+.seg button.on { background: var(--white); color: var(--green-dark); font-weight: 600; box-shadow: 0 1px 3px rgba(26,58,42,.14); }
+.seg-n { font-size: 11px; font-weight: 600; color: var(--text-muted); background: rgba(26,58,42,.07); border-radius: 999px; padding: 1px 7px; }
+.seg button.on .seg-n { background: var(--green-pale); color: var(--green-dark); }
+.fwrap { position: relative; }
+.fbtn { display: inline-flex; align-items: center; gap: 7px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--white); color: var(--green-dark); border-radius: 10px; padding: 7px 13px; }
+.fbtn:hover, .fbtn.open { background: var(--green-pale); border-color: var(--green-light); }
+.fbtn.has { border-color: var(--green-light); }
+.fbadge { background: var(--green-dark); color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+.fpop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 360px; max-width: calc(100vw - 32px);
+  background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+  box-shadow: 0 16px 40px rgba(26,58,42,.18); }
+.fpop[hidden] { display: none; }
+.fgroup { margin-bottom: 14px; }
+.flabel { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 7px; }
+.flabel span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.fpills { display: flex; flex-wrap: wrap; gap: 6px; }
+.fpill { display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--white); color: var(--text-muted); border-radius: 999px; padding: 5px 12px; }
+.fpill:hover, .fpill.on { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
+.fpill.on { font-weight: 600; }
+.fpop select.form-control { width: 100%; }
+.ffoot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--border); }
+.flink { border: 0; background: none; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--green-mid); cursor: pointer; padding: 0; }
+.flink:disabled { color: var(--text-muted); opacity: .5; cursor: default; }
+.fchip { display: inline-flex; align-items: center; gap: 4px; background: var(--green-pale); color: var(--green-dark); border: 1px solid var(--green-light);
+  border-radius: 999px; padding: 4px 6px 4px 11px; font-size: 12px; font-weight: 600; }
+.fchip button { border: 0; background: none; color: var(--green-dark); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 5px; border-radius: 999px; }
+.fchip button:hover { background: rgba(26,58,42,.12); }
+.fhint { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+@media (max-width: 1100px) { .fhint { display: none; } }
+@media (max-width: 560px) { .fpop { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; } }
+
+/* ============================================================
    DETAIL PAGE
    ============================================================ */
 .detail-header {
