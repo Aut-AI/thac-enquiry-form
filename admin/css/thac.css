@@ -73,6 +73,14 @@ a { text-decoration: none; color: inherit; }
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
+.logo-tile {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: #f4f1e8; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.logo-tile img { width: 100%; height: auto; display: block; }
+
 .sidebar-logo .logo-name {
   font-size: 18px;
   font-weight: 700;
@@ -814,20 +822,22 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
 
+.login-logo .logo-circle img { width: 100%; height: auto; display: block; }
 .login-logo {
   text-align: center;
   margin-bottom: 32px;
 }
 
 .login-logo .logo-circle {
-  width: 56px;
-  height: 56px;
-  background: var(--green-mid);
-  border-radius: 14px;
+  width: 72px;
+  height: 72px;
+  padding: 8px;
+  background: #f4f1e8;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
   margin-bottom: 12px;
 }
 

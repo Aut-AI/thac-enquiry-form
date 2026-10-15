@@ -371,7 +371,7 @@ function renderSidebar(activePage) {
       <div class="sidebar-logo">
         <div style="display:flex;align-items:center;">
           <div style="display:flex;align-items:center;gap:8px;">
-            ${brandMark(18)}
+            <span class="logo-tile"><img src="img/logo-tree.png" alt="" width="40" height="34"></span>
             <div>
               <div class="logo-name">THAC</div>
               <div class="logo-sub">Heaps Arboriculture</div>
@@ -487,6 +487,14 @@ async function requireAdmin() {
     return false;
   }
 }
+
+// Browser-tab icon for every admin page
+(function () {
+  if (typeof document === 'undefined' || document.querySelector('link[rel~="icon"]')) return;
+  const l = document.createElement('link');
+  l.rel = 'icon'; l.type = 'image/png'; l.href = 'img/favicon.png';
+  document.head.appendChild(l);
+})();
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
