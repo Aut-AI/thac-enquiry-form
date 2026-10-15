@@ -54,6 +54,9 @@ const ICON_PATHS = {
   chevronUp: '<polyline points="5.5 15.5 12 9 18.5 15.5"/>',
   chevronDown: '<polyline points="5.5 8.5 12 15 18.5 8.5"/>',
   filter: '<path d="M4 5.5h16l-6.2 7.3v5.2l-3.6 1.8v-7Z"/>',
+  panelCollapse: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><line x1="9.5" y1="4.5" x2="9.5" y2="19.5"/><polyline points="16 9.5 13.5 12 16 14.5"/>',
+  panelExpand: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><line x1="9.5" y1="4.5" x2="9.5" y2="19.5"/><polyline points="13 9.5 15.5 12 13 14.5"/>',
+  logOut: '<path d="M9.5 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h3.5"/><polyline points="14.5 8 19 12 14.5 16"/><line x1="19" y1="12" x2="9.5" y2="12"/>',
 };
 
 function icon(name, size = 16) {
@@ -355,8 +358,12 @@ function renderSidebar(activePage) {
       btn.setAttribute('aria-label', 'Open menu');
       topbar.insertBefore(btn, topbar.firstChild);
     }
+    // Icon-only mode shows no labels, so give each link a tooltip
+    document.querySelectorAll('.sidebar .nav-item[data-page]').forEach(a => { a.title = a.textContent.trim(); });
+    syncCollapseButton();
     refreshSidebarUser();
   }, 0);
+  try { document.documentElement.classList.toggle('sb-collapsed', localStorage.getItem('thac_sidebar') === 'collapsed'); } catch (e) { /* storage blocked */ }
 
   return `
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
@@ -405,6 +412,7 @@ function renderSidebar(activePage) {
         </a>
       </nav>
       <div class="sidebar-footer">
+        <button class="sidebar-collapse" id="sidebarCollapse" onclick="toggleSidebarCollapse()"></button>
         <div class="user-info">
           <div class="user-avatar" id="sidebarAvatar">${initials}</div>
           <div>
@@ -412,7 +420,7 @@ function renderSidebar(activePage) {
             <div class="user-role" id="sidebarUserRole">&nbsp;</div>
           </div>
         </div>
-        <button class="btn-logout" onclick="logout()">Sign Out</button>
+        <button class="btn-logout" onclick="logout()" title="Sign Out"><span class="lo-ico">${icon('logOut', 15)}</span><span class="lo-txt">Sign Out</span></button>
       </div>
     </aside>
   `;
@@ -488,6 +496,25 @@ function toggleSidebar() {
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+// Desktop only: shrink the sidebar to an icon rail and back. Remembered per browser.
+function syncCollapseButton() {
+  const btn = document.getElementById('sidebarCollapse');
+  if (!btn) return;
+  const collapsed = document.documentElement.classList.contains('sb-collapsed');
+  btn.innerHTML = `${icon(collapsed ? 'panelExpand' : 'panelCollapse', 17)}<span class="sc-txt">Collapse</span>`;
+  btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  btn.setAttribute('aria-label', btn.title);
+  btn.setAttribute('aria-expanded', String(!collapsed));
+}
+
+function toggleSidebarCollapse() {
+  const collapsed = document.documentElement.classList.toggle('sb-collapsed');
+  try { localStorage.setItem('thac_sidebar', collapsed ? 'collapsed' : 'expanded'); } catch (e) { /* storage blocked */ }
+  syncCollapseButton();
+  // Maps and wide tables re-measure once the width change has finished
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 260);
 }
 
 // ============================================================
@@ -609,7 +636,11 @@ function sortTh(label, key, sort, handler = 'setSort') {
   const idx = levels.findIndex(l => l.key === key);
   const cls = idx >= 0 ? ` sorted-${levels[idx].dir}` : '';
   const badge = idx >= 0 && levels.length > 1 ? `<sup class="sort-level">${idx + 1}</sup>` : '';
-  return `<th class="sortable${cls}" onclick="${handler}('${key}', event)" title="Click to sort by ${label}. Shift-click to add it as another sort level.">${label}${badge}</th>`;
+  // The last word and the arrow share a nowrap span, so a wrapped header never leaves the arrow alone on a line
+  const words = String(label).split(' ');
+  const last = words.pop();
+  const head = words.length ? words.join(' ') + ' ' : '';
+  return `<th class="sortable${cls}" onclick="${handler}('${key}', event)" title="Click to sort by ${label}. Shift-click to add it as another sort level."><span class="th-text">${head}<span class="th-last">${last}${badge}</span></span></th>`;
 }
 
 function isAddLevel(ev) {

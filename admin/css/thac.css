@@ -230,11 +230,28 @@ a { text-decoration: none; color: inherit; }
   background: rgba(255,255,255,0.15);
   color: white;
 }
+.btn-logout { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-logout .lo-ico { display: inline-flex; }
+
+.sidebar-collapse {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; margin-bottom: 10px;
+  background: none; border: 0; border-radius: 6px;
+  color: rgba(255,255,255,0.6); font-family: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.sidebar-collapse:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.sidebar-collapse:focus-visible, .nav-item:focus-visible, .btn-logout:focus-visible { outline: 2px solid #8fc4a0; outline-offset: -2px; }
+.sidebar-collapse svg { flex-shrink: 0; }
+
+/* Tables scroll inside their card rather than pushing the page wide */
+#jobsTable, #clientsTable, #urgencyDashboard { overflow-x: auto; }
 
 /* Main content */
 .main-content {
   margin-left: var(--sidebar-w);
   flex: 1;
+  min-width: 0;            /* lets wide tables scroll inside their card instead of stretching the page */
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -398,7 +415,18 @@ a { text-decoration: none; color: inherit; }
 /* Sortable column headers (see sortRows / sortTh in thac.js) */
 .data-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .data-table th.sortable:hover { color: var(--text); }
-.data-table th.sortable::after {
+
+/* Compact variant for wide tables (jobs list, dashboard): tighter cells, headers may wrap */
+.data-table.compact th { padding: 9px 8px; font-size: 10.5px; letter-spacing: 0.3px; line-height: 1.25; vertical-align: bottom; }
+.data-table.compact td { padding: 10px 8px; font-size: 13px; }
+.data-table.compact th.sortable { white-space: normal; }
+.data-table.compact th.sortable .th-last::after { margin-left: 4px; }
+.data-table.compact th:first-child, .data-table.compact td:first-child { padding-left: 14px; }
+.data-table.compact th:last-child, .data-table.compact td:last-child { padding-right: 14px; }
+.data-table.compact .badge, .data-table.compact .pill { padding-left: 8px; padding-right: 8px; }
+
+.data-table th .th-last { white-space: nowrap; }
+.data-table th.sortable .th-last::after {
   content: '';
   display: inline-block;
   margin-left: 6px;
@@ -408,8 +436,8 @@ a { text-decoration: none; color: inherit; }
   border-top: 5px solid currentColor;
   opacity: 0.25;
 }
-.data-table th.sorted-asc::after  { border-top: 0; border-bottom: 5px solid currentColor; opacity: 1; }
-.data-table th.sorted-desc::after { opacity: 1; }
+.data-table th.sorted-asc .th-last::after  { border-top: 0; border-bottom: 5px solid currentColor; opacity: 1; }
+.data-table th.sorted-desc .th-last::after { opacity: 1; }
 .data-table th .sort-level { margin-left: 3px; font-size: 10px; font-weight: 700; }
 .sort-hint { font-size: 12px; color: var(--text-muted, #6b7280); padding: 6px 2px 8px; }
 .data-table td.tick-cell { text-align: center; }
@@ -866,6 +894,32 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   padding: 2px 4px;
   margin-left: auto;
 }
+
+/* ---- Collapsible sidebar: desktop only; phones keep the slide-out menu ---- */
+@media (min-width: 769px) {
+  :root.sb-collapsed { --sidebar-w: 68px; }
+  .sidebar { transition: width .2s ease; }
+  .main-content { transition: margin-left .2s ease; }
+  .sidebar { overflow-x: hidden; }
+
+  .sb-collapsed .sidebar-logo { padding: 18px 0 14px; }
+  .sb-collapsed .sidebar-logo > div, .sb-collapsed .sidebar-logo > div > div { justify-content: center; gap: 0 !important; }
+  .sb-collapsed .sidebar-logo .logo-name, .sb-collapsed .sidebar-logo .logo-sub { display: none; }
+
+  .sb-collapsed .nav-section { font-size: 0; height: 0; padding: 0; margin: 10px 18px; border-top: 1px solid rgba(255,255,255,0.14); }
+  .sb-collapsed .nav-item { font-size: 0; justify-content: center; gap: 0; padding: 12px 0; }
+  .sb-collapsed .nav-item .nav-icon { width: 20px; height: 20px; opacity: 1; }
+  .sb-collapsed .nav-item .nav-badge { display: none; }
+
+  .sb-collapsed .sidebar-footer { padding: 12px 8px; }
+  .sb-collapsed .sidebar-collapse { justify-content: center; padding: 8px 0; }
+  .sb-collapsed .sidebar-collapse .sc-txt { display: none; }
+  .sb-collapsed .user-info { justify-content: center; margin-bottom: 8px; }
+  .sb-collapsed .user-info > div:not(.user-avatar) { display: none; }
+  .sb-collapsed .btn-logout { padding: 8px 0; }
+  .sb-collapsed .btn-logout .lo-txt { display: none; }
+}
+@media (max-width: 768px) { .sidebar-collapse { display: none; } }
 
 @media (max-width: 1100px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
