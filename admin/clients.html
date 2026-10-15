@@ -12,6 +12,7 @@
 
 <script src="js/supabase.js"></script>
 <script src="js/thac.js"></script>
+<script src="js/entry.js"></script>
 <script>
 requireAuth();
 
@@ -34,6 +35,8 @@ async function init() {
           <span style="display:flex;">${icon('search', 16)}</span>
           <input type="text" placeholder="Search by name, email, company, introducer..." oninput="handleSearch(this.value)">
         </div>
+        <button class="btn btn-secondary btn-sm" onclick="openNewJobModal()">${icon('plus', 14)}New job</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewCustomerModal()">${icon('plus', 14)}New customer</button>
       </div>
       <div class="page-body">
         <div class="card">

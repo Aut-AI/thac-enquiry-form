@@ -12,6 +12,7 @@
 
 <script src="js/supabase.js"></script>
 <script src="js/thac.js"></script>
+<script src="js/entry.js"></script>
 <script>
 requireAuth();
 
@@ -31,6 +32,7 @@ async function init() {
       <div class="topbar">
         <a href="clients.html" class="btn btn-secondary btn-sm">← Back</a>
         <div class="topbar-title" id="pageTitle">Client Detail</div>
+        <button class="btn btn-primary btn-sm" onclick="openNewJobModal({ clientId })">${icon('plus', 14)}Add job</button>
       </div>
       <div class="page-body" id="pageBody">
         <div class="loading"><div class="spinner"></div><br>Loading client...</div>
