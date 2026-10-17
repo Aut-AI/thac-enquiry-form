@@ -285,9 +285,40 @@ function dispatchGlyph(state) {
   return m.glyph ? icon(m.glyph, 12) : dot(m.tone);
 }
 
+// What happened before each status and what has to happen next. Shown as a hover
+// helper on any element carrying data-status (badges, filter tabs, dashboard rows).
+// Keep in step with help/job-journey.html.
+const STATUS_HELP = {
+  pending_approval: { label: 'Pending approval',
+    before: 'The job was created from a website enquiry, added with New job, or a Stage 2 job was activated.',
+    next: 'Prepare the Axiscape database and report template, then press Approve to Map.' },
+  waiting_for_plans: { label: 'Waiting for plans',
+    before: 'A Stage 2 job was created, or the job was started while waiting on drawings. The SLA clock is not running.',
+    next: 'When the plans arrive, press Plans Received, Activate Job. The SLA starts and the job moves to Pending approval.' },
+  red: { label: 'Unallocated',
+    before: 'The office approved it to the map. Surveyor pay was worked out.',
+    next: 'A surveyor in range claims it in the app, or you allocate it to one. Remove from Map sends it back to Pending.' },
+  orange: { label: 'Claimed',
+    before: 'A surveyor claimed it (or accepted an allocation) and agreed to the NDA.',
+    next: 'The surveyor visits the site and taps Mark Field Data Uploaded. Unassign Surveyor puts it back on the map.' },
+  yellow: { label: 'Attended',
+    before: 'The surveyor visited and uploaded the field data.',
+    next: 'Work through the Report checklist on the job page, then tick Report finalised and sent.' },
+  green: { label: 'Report sent',
+    before: 'The office ticked Report finalised and sent. The job left the surveyor app.',
+    next: 'Record the invoice (both on a 50/50 job). It archives itself once fully invoiced.' },
+  archived: { label: 'Archived',
+    before: 'The report was sent and the job fully invoiced, or the customer declined the quote.',
+    next: 'Nothing, unless an invoice is still to be marked paid.' },
+};
+
+function statusHelpAttr(state) {
+  return STATUS_HELP[state] ? ` data-status="${state}" tabindex="0"` : '';
+}
+
 function dispatchBadge(state) {
   const m = getDispatchMeta(state);
-  return `<span class="badge ${m.cls}">${dispatchGlyph(state)}${m.label}</span>`;
+  return `<span class="badge ${m.cls}"${statusHelpAttr(state)}>${dispatchGlyph(state)}${m.label}</span>`;
 }
 
 function urgencyColorBadge(color) {
@@ -357,6 +388,16 @@ function renderSidebar(activePage) {
       btn.setAttribute('onclick', 'toggleSidebar()');
       btn.setAttribute('aria-label', 'Open menu');
       topbar.insertBefore(btn, topbar.firstChild);
+    }
+    if (topbar && !topbar.querySelector('.help-btn')) {
+      const help = document.createElement('button');
+      help.className = 'help-btn';
+      help.type = 'button';
+      help.innerHTML = icon('helpCircle', 19);
+      help.title = 'How jobs move through the system';
+      help.setAttribute('aria-label', 'Help: how jobs move through the system');
+      help.setAttribute('onclick', 'openHelp()');
+      topbar.appendChild(help);
     }
     // Icon-only mode shows no labels, so give each link a tooltip
     document.querySelectorAll('.sidebar .nav-item[data-page]').forEach(a => { a.title = a.textContent.trim(); });
@@ -505,6 +546,69 @@ function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('active');
 }
+
+// ============================================================
+// HELP: the job journey guide in a pop-up, and status hover helpers
+// ============================================================
+
+function openHelp(anchor) {
+  closeHelp();
+  const o = document.createElement('div');
+  o.id = 'helpModal';
+  o.className = 'help-overlay';
+  o.innerHTML = `
+    <div class="help-panel" role="dialog" aria-modal="true" aria-label="How jobs move through the system">
+      <div class="help-bar">
+        <span>How jobs move through the system</span>
+        <span style="display:flex;gap:8px;align-items:center;">
+          <a href="help/job-journey.html${anchor ? '#' + anchor : ''}" target="_blank" class="btn btn-secondary btn-sm">Open in new tab</a>
+          <button type="button" class="help-close" onclick="closeHelp()" aria-label="Close help">${icon('x', 18)}</button>
+        </span>
+      </div>
+      <iframe src="help/job-journey.html${anchor ? '#' + anchor : ''}" title="Job journey guide"></iframe>
+    </div>`;
+  o.addEventListener('mousedown', (e) => { if (e.target === o) closeHelp(); });
+  document.body.appendChild(o);
+  o.querySelector('.help-close').focus();
+}
+
+function closeHelp() {
+  document.getElementById('helpModal')?.remove();
+}
+
+(function () {
+  if (typeof document === 'undefined') return;
+  let tip = null, current = null;
+  function show(el) {
+    const h = STATUS_HELP[el.dataset.status];
+    if (!h) return;
+    if (!tip) { tip = document.createElement('div'); tip.className = 'status-tip'; tip.setAttribute('role', 'tooltip'); tip.id = 'statusTip'; document.body.appendChild(tip); }
+    current = el;
+    tip.innerHTML = `<div class="st-h">${h.label}</div>
+      <div class="st-row"><span>Before</span>${h.before}</div>
+      <div class="st-row"><span>Next</span>${h.next}</div>`;
+    tip.style.display = 'block';
+    el.setAttribute('aria-describedby', 'statusTip');
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, hgt = tip.offsetHeight;
+    let left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    let top = r.bottom + 8;
+    if (top + hgt > window.innerHeight - 8) top = r.top - hgt - 8;
+    tip.style.left = left + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  }
+  function hide(el) {
+    if (el && el !== current) return;
+    if (tip) tip.style.display = 'none';
+    current?.removeAttribute('aria-describedby');
+    current = null;
+  }
+  document.addEventListener('mouseover', (e) => { const el = e.target.closest?.('[data-status]'); if (el && el !== current) show(el); });
+  document.addEventListener('mouseout', (e) => { const el = e.target.closest?.('[data-status]'); if (el && !el.contains(e.relatedTarget)) hide(el); });
+  document.addEventListener('focusin', (e) => { const el = e.target.closest?.('[data-status]'); if (el) show(el); });
+  document.addEventListener('focusout', (e) => { const el = e.target.closest?.('[data-status]'); if (el) hide(el); });
+  document.addEventListener('scroll', () => hide(), true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hide(); closeHelp(); } });
+})();
 
 // Desktop only: shrink the sidebar to an icon rail and back. Remembered per browser.
 function syncCollapseButton() {

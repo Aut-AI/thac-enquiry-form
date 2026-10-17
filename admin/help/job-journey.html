@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="../img/favicon.png">
+<title>THAC Job Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+/* Layout: one reading column; a status rail at the top (the same coloured dots as the CRM), then one row per status. */
+:root {
+  --bg: #f4f7f5; --surface: #ffffff; --surface-2: #eef3f0; --line: #d6e1da;
+  --ink: #17251d; --muted: #5d6b63; --brand: #1a3a2a; --brand-2: #2d5a3d; --brand-tint: #e3efe7;
+  --pending: #6b7280; --waiting: #7c6aa8; --red: #c0392b; --orange: #c8773a; --yellow: #b8930f; --green: #2f7d4a; --archived: #94a3b8;
+  --note-bg: #fbf3e7; --note-ink: #7a4a17;
+  --display: "Fraunces", Georgia, serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111a15; --surface: #18241d; --surface-2: #1f2e25; --line: #2c3d33;
+  --ink: #e6efe9; --muted: #9fb1a6; --brand: #a8d5b6; --brand-2: #8cc79f; --brand-tint: #22382b;
+  --pending: #9aa3af; --waiting: #ab9bd6; --red: #e8705f; --orange: #e59a5e; --yellow: #e3c04a; --green: #6cc28a; --archived: #8391a6;
+  --note-bg: #2e2416; --note-ink: #f0c48d; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #111a15; --surface: #18241d; --surface-2: #1f2e25; --line: #2c3d33;
+  --ink: #e6efe9; --muted: #9fb1a6; --brand: #a8d5b6; --brand-2: #8cc79f; --brand-tint: #22382b;
+  --pending: #9aa3af; --waiting: #ab9bd6; --red: #e8705f; --orange: #e59a5e; --yellow: #e3c04a; --green: #6cc28a; --archived: #8391a6;
+  --note-bg: #2e2416; --note-ink: #f0c48d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--brand-2); }
+
+header { padding-top: 40px; display: grid; gap: 10px; max-width: 720px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-2); }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.08; color: var(--brand); }
+.lede { color: var(--muted); font-size: 16.5px; max-width: 62ch; }
+
+/* status rail */
+.rail-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 20px 16px; }
+.rail { display: grid; grid-template-columns: repeat(6, minmax(118px, 1fr)); min-width: 760px; position: relative; }
+.rail::before { content: ""; position: absolute; left: 7%; right: 7%; top: 13px; border-top: 2px solid var(--line); }
+.stop { position: relative; display: grid; justify-items: center; text-align: center; gap: 6px; padding: 0 6px; text-decoration: none; color: inherit; }
+.stop .dot { width: 26px; height: 26px; border-radius: 999px; border: 4px solid var(--surface); box-shadow: 0 0 0 1.5px var(--line); }
+.stop b { font-size: 14px; }
+.stop span { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.stop:hover b { text-decoration: underline; }
+.branch { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted); }
+.branch i { font-style: normal; display: inline-flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 600; }
+.mini { width: 11px; height: 11px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
+
+.d-pending { background: var(--pending); } .d-waiting { background: var(--waiting); } .d-red { background: var(--red); }
+.d-orange { background: var(--orange); } .d-yellow { background: var(--yellow); } .d-green { background: var(--green); } .d-archived { background: var(--archived); }
+
+/* sections */
+.sec-head { display: grid; gap: 6px; max-width: 720px; }
+h2 { font-family: var(--display); font-weight: 600; font-size: clamp(22px, 3vw, 28px); color: var(--brand); }
+.sec-head p { color: var(--muted); }
+
+.start { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.box h3 { font-size: 16px; }
+ol.steps, ul.plain { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; }
+ul.plain { list-style: disc; }
+
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: grid; grid-template-columns: 210px minmax(0, 1fr); overflow: hidden; scroll-margin-top: 16px; }
+.stage + .stage { margin-top: 12px; }
+.stage-id { padding: 18px 18px; background: var(--surface-2); border-right: 1px solid var(--line); display: grid; gap: 8px; align-content: start; }
+.stage-id .tag { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
+.stage-id .dot { width: 14px; height: 14px; border-radius: 999px; }
+.stage-id small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.stage-body { padding: 16px 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 22px; }
+.col h4 { margin: 0 0 6px; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.col p, .col li { font-size: 14px; }
+.col ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.col .btn { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 6px; background: var(--brand-tint); color: var(--brand); white-space: nowrap; }
+.mail { display: block; font-size: 13px; color: var(--muted); }
+.mail::before { content: "Email: "; font-weight: 700; color: var(--ink); }
+.back { grid-column: 1 / -1; font-size: 13px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 10px; }
+.back b { color: var(--ink); }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 640px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; background: var(--surface-2); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.yes { color: var(--green); font-weight: 600; }
+.no { color: var(--muted); }
+td.num { font-variant-numeric: tabular-nums; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.note { background: var(--note-bg); color: var(--note-ink); border-radius: 12px; padding: 12px 16px; font-size: 14px; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 860px) {
+  .stage { grid-template-columns: 1fr; }
+  .stage-id { border-right: 0; border-bottom: 1px solid var(--line); }
+  .stage-body { grid-template-columns: 1fr; }
+  .start, .two { grid-template-columns: 1fr; }
+}
+a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 3px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Heaps Arboriculture · how a job moves through the CRM</p>
+    <h1>The job journey, status by status</h1>
+    <p class="lede">Every job carries one dispatch status, shown as a coloured dot on the jobs list, the dashboard and the live map. This page walks through each status: what it means, what moves the job on, who gets an email, and what the surveyors can see.</p>
+  </header>
+
+  <section aria-label="Status overview">
+    <div class="rail-wrap">
+      <div class="rail">
+        <a class="stop" href="#pending"><span class="dot d-pending"></span><b>Pending approval</b><span>Office preparing the job</span></a>
+        <a class="stop" href="#red"><span class="dot d-red"></span><b>Unallocated</b><span>Live on the map, waiting for a surveyor</span></a>
+        <a class="stop" href="#orange"><span class="dot d-orange"></span><b>Claimed</b><span>A surveyor has taken it</span></a>
+        <a class="stop" href="#yellow"><span class="dot d-yellow"></span><b>Attended</b><span>Site visited, data uploaded</span></a>
+        <a class="stop" href="#green"><span class="dot d-green"></span><b>Report sent</b><span>Report out, invoicing</span></a>
+        <a class="stop" href="#archived"><span class="dot d-archived"></span><b>Archived</b><span>Finished and filed</span></a>
+      </div>
+      <div class="branch">
+        <i><span class="mini d-waiting"></span>Waiting for plans</i> A Stage 2 (or plans-dependent) job parks here, then joins at Pending approval once the plans arrive.
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>How a job starts</h2>
+      <p>There are two ways in. Either way the job appears straight away in the CRM as Pending approval.</p></div>
+    <div class="start">
+      <div class="box">
+        <h3>A customer uses the website form</h3>
+        <ol class="steps">
+          <li>The customer fills in the enquiry form. The enquiry and its job are created together.</li>
+          <li>You send the quote from the CRM. The customer gets the price by email.</li>
+          <li>The customer accepts with one click, then fills in their full details. The job shows <b>Details Received</b>.</li>
+          <li>If they decline instead, the job is archived and you get an email with their reason.</li>
+        </ol>
+        <span class="mail">to you on a new enquiry, on acceptance and on decline; to the customer with the quote and a "confirm your details" link.</span>
+      </div>
+      <div class="box">
+        <h3>You add it yourself</h3>
+        <ol class="steps">
+          <li>Use <b>New job</b> on the Jobs or Clients page, or <b>Add job</b> on a customer's page.</li>
+          <li>Pick an existing customer or add a new one in the same form. Customers are matched by email, so nobody is added twice.</li>
+          <li>Choose the survey type, site postcode and deadline. The urgency and SLA date are worked out for you.</li>
+          <li>Start it as Pending approval, or as Waiting for plans if you're still waiting on drawings.</li>
+        </ol>
+        <span class="mail">to you: "Job created, ready for preparation".</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Each status in turn</h2>
+      <p>Who does what at every stage, and what happens on its own.</p></div>
+
+    <article class="stage" id="waiting">
+      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Waiting for plans</span>
+        <small>Parked until the architect's revised plans arrive. Not on any map, and the SLA clock isn't running.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Typically</h4><p>A Stage 2 BS5837 job (AIA, AMS, TPP), made from the Stage 1 job with <span class="btn">Create Stage 2 Job</span>.</p></div>
+        <div class="col"><h4>Moves on when</h4><p>Plans arrive and you press <span class="btn">Plans Received, Activate Job</span>.</p></div>
+        <div class="col"><h4>What happens</h4><ul><li>The SLA clock starts from today.</li><li>The job moves to Pending approval.</li></ul></div>
+      </div>
+    </article>
+
+    <article class="stage" id="pending">
+      <div class="stage-id"><span class="tag"><span class="dot d-pending"></span>Pending approval</span>
+        <small>The job exists, but surveyors can't see it yet.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Office does</h4><ul><li>Prepare the Axiscape survey database.</li><li>Draft the initial report template.</li><li>Check the site address, trees and fee.</li></ul></div>
+        <div class="col"><h4>Moves on when</h4><p>You press <span class="btn">Approve to Map</span> on the job page.</p></div>
+        <div class="col"><h4>What happens</h4><ul><li>The surveyor's pay is worked out (hours × their rate).</li><li>A red dot appears on the surveyor map.</li></ul><span class="mail">to you, confirming the job is live.</span></div>
+      </div>
+    </article>
+
+    <article class="stage" id="red">
+      <div class="stage-id"><span class="tag"><span class="dot d-red"></span>Unallocated</span>
+        <small>Live on the map. Any active surveyor whose coverage area includes the site can see and claim it.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Surveyors see</h4><p>The job on the app's map and its Available list, if the site is within their travel radius.</p></div>
+        <div class="col"><h4>Moves on when</h4><ul><li>A surveyor taps Claim in the app and accepts the NDA, or</li><li>you <span class="btn">Allocate to Surveyor</span> with a time limit and they accept.</li></ul></div>
+        <div class="col"><h4>What happens</h4><p>The job turns orange and leaves everyone else's map.</p><span class="mail">to you when it's claimed.</span></div>
+        <p class="back"><b>Going back:</b> <span class="btn">Remove from Map</span> returns the job to Pending approval.</p>
+      </div>
+    </article>
+
+    <article class="stage" id="orange">
+      <div class="stage-id"><span class="tag"><span class="dot d-orange"></span>Claimed</span>
+        <small>One surveyor owns the job and is arranging the visit.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Surveyor does</h4><ul><li>Agrees the survey date.</li><li>Visits the site.</li><li>Uploads photos and field data in the app.</li></ul></div>
+        <div class="col"><h4>Moves on when</h4><p>The surveyor taps <span class="btn">Mark Field Data Uploaded</span> in the app.</p></div>
+        <div class="col"><h4>What happens</h4><p>The job turns yellow.</p><span class="mail">to you: report finalisation needed.</span></div>
+        <p class="back"><b>Going back:</b> <span class="btn">Unassign Surveyor</span> returns the job to Unallocated, back on the map.</p>
+      </div>
+    </article>
+
+    <article class="stage" id="yellow">
+      <div class="stage-id"><span class="tag"><span class="dot d-yellow"></span>Attended</span>
+        <small>The site visit is done. The report is now with the office.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Office does</h4><p>Works down the job page's Report checklist:</p><ul><li>Axiscape DB prepared</li><li>Report drafted</li><li>Report finalised and sent</li></ul></div>
+        <div class="col"><h4>Also on the job page</h4><p><b>Report to generate</b> and <b>Report generated</b> tick-boxes. They feed the dashboard's Reports box and decide when Invoice 2 is due on a 50/50 job.</p></div>
+        <div class="col"><h4>Moves on when</h4><p>You tick <span class="btn">Report finalised and sent</span>.</p><span class="mail">to you, confirming, with a reminder to invoice.</span></div>
+      </div>
+    </article>
+
+    <article class="stage" id="green">
+      <div class="stage-id"><span class="tag"><span class="dot d-green"></span>Report sent</span>
+        <small>The report is out. The job leaves the surveyor's app. It's waiting on invoicing.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Office does</h4><p>Raise the invoice in QuickBooks, then record it on the job (see Invoicing below).</p></div>
+        <div class="col"><h4>Moves on when</h4><p>The job is fully invoiced: one invoice, or both on a 50/50 job.</p></div>
+        <div class="col"><h4>What happens</h4><p>It archives itself. This works in either order, so if you invoiced before the report went out, ticking "report sent" archives it.</p></div>
+      </div>
+    </article>
+
+    <article class="stage" id="archived">
+      <div class="stage-id"><span class="tag"><span class="dot d-archived"></span>Archived</span>
+        <small>Finished: report sent and fully invoiced, or the quote was declined.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Where it lives</h4><p>The <b>Archived</b> filter on the Jobs page. Hidden from the default list and every map.</p></div>
+        <div class="col"><h4>Payment</h4><p>Marking an invoice paid doesn't change the status. Archived jobs still show paid and unpaid invoices.</p></div>
+        <div class="col"><h4>Overdue</h4><p>An invoice unpaid after 30 days is flagged overdue on the job.</p></div>
+      </div>
+    </article>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Who sees the job, and where</h2>
+      <p>When a job is on each map.</p></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Status</th><th>Surveyor app: Available</th><th>Surveyor app: My Jobs</th><th>Your live map</th></tr></thead>
+      <tbody>
+        <tr><td><span class="mini d-waiting"></span> Waiting for plans</td><td class="no">No</td><td class="yes">Yes, if a surveyor is assigned</td><td class="yes">Yes</td></tr>
+        <tr><td><span class="mini d-pending"></span> Pending approval</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-red"></span> Unallocated</td><td class="yes">Yes, within each surveyor's area</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td><span class="mini d-orange"></span> Claimed</td><td class="no">No</td><td class="yes">Yes, the claiming surveyor</td><td class="yes">Yes</td></tr>
+        <tr><td><span class="mini d-yellow"></span> Attended</td><td class="no">No</td><td class="yes">Yes, the claiming surveyor</td><td class="yes">Yes</td></tr>
+        <tr><td><span class="mini d-green"></span> Report sent</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes, until archived</td></tr>
+        <tr><td><span class="mini d-archived"></span> Archived</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+      </tbody></table></div>
+    <p class="note">A job only plots on a map once it has coordinates. They come from the site postcode, and the job page looks them up if they're missing. A paused surveyor sees no available jobs.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Urgency and the SLA deadline</h2>
+      <p>Urgency comes from the deadline chosen on the form (or on New job). The SLA date is that many working days ahead, Monday to Friday.</p></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Urgency</th><th>Deadline</th><th>Surcharge on the quote</th></tr></thead>
+      <tbody>
+        <tr><td><span class="mini d-red"></span> Urgent</td><td class="num">3 working days</td><td class="num">£200</td></tr>
+        <tr><td><span class="mini d-orange"></span> Elevated</td><td class="num">5 working days</td><td class="num">£150</td></tr>
+        <tr><td><span class="mini d-yellow"></span> Standard</td><td class="num">10 working days</td><td class="num">£75</td></tr>
+        <tr><td><span class="mini d-pending"></span> Low</td><td class="num">15 working days or more</td><td class="num">As quoted</td></tr>
+      </tbody></table></div>
+    <div class="two">
+      <p class="note">Changing urgency on the job page restarts the SLA from today. That's also how an imported job gets an SLA for the first time.</p>
+      <p class="note">The dashboard's <b>Overdue</b> box counts jobs past their SLA date whose report hasn't been sent.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Invoicing</h2>
+      <p>Invoices are raised in QuickBooks. The CRM records them so the dashboard totals, overdue flags and archiving all work.</p></div>
+    <div class="two">
+      <div class="box">
+        <h3>Single invoice (the default)</h3>
+        <ul class="plain">
+          <li><b>Mark Invoiced</b> records one invoice for the agreed fee, dated today.</li>
+          <li><b>Custom Invoice</b> lets you type a different amount or date.</li>
+          <li><b>Mark Invoice Paid</b> records the payment date.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>50/50 split</h3>
+        <ul class="plain">
+          <li><b>Invoice 1</b>: surveyor cost, half the survey fee and any urgency fee.</li>
+          <li><b>Invoice 2</b>: the other half of the survey fee, once the report is generated. The CRM asks you to confirm if you raise it before then.</li>
+          <li>Each invoice is marked paid separately.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Switch between Single and 50/50 in the Financial section of the job page. The dashboard's <b>This month</b> and <b>This year</b> figures add up invoices raised (excluding VAT), not payments received.</p>
+  </section>
+
+  <footer>Taken from the THAC CRM as it works today. If a step here doesn't match what you see, tell Nick.</footer>
+</div>
+
+</body>
+</html>

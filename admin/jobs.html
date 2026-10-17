@@ -241,7 +241,7 @@ function renderFilterBar() {
     <div class="fbar">
       <div class="seg" role="group" aria-label="Job status">
         ${STATUS_FILTERS.map(([key, label, ic]) => `
-          <button type="button" class="${activeFilter === key ? 'on' : ''}" onclick="setFilter('${key}')">
+          <button type="button" class="${activeFilter === key ? 'on' : ''}" onclick="setFilter('${key}')"${key === 'all' ? '' : ` data-status="${key}"`}>
             ${ic ? (['urgent','elevated','standard','complete','low'].includes(ic) ? dot(ic) : icon(ic, 14)) : ''}${label}
             <span class="seg-n">${statusCount(key)}</span>
           </button>`).join('')}

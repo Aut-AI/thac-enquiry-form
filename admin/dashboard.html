@@ -56,17 +56,17 @@ async function init() {
           <div class="stat-card multi">
             <div class="stat-label">Dispatch</div>
             <div class="stat-rows">
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=pending_approval'">
+              <div class="stat-row" data-status="pending_approval" tabindex="0" onclick="window.location.href='jobs.html?dispatch=pending_approval'">
                 <span class="stat-row-label">${icon('clock', 12)}Pending approval</span><span class="stat-row-count" id="statPending">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=waiting_for_plans'">
+              <div class="stat-row" data-status="waiting_for_plans" tabindex="0" onclick="window.location.href='jobs.html?dispatch=waiting_for_plans'">
                 <span class="stat-row-label">${icon('clock', 12)}Waiting for plans</span><span class="stat-row-count" id="statWaiting">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=red'">
+              <div class="stat-row" data-status="red" tabindex="0" onclick="window.location.href='jobs.html?dispatch=red'">
                 <span class="stat-row-label">${dot('urgent')}Unallocated</span><span class="stat-row-count" id="statUnallocated">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=orange'">
+              <div class="stat-row" data-status="orange" tabindex="0" onclick="window.location.href='jobs.html?dispatch=orange'">
                 <span class="stat-row-label">${dot('elevated')}Claimed</span><span class="stat-row-count" id="statClaimed">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=yellow'">
+              <div class="stat-row" data-status="yellow" tabindex="0" onclick="window.location.href='jobs.html?dispatch=yellow'">
                 <span class="stat-row-label">${dot('standard')}Attended</span><span class="stat-row-count" id="statAttended">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=green'">
+              <div class="stat-row" data-status="green" tabindex="0" onclick="window.location.href='jobs.html?dispatch=green'">
                 <span class="stat-row-label">${dot('complete')}Report sent</span><span class="stat-row-count" id="statSent">—</span></div>
             </div>
           </div>
@@ -254,7 +254,7 @@ function dispatchBadge(state) {
     archived: [icon('archive', 12), 'Archived', 'badge-low'],
   };
   const [glyph, label, cls] = map[state] || ['', state || '—', 'badge-low'];
-  return `<span class="badge ${cls}">${glyph}${label}</span>`;
+  return `<span class="badge ${cls}"${statusHelpAttr(state)}>${glyph}${label}</span>`;
 }
 
 async function loadUrgencyDashboard() {
