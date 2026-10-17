@@ -51,6 +51,69 @@
   background: #fef9c3; color: #854d0e;
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
 }
+
+/* ---- Job page: compact label/value layout ---- */
+.jd .card { padding: 14px 18px; border-radius: 12px; }
+.jd .card-title { margin-bottom: 8px; font-size: 14px; min-height: 28px; }
+.jd .card-title .btn-sm { padding: 4px 10px; font-size: 12px; }
+.jd-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+.jd-main, .jd-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 1100px) { .jd-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.strip-t { background: var(--white); padding: 10px 14px; min-width: 0; }
+.strip-k { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 3px; }
+.strip-v { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.strip-v a { color: var(--green-mid); text-decoration: none; }
+.strip-v a:hover { text-decoration: underline; }
+.strip-v .muted { color: var(--text-muted); font-weight: 400; }
+.strip-t.hl .strip-v { color: var(--green-mid); font-size: 16px; }
+
+.kv { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
+.kv.one { grid-template-columns: 1fr; }
+.kv-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px solid #edf1ee; min-height: 30px; }
+.kv-row.full { grid-column: 1 / -1; }
+.kv-k { font-size: 12px; color: var(--text-muted); }
+.kv-v { font-size: 13.5px; color: var(--text); font-weight: 500; overflow-wrap: anywhere; }
+.kv-v a { color: var(--green-mid); }
+.kv-v .dim { color: var(--text-muted); font-weight: 400; }
+.kv-v .btn-sm { padding: 2px 9px; font-size: 11.5px; margin-left: 8px; }
+.kv-group { grid-column: 1 / -1; font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--green-mid); padding: 10px 0 2px; }
+.kv-group:first-child { padding-top: 0; }
+.kv-edit { grid-column: 1 / -1; padding: 6px 0 8px; border-bottom: 1px solid #edf1ee; }
+.jd .form-group { margin-bottom: 10px; }
+.jd .form-group label { font-size: 12px; margin-bottom: 4px; }
+.jd .form-control { padding: 7px 10px; font-size: 13.5px; }
+
+.blk { margin-top: 10px; padding-top: 10px; border-top: 1px solid #edf1ee; }
+.blk-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 26px; }
+.blk-k { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--green-mid); }
+.blk .btn-sm { padding: 3px 10px; font-size: 12px; }
+.blk-txt { font-size: 13px; line-height: 1.5; background: var(--bg); padding: 9px 11px; border-radius: 8px; white-space: pre-wrap; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { font-size: 11.5px; color: var(--text-muted); margin: -2px 0 10px; line-height: 1.4; }
+.seg2 { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; vertical-align: middle; }
+.seg2 button { border: 0; background: var(--white); font-family: inherit; font-size: 12px; font-weight: 500; color: var(--text-muted);
+  padding: 4px 11px; cursor: pointer; }
+.seg2 button.on { background: var(--green-dark); color: #fff; }
+
+.actions { display: flex; flex-direction: column; gap: 6px; }
+.actions .btn { padding: 8px 12px; font-size: 13px; }
+.chip-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+.chip-row small { font-weight: 400; opacity: .85; margin-left: auto; }
+.chip-row .btn { margin-left: auto; padding: 3px 9px; font-size: 11.5px; }
+.chip-row.warn { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+.chip-row.good { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+.chk { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #edf1ee; }
+.chk input { margin-top: 2px; }
+.chk small { display: block; color: var(--text-muted); font-size: 11px; }
+.prog { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #edf1ee; cursor: pointer; font-size: 13px; }
+.prog:last-child, .chk:last-child { border-bottom: 0; }
+.sub-h { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); margin: 10px 0 2px; }
 </style>
 </head>
 <body>
@@ -216,6 +279,16 @@ async function loadJob() {
     job = data[0];
     document.getElementById('pageTitle').textContent = job.reference || 'Job Detail';
     introducers = await loadIntroducers();
+
+    // Names for the summary strip (the customer from the New job form, and the surveyor)
+    try {
+      const [cust, surv] = await Promise.all([
+        job.arranging_client_id ? dbGet('clients', { 'id': `eq.${job.arranging_client_id}`, 'select': 'id,full_name,company_name,email', 'limit': 1 }) : null,
+        job.surveyor_id ? dbGet('surveyors', { 'id': `eq.${job.surveyor_id}`, 'select': 'full_name', 'limit': 1 }) : null,
+      ]);
+      job.customer = cust?.[0] || null;
+      job.surveyor_name = surv?.[0]?.full_name || null;
+    } catch (e) { console.error('Summary names:', e); }
 
     // Load linked enquiry for acceptance details
     if (job.enquiry_id) {
@@ -407,22 +480,51 @@ function displayParkingMap() {
   }, 200);
 }
 
+// ---- Compact label/value helpers (job page) ----
+// A labelled row; skipped when there is no value unless `always` is set.
+function kv(label, valueHtml, opts = {}) {
+  const empty = valueHtml == null || valueHtml === '';
+  if (empty && !opts.always) return '';
+  return `<div class="kv-row${opts.full ? ' full' : ''}"><div class="kv-k">${label}</div><div class="kv-v">${empty ? '<span class="dim">—</span>' : valueHtml}</div></div>`;
+}
+const money = (n) => (n == null || n === '' || Number(n) === 0) ? '' :
+  '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
+const mailto = (e) => e ? `<a href="mailto:${escapeHtml(e)}">${escapeHtml(e)}</a>` : '';
+
+// Key facts at the top of the page
+function renderSummaryStrip() {
+  const c = job.customer;
+  const custName = c ? (c.company_name && c.full_name ? `${c.full_name} (${c.company_name})` : (c.company_name || c.full_name || c.email)) : null;
+  const fallbackName = job.end_client_name || enquiry?.contact_name || job.billing_contact_name;
+  const tile = (label, html, cls = '') => `<div class="strip-t ${cls}"><div class="strip-k">${label}</div><div class="strip-v" title="${String(html || '').replace(/<[^>]+>/g, '').replace(/"/g, '&quot;')}">${html || '<span class="muted">—</span>'}</div></div>`;
+  const sd = job.survey_date
+    ? `${job.survey_date_confirmed ? dot('complete') : dot('elevated')} ${formatDate(job.survey_date)}`
+    : '';
+  return `<div class="strip">
+    ${tile('Customer', custName ? `<a href="client-detail.html?id=${c.id}">${escapeHtml(custName)}</a>` : escapeHtml(fallbackName || ''))}
+    ${tile('Surveyor', escapeHtml(job.surveyor_name || ''))}
+    ${tile('Site', escapeHtml(job.site_postcode || ''))}
+    ${tile('Survey date', sd)}
+    ${tile('SLA deadline', job.sla_deadline ? formatDate(job.sla_deadline) : '')}
+    ${tile('Agreed fee', money(job.agreed_amount), 'hl')}
+  </div>`;
+}
+
 function renderIntroducer() {
   const current = introducers.find(i => i.id === job.introducer_client_id);
   return `
     <div class="card">
       <div class="card-title">
-        Introducer
-        ${current ? `<a href="client-detail.html?id=${current.id}" class="btn btn-secondary btn-sm">View all their jobs →</a>` : ''}
+        <span title="Who sent this work in (insurer, architect, agent). Used to group jobs by source.">Introducer</span>
+        ${current ? `<a href="client-detail.html?id=${current.id}" class="btn btn-secondary btn-sm">All their jobs →</a>` : ''}
       </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Who sent this work in (insurer, architect, agent). Used to group jobs by source.</div>
       ${addingIntroducer ? `
-        <div class="detail-grid">
-          <div class="detail-field"><label>Company</label><input type="text" class="form-control" id="newIntroCompany" placeholder="e.g. Trinity Claims"></div>
-          <div class="detail-field"><label>Contact name</label><input type="text" class="form-control" id="newIntroName"></div>
-          <div class="detail-field" style="grid-column:1/-1"><label>Email</label><input type="email" class="form-control" id="newIntroEmail"></div>
+        <div class="two">
+          <div class="form-group"><label>Company</label><input type="text" class="form-control" id="newIntroCompany" placeholder="e.g. Trinity Claims"></div>
+          <div class="form-group"><label>Contact name</label><input type="text" class="form-control" id="newIntroName"></div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
+        <div class="form-group"><label>Email</label><input type="email" class="form-control" id="newIntroEmail"></div>
+        <div style="display:flex;gap:8px;">
           <button class="btn btn-primary btn-sm" onclick="saveNewIntroducer()">Add &amp; link</button>
           <button class="btn btn-secondary btn-sm" onclick="addingIntroducer=false;renderJob()">Cancel</button>
         </div>
@@ -480,6 +582,8 @@ function renderContactDetails() {
   const company = enquiry?.company;
   const email = enquiry?.contact_email || job?.billing_contact_email;
   const phone = enquiry?.contact_phone;
+  const endName = job?.end_client_name;
+  const endEmail = job?.end_client_email;
 
   const invoiceName = job?.billing_contact_name;
   const invoiceEmail = job?.billing_contact_email;
@@ -490,90 +594,30 @@ function renderContactDetails() {
   const introducerName    = enquiry?.introducer_name;
   const introducerEmail   = enquiry?.introducer_email;
 
-  if (!name && !email && !phone && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
+  if (!name && !email && !phone && !endName && !endEmail && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
 
+  const hasInvoice = invoiceName || invoiceEmail || invoiceAddress;
   return `
     <div class="card">
-      <div class="card-title">Contact Details</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        ${name ? `
-          <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Full Name</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${name}</div>
-          </div>
-        ` : ''}
-        ${company ? `
-          <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Company</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${company}</div>
-          </div>
-        ` : ''}
-        ${email ? `
-          <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
-            <div style="font-size:13px;"><a href="mailto:${email}">${email}</a></div>
-          </div>
-        ` : ''}
-        ${phone ? `
-          <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Phone</div>
-            <div style="font-size:13px;"><a href="tel:${phone}">${phone}</a></div>
-          </div>
-        ` : ''}
+      <div class="card-title">Contacts</div>
+      <div class="kv">
+        ${(name || company || email || phone) ? `<div class="kv-group">Contact</div>
+          ${kv('Name', escapeHtml(name || ''))}
+          ${kv('Company', escapeHtml(company || ''))}
+          ${kv('Email', mailto(email))}
+          ${kv('Phone', phone ? `<a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>` : '')}` : ''}
+        ${(endName || endEmail) ? `<div class="kv-group">End client / site contact</div>
+          ${kv('Name', escapeHtml(endName || ''))}
+          ${kv('Email', mailto(endEmail))}` : ''}
+        ${hasInvoice ? `<div class="kv-group">Invoice to</div>
+          ${kv('Name', escapeHtml(invoiceName || ''))}
+          ${kv('Email', mailto(invoiceEmail))}
+          ${invoiceAddress ? kv('Address', `<span style="white-space:pre-wrap">${escapeHtml(invoiceAddress)}</span>`, { full: true }) : ''}` : ''}
+        ${reportAddresseeName ? `<div class="kv-group">Report addressed to</div>${kv('Name', escapeHtml(reportAddresseeName), { full: true })}` : ''}
+        ${(introducerName || introducerEmail) ? `<div class="kv-group">Also copied on quote</div>
+          ${kv('Name', escapeHtml(introducerName || ''))}
+          ${kv('Email', mailto(introducerEmail))}` : ''}
       </div>
-
-      ${(introducerName || introducerEmail) ? `
-        <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Also Copied On Quote</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            ${introducerName ? `
-            <div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Name</div>
-              <div style="font-size:13px;color:var(--text);">${introducerName}</div>
-            </div>
-            ` : ''}
-            ${introducerEmail ? `
-              <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
-                <div style="font-size:13px;"><a href="mailto:${introducerEmail}">${introducerEmail}</a></div>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      ` : ''}
-
-      ${invoiceName || invoiceEmail || invoiceAddress ? `
-        <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Invoice Addressee</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            ${invoiceName ? `
-              <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Name</div>
-                <div style="font-size:13px;color:var(--text);">${invoiceName}</div>
-              </div>
-            ` : ''}
-            ${invoiceEmail ? `
-              <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Email</div>
-                <div style="font-size:13px;"><a href="mailto:${invoiceEmail}">${invoiceEmail}</a></div>
-              </div>
-            ` : ''}
-            ${invoiceAddress ? `
-              <div style="grid-column:1/-1;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Address</div>
-                <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">${invoiceAddress}</div>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      ` : ''}
-
-      ${reportAddresseeName ? `
-        <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Report Addressee</div>
-          <div style="font-size:13px;color:var(--text);">${reportAddresseeName}</div>
-        </div>
-      ` : ''}
     </div>
   `;
 }
@@ -582,174 +626,107 @@ function renderSurveyAndSiteDetails() {
   const surveyType = enquiry?.survey_type || job?.survey_type || job?.job_type;
   const treeCount = job?.tree_count_band || enquiry?.tree_count_band;
   const deadlineTier = job?.deadline_tier || enquiry?.deadline_tier;
-  const addressParts = [enquiry?.site_street, enquiry?.site_city, enquiry?.site_postcode].filter(Boolean);
-  const address = addressParts.join('<br>');
+  // Form jobs carry the address on the enquiry; typed-in and imported jobs on the job itself
+  const addressParts = enquiry
+    ? [enquiry.site_street, enquiry.site_city, enquiry.site_postcode]
+    : [job?.site_street, job?.site_city, job?.site_postcode];
+  const address = addressParts.filter(Boolean).map(escapeHtml).join(', ');
   const surveyDate = job?.survey_date;
   const slaDeadline = job?.sla_deadline;
   const postcode = job?.site_postcode;
   const coordinates = job?.site_lat && job?.site_lng ? `${Number(job.site_lat).toFixed(5)}, ${Number(job.site_lng).toFixed(5)}` : null;
   const hasParkingPin = enquiry?.parking_lat || job?.parking_lat;
-  console.log('🅿️ Parking check - enquiry.parking_lat:', enquiry?.parking_lat, 'job.parking_lat:', job?.parking_lat, 'hasParkingPin:', hasParkingPin);
-  const hasAccessDetails = job?.site_access_notes || job?.site_location_tag;
+  const parkingText = job?.parking_details || enquiry?.parking_details;
 
-  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasParkingPin && !hasAccessDetails) return '';
+  if (!surveyType && !treeCount && !address && !surveyDate && !slaDeadline && !postcode && !hasParkingPin && !job?.site_access_notes) return '';
+
+  const treeValue = `
+    <span id="treeCountView">${treeCount ? escapeHtml(treeCount) + ' trees' : '<span class="dim">Not set</span>'}</span>
+    <button class="btn btn-secondary btn-sm" id="editTreeCountBtn" onclick="toggleTreeCountEditor()">${treeCount ? 'Edit' : 'Set'}</button>`;
+
+  const dateValue = surveyDate ? `
+    <span id="surveyDateDisplay" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-weight:600;color:${job?.survey_date_confirmed ? 'var(--green-mid)' : '#c2620c'};display:inline-flex;align-items:center;gap:6px;">
+        ${job?.survey_date_confirmed ? dot('complete') + 'Confirmed' : dot('elevated') + 'Proposed'}: ${formatDate(surveyDate)}
+      </span>
+      <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Edit</button>
+    </span>` : '';
 
   return `
     <div class="card">
-      <div class="card-title">Survey & Site Details</div>
-      <div class="detail-grid">
-        ${surveyType ? `
-          <div class="detail-field">
-            <label>Survey Type</label>
-            <div class="field-value">${getSurveyLabel(surveyType)}</div>
-          </div>
-        ` : ''}
-        <div class="detail-field" style="grid-column:1/-1;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <label>Tree Count Band</label>
-            <button class="btn btn-secondary btn-sm" id="editTreeCountBtn" onclick="toggleTreeCountEditor()">${treeCount ? 'Edit' : 'Set'}</button>
-          </div>
-          <div id="treeCountView">
-            <div class="field-value">${treeCount ? treeCount + ' trees' : '—'}</div>
-          </div>
-          <div id="treeCountEdit" style="display:none;margin-top:8px;">
-            <div class="form-group">
-              <select class="form-control" id="treeBandSelect">
-                <option value="">Select...</option>
-                <option value="1-20" ${treeCount === '1-20' ? 'selected' : ''}>1 – 20 trees</option>
-                <option value="21-40" ${treeCount === '21-40' ? 'selected' : ''}>21 – 40 trees</option>
-                <option value="41-60" ${treeCount === '41-60' ? 'selected' : ''}>41 – 60 trees</option>
-                <option value="61-80" ${treeCount === '61-80' ? 'selected' : ''}>61 – 80 trees</option>
-                <option value="81-100" ${treeCount === '81-100' ? 'selected' : ''}>81 – 100 trees</option>
-                <option value="100+" ${treeCount === '100+' ? 'selected' : ''}>100+ trees (custom quote)</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <button class="btn btn-secondary" onclick="toggleTreeCountEditor()">Cancel</button>
-              <button class="btn btn-primary" onclick="saveTreeCountBand()">Save</button>
-            </div>
+      <div class="card-title">Survey &amp; Site</div>
+      <div class="kv">
+        ${kv('Survey type', escapeHtml(getSurveyLabel(surveyType) || ''), { always: true })}
+        ${kv('Trees', treeValue, { always: true })}
+        <div class="kv-edit" id="treeCountEdit" style="display:none;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="form-control" id="treeBandSelect" style="width:auto;">
+              <option value="">Select...</option>
+              <option value="1-20" ${treeCount === '1-20' ? 'selected' : ''}>1 – 20 trees</option>
+              <option value="21-40" ${treeCount === '21-40' ? 'selected' : ''}>21 – 40 trees</option>
+              <option value="41-60" ${treeCount === '41-60' ? 'selected' : ''}>41 – 60 trees</option>
+              <option value="61-80" ${treeCount === '61-80' ? 'selected' : ''}>61 – 80 trees</option>
+              <option value="81-100" ${treeCount === '81-100' ? 'selected' : ''}>81 – 100 trees</option>
+              <option value="100+" ${treeCount === '100+' ? 'selected' : ''}>100+ trees (custom quote)</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="toggleTreeCountEditor()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveTreeCountBand()">Save</button>
           </div>
         </div>
-        ${deadlineTier ? `
-          <div class="detail-field">
-            <label>Required Deadline</label>
-            <div class="field-value">${deadlineTier}</div>
+        ${kv('Deadline asked', deadlineTier ? escapeHtml(getDeadlineLabel(deadlineTier)) : '', { always: true })}
+        ${kv('SLA deadline', slaDeadline ? formatDate(slaDeadline) : '', { always: true })}
+        ${surveyDate ? kv('Survey date', dateValue, { full: true }) : kv('Survey date', '', { always: true })}
+        ${surveyDate ? `<div class="kv-edit" id="surveyDateEdit" style="display:none;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="date" class="form-control" id="surveyDateInput" value="${job?.survey_date || ''}" style="width:auto;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400;margin:0;">
+              <input type="checkbox" id="surveyDateConfirmed" ${job?.survey_date_confirmed ? 'checked' : ''}>
+              Client confirmed
+            </label>
+            <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveSurveyDate()">Save</button>
           </div>
-        ` : ''}
-        ${coordinates ? `
-          <div class="detail-field">
-            <label>Coordinates</label>
-            <div class="field-value" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
-              <span style="display:inline-flex;align-items:center;gap:6px;">${icon('mapPin', 13)}${coordinates}</span>
-              <button style="padding:4px 8px;font-size:11px;background:var(--green-light);color:var(--green-dark);border:none;cursor:pointer;border-radius:4px;font-weight:500;" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
+        </div>` : ''}
+        ${kv('Site address', address ? `${address}${postcode ? ` <a href="https://maps.google.com/?q=${encodeURIComponent(postcode)}" target="_blank" style="font-size:12px;white-space:nowrap;">Map →</a>` : ''}` : '', { full: true, always: true })}
+        ${coordinates ? kv('Coordinates', `<span class="dim" style="font-size:12.5px;">${coordinates}</span>
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>`, { full: true })
+          : (postcode ? kv('Coordinates', `<span class="dim">Missing</span> <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">${icon('mapPin', 12)}Get coordinates</button>`, { full: true }) : '')}
+      </div>
+
+      ${parkingText ? `
+        <div class="blk">
+          <div class="blk-h"><span class="blk-k">Parking</span>
+            <button class="btn btn-secondary btn-sm" id="editParkingBtn" onclick="toggleParkingEditor()">Edit</button></div>
+          <div id="parkingDisplay"><div class="blk-txt">${escapeHtml(parkingText)}</div></div>
+          <div id="parkingEditor" style="display:none;">
+            <textarea class="form-control" id="parkingText" rows="3" placeholder="Parking information...">${escapeHtml(parkingText)}</textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleParkingEditor()">Cancel</button>
+              <button class="btn btn-primary btn-sm" onclick="saveParkingDetails()">Save</button>
             </div>
           </div>
-        ` : job?.site_postcode && !coordinates ? `
-          <div class="detail-field">
-            <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">${icon('mapPin', 13)}Get Coordinates</button>
-          </div>
-        ` : ''}
-        ${address ? `
-          <div class="detail-field" style="grid-column:1/-1">
-            <label>Site Address</label>
-            <div class="field-value">${address}<br><a href="https://maps.google.com/?q=${postcode}" target="_blank" style="font-size:12px;color:var(--green-mid);">View on Google Maps →</a></div>
-          </div>
-        ` : ''}
-        ${surveyDate ? `
-          <div class="detail-field" style="grid-column:1/-1">
-            <label>Survey Date</label>
-            <div id="surveyDateDisplay" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span style="font-weight:600;color:${job?.survey_date_confirmed ? 'var(--green-mid)' : '#f97316'};display:inline-flex;align-items:center;gap:6px;">
-                ${job?.survey_date_confirmed ? dot('complete') + 'Confirmed' : dot('elevated') + 'Proposed'}: ${formatDate(surveyDate)}
-              </span>
-              <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Edit</button>
-            </div>
-            <div id="surveyDateEdit" style="display:none;margin-top:8px;">
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="date" class="form-control" id="surveyDateInput" value="${job?.survey_date || ''}" style="width:auto;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400;">
-                  <input type="checkbox" id="surveyDateConfirmed" ${job?.survey_date_confirmed ? 'checked' : ''}>
-                  Client confirmed
-                </label>
-                <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Cancel</button>
-                <button class="btn btn-primary btn-sm" onclick="saveSurveyDate()">Save</button>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-        ${slaDeadline ? `
-          <div class="detail-field">
-            <label>SLA Deadline</label>
-            <div class="field-value">${formatDate(slaDeadline)}</div>
-          </div>
-        ` : ''}
-        ${enquiry?.parking_details || job?.parking_details ? `
-          <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Parking Details</div>
-              <button class="btn btn-secondary btn-sm" id="editParkingBtn" onclick="toggleParkingEditor()">Edit</button>
-            </div>
-            <div id="parkingDisplay">
-              ${job?.parking_details || enquiry?.parking_details ? `<div style="font-size:13px;background:var(--bg);padding:10px;border-radius:8px;white-space:pre-wrap;color:var(--text);">${job?.parking_details || enquiry?.parking_details}</div>` : ''}
-            </div>
-            <div id="parkingEditor" style="display:none;margin-top:8px;">
-              <div class="form-group">
-                <label>Parking Details</label>
-                <textarea class="form-control" id="parkingText" rows="3" placeholder="Parking information...">${job?.parking_details || enquiry?.parking_details || ''}</textarea>
-              </div>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-secondary btn-sm" onclick="toggleParkingEditor()">Cancel</button>
-                <button class="btn btn-primary btn-sm" onclick="saveParkingDetails()">Save</button>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-        <div style="grid-column:1/-1;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Site Access</div>
-            <button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">
-              ${job?.site_access_notes ? 'Edit' : 'Add access details'}
-            </button>
-          </div>
-          <div id="accessDisplay">
-            ${job?.site_access_notes ? `
-              <div style="font-size:13px;line-height:1.6;background:var(--bg);padding:12px;border-radius:8px;white-space:pre-wrap;">${job.site_access_notes}</div>` : ''}
-          </div>
-          <div id="accessEditor" style="display:none;margin-top:8px;">
-            <div class="form-group">
-              <label>Access Details</label>
-              <textarea class="form-control" id="accessText" rows="3" placeholder="Parking, gate codes, instructions...">${job?.site_access_notes || ''}</textarea>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-secondary btn-sm" onclick="toggleAccessEditor()">Cancel</button>
-              <button class="btn btn-primary btn-sm" onclick="saveAccessNotes()">Save</button>
-            </div>
+        </div>` : ''}
+
+      <div class="blk">
+        <div class="blk-h"><span class="blk-k">Site access</span>
+          <button class="btn btn-secondary btn-sm" id="editAccessBtn" onclick="toggleAccessEditor()">${job?.site_access_notes ? 'Edit' : 'Add'}</button></div>
+        <div id="accessDisplay">${job?.site_access_notes ? `<div class="blk-txt">${escapeHtml(job.site_access_notes)}</div>` : '<div class="dim" style="font-size:12.5px;color:var(--text-muted);">No access notes yet.</div>'}</div>
+        <div id="accessEditor" style="display:none;">
+          <textarea class="form-control" id="accessText" rows="3" placeholder="Parking, gate codes, instructions...">${escapeHtml(job?.site_access_notes || '')}</textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleAccessEditor()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAccessNotes()">Save</button>
           </div>
         </div>
       </div>
+
       ${hasParkingPin ? `
-        <div style="margin-top:16px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Parking Location</div>
-          <div id="parkingMapContainer" style="width:100%;height:280px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
-        </div>
-      ` : ''}
+        <div class="blk">
+          <div class="blk-h"><span class="blk-k">Parking location</span></div>
+          <div id="parkingMapContainer" style="width:100%;height:220px;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
+        </div>` : ''}
     </div>
   `;
-
-  // Display parking map - deferred
-  setTimeout(() => {
-    try {
-      const container = document.getElementById('parkingMapContainer');
-      if (!container) return;
-      const parkingLat = enquiry?.parking_lat || job?.parking_lat;
-      const parkingLng = enquiry?.parking_lng || job?.parking_lng;
-      if (parkingLat && parkingLng) {
-        displayParkingMap();
-      }
-    } catch (e) {
-      console.error('Map error:', e);
-    }
-  }, 250);
 }
 
 function renderJobLinkingBanner() {
@@ -796,13 +773,17 @@ function renderJobLinkingBanner() {
 }
 
 function renderJob() {
-  document.getElementById('pageBody').innerHTML = `
-    <div class="detail-header">
+  const isStaged = job.billing_mode === 'staged';
+  const hasDocs = job.doc_block_plan_url || job.doc_topo_survey_url || job.doc_other_urls || job.topo_survey_provided;
+  const pageBody = document.getElementById('pageBody');
+  pageBody.classList.add('jd');
+  pageBody.innerHTML = `
+    <div class="detail-header" style="margin-bottom:12px;">
       <div>
         <div class="detail-ref">${job.reference || '—'}</div>
         <div class="detail-sub">${getSurveyLabel(job.survey_type || job.job_type)}</div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         ${job.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle', 12)}Details Received</span>` : `<span class="badge badge-low">${icon('clock', 12)}Awaiting Customer Details</span>`}
         ${urgencyColorBadge(job.urgency_state)}
         ${dispatchBadge(job.dispatch_state)}
@@ -810,151 +791,121 @@ function renderJob() {
     </div>
 
     ${renderJobLinkingBanner()}
+    ${renderSummaryStrip()}
 
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
-      <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="jd-grid">
+      <div class="jd-main">
 
-        <!-- Contact Details -->
         ${renderContactDetails()}
-        ${renderIntroducer()}
-
-        <!-- Survey & Site Details -->
         ${renderSurveyAndSiteDetails()}
 
         <!-- Financial -->
         <div class="card">
           <div class="card-title">
             Financial
-            ${!(job.invoiced || job.invoice1_date) ? `<button class="btn btn-primary btn-sm" style="background:var(--green-dark);" onclick="markInvoiced()">${icon('checkCircle', 13)}Mark Invoiced</button>` : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 13)}Invoiced ${(job.invoice1_date || job.invoiced_at) ? formatDate(job.invoice1_date || job.invoiced_at) : ''}</span>`}
-            <button id="editFinBtn" class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Edit</button>
+            <span style="display:flex;gap:8px;align-items:center;">
+              ${!(job.invoiced || job.invoice1_date) ? '' : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 13)}Invoiced ${(job.invoice1_date || job.invoiced_at) ? formatDate(job.invoice1_date || job.invoiced_at) : ''}</span>`}
+              <button id="editFinBtn" class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Edit</button>
+            </span>
           </div>
           <div id="financialView">
-            <div class="detail-grid">
-              <div class="detail-field">
-                <label>Quoted Amount</label>
-                <div class="field-value">${job.quoted_amount ? '£' + Number(job.quoted_amount).toLocaleString() : '—'}</div>
-              </div>
-              <div class="detail-field">
-                <label>Agreed Amount</label>
-                <div class="field-value" style="font-size:20px;font-weight:700;color:var(--green-mid);">
-                  ${job.agreed_amount ? '£' + Number(job.agreed_amount).toLocaleString() : '—'}
-                </div>
-              </div>
-              <div class="detail-field">
-                <label>Urgency Surcharge</label>
-                <div class="field-value">${job.urgency_surcharge ? '£' + Number(job.urgency_surcharge).toLocaleString() : '—'}</div>
-              </div>
-              <div class="detail-field">
-                <label>Travel Cost</label>
-                <div class="field-value">${enquiry?.travel_cost ? '£' + Number(enquiry.travel_cost).toLocaleString() : '—'}</div>
-              </div>
-              <div class="detail-field">
-                <label>Surveyor Pay</label>
-                <div class="field-value">${job.surveyor_pay_amount ? '£' + Number(job.surveyor_pay_amount).toLocaleString() : '—'}</div>
-              </div>
-              <div class="detail-field">
-                <label>Billing Mode</label>
-                <div class="field-value">${job.billing_mode === 'staged' ? 'Staged 50/50' : 'Single Invoice'}</div>
-              </div>
+            <div class="kv">
+              ${kv('Agreed', job.agreed_amount ? `<span style="font-size:15px;font-weight:700;color:var(--green-mid);">${money(job.agreed_amount)}</span>` : '', { always: true })}
+              ${kv('Quoted', money(job.quoted_amount), { always: true })}
+              ${kv('Urgency fee', money(job.urgency_surcharge), { always: true })}
+              ${kv('Travel cost', money(enquiry?.travel_cost), { always: true })}
+              ${kv('Surveyor pay', money(job.surveyor_pay_amount), { always: true })}
+              ${kv('Billing', `<span class="seg2" role="group" aria-label="Billing method">
+                  <button type="button" class="${!isStaged ? 'on' : ''}" onclick="changeInvoicingMethod('single')">Single</button>
+                  <button type="button" class="${isStaged ? 'on' : ''}" onclick="changeInvoicingMethod('split')">50/50 split</button>
+                </span>`, { always: true })}
             </div>
+            <div class="hint" style="margin:8px 0 0;">${isStaged
+              ? 'Invoice 1: surveyor cost + ½ survey fee + urgency fee. Invoice 2: ½ survey fee, once the report is generated' + (job.report_generated ? ' (it is).' : ' (not yet).')
+              : 'One invoice for the full job cost.'}</div>
           </div>
-          <div id="financialEdit" style="display:none;margin-top:8px;">
-            <div class="detail-grid">
+          <div id="financialEdit" style="display:none;margin-top:4px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
               <div class="form-group">
-                <label>Agreed Amount (£)</label>
+                <label>Agreed (£)</label>
                 <input type="number" class="form-control" id="finAgreed" step="0.01" min="0" value="${job.agreed_amount || ''}">
               </div>
               <div class="form-group">
-                <label>Urgency Surcharge (£)</label>
+                <label>Urgency fee (£)</label>
                 <input type="number" class="form-control" id="finSurcharge" step="0.01" min="0" value="${job.urgency_surcharge || ''}">
               </div>
               <div class="form-group">
-                <label>Surveyor Pay (£)</label>
+                <label>Surveyor pay (£)</label>
                 <input type="number" class="form-control" id="finSurveyor" step="0.01" min="0" value="${job.surveyor_pay_amount || ''}">
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:12px;">
-              <button class="btn btn-secondary" onclick="toggleFinancialEdit()">Cancel</button>
-              <button class="btn btn-primary" onclick="saveFinancials()">Save</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Cancel</button>
+              <button class="btn btn-primary btn-sm" onclick="saveFinancials()">Save</button>
             </div>
           </div>
           ${renderInvoiceSection()}
         </div>
 
-<!-- Documents -->
+        <!-- Documents -->
         <div class="card">
           <div class="card-title">
             Documents
-            <button class="btn btn-secondary btn-sm" id="editDocsBtn" onclick="toggleDocsEditor()">
-              ${(job.doc_block_plan_url || job.doc_topo_survey_url || job.doc_other_urls) ? 'Edit' : 'Add links'}
-            </button>
+            <button class="btn btn-secondary btn-sm" id="editDocsBtn" onclick="toggleDocsEditor()">${hasDocs ? 'Edit' : 'Add links'}</button>
           </div>
           <div id="docsDisplay">
-            ${(job.doc_block_plan_url || job.doc_topo_survey_url || job.doc_other_urls || job.topo_survey_provided) ? `
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
-                  <span style="display:flex;color:${job.topo_survey_provided ? 'var(--green-dark)' : 'var(--border)'};">${job.topo_survey_provided ? icon('checkCircle', 16) : '<span class="status-dot" style="width:14px;height:14px;background:none;border:1.5px solid var(--border);"></span>'}</span>
-                  <span style="color:${job.topo_survey_provided ? 'var(--green-dark)' : 'var(--text-muted)'};">Topo survey provided</span>
-                </div>
-                ${job.doc_block_plan_url ? `
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:12px;color:var(--text-muted);width:90px;flex-shrink:0;">Block Plan</span>
-                  <a href="${job.doc_block_plan_url}" target="_blank" class="btn btn-secondary btn-sm">${icon('document', 13)}Open →</a>
-                </div>` : '<div style="font-size:12px;color:var(--text-muted);">Block plan: not yet uploaded</div>'}
-                ${job.doc_topo_survey_url ? `
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:12px;color:var(--text-muted);width:90px;flex-shrink:0;">Topo Survey</span>
-                  <a href="${job.doc_topo_survey_url}" target="_blank" class="btn btn-secondary btn-sm">${icon('document', 13)}Open →</a>
-                </div>` : ''}
-                ${job.doc_other_urls ? `
-                <div style="font-size:13px;line-height:1.6;color:var(--text-muted);">${job.doc_other_urls}</div>` : ''}
+            ${hasDocs ? `
+              <div class="kv">
+                ${kv('Block plan', job.doc_block_plan_url ? `<a href="${escapeHtml(job.doc_block_plan_url)}" target="_blank">${icon('document', 13)} Open →</a>` : '<span class="dim">Not yet uploaded</span>', { always: true })}
+                ${kv('Topo survey', job.doc_topo_survey_url ? `<a href="${escapeHtml(job.doc_topo_survey_url)}" target="_blank">${icon('document', 13)} Open →</a>` : (job.topo_survey_provided ? 'Provided by client' : '<span class="dim">Not provided</span>'), { always: true })}
+                ${job.doc_other_urls ? kv('Other', `<span style="white-space:pre-wrap">${escapeHtml(job.doc_other_urls)}</span>`, { full: true }) : ''}
               </div>
-            ` : `<div style="font-size:13px;color:var(--text-muted);">No documents yet — paste Google Drive sharing links once client submits plans.</div>`}
+            ` : `<div style="font-size:12.5px;color:var(--text-muted);">No documents yet. Paste Google Drive sharing links once the client sends plans.</div>`}
           </div>
-          <div id="docsEditor" style="display:none;margin-top:8px;">
+          <div id="docsEditor" style="display:none;margin-top:4px;">
             <div class="form-group">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
                 <input type="checkbox" id="topoProvided" ${job.topo_survey_provided ? 'checked' : ''}>
                 Topo survey provided by client
               </label>
             </div>
-            <div class="form-group">
-              <label>Block Plan (Google Drive link) <span style="color:#dc2626;font-size:11px;">required</span></label>
-              <input type="url" class="form-control" id="docBlockPlan" value="${job.doc_block_plan_url || ''}" placeholder="https://drive.google.com/...">
+            <div class="two">
+              <div class="form-group">
+                <label>Block plan link <span style="color:#dc2626;font-size:11px;">required</span></label>
+                <input type="url" class="form-control" id="docBlockPlan" value="${escapeHtml(job.doc_block_plan_url || '')}" placeholder="https://drive.google.com/...">
+              </div>
+              <div class="form-group">
+                <label>Topo survey link</label>
+                <input type="url" class="form-control" id="docTopoSurvey" value="${escapeHtml(job.doc_topo_survey_url || '')}" placeholder="https://drive.google.com/...">
+              </div>
             </div>
             <div class="form-group">
-              <label>Topo Survey (Google Drive link)</label>
-              <input type="url" class="form-control" id="docTopoSurvey" value="${job.doc_topo_survey_url || ''}" placeholder="https://drive.google.com/...">
-            </div>
-            <div class="form-group">
-              <label>Other Documents / Notes</label>
-              <textarea class="form-control" id="docOther" rows="2" placeholder="Any other document links or notes...">${job.doc_other_urls || ''}</textarea>
+              <label>Other documents / notes</label>
+              <textarea class="form-control" id="docOther" rows="2" placeholder="Any other document links or notes...">${escapeHtml(job.doc_other_urls || '')}</textarea>
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-secondary" onclick="toggleDocsEditor()">Cancel</button>
-              <button class="btn btn-primary" onclick="saveDocs()">Save</button>
+              <button class="btn btn-secondary btn-sm" onclick="toggleDocsEditor()">Cancel</button>
+              <button class="btn btn-primary btn-sm" onclick="saveDocs()">Save</button>
             </div>
           </div>
         </div>
 
-        <!-- Internal Notes (always shown) -->
+        <!-- Internal Notes -->
         <div class="card">
           <div class="card-title">
             Internal Notes
-            <button class="btn btn-secondary btn-sm" id="editNoteBtn" onclick="toggleNoteEditor()">
-              ${job.internal_notes ? 'Edit' : 'Add note'}
-            </button>
+            <button class="btn btn-secondary btn-sm" id="editNoteBtn" onclick="toggleNoteEditor()">${job.internal_notes ? 'Edit' : 'Add note'}</button>
           </div>
           <div id="noteDisplay">
             ${job.internal_notes
-              ? `<div style="font-size:13px;line-height:1.6;background:var(--amber-light);padding:12px;border-radius:8px;">${job.internal_notes}</div>`
-              : `<div style="font-size:13px;color:var(--text-muted);">No notes yet.</div>`}
+              ? `<div class="blk-txt" style="background:var(--amber-light);">${escapeHtml(job.internal_notes)}</div>`
+              : `<div style="font-size:12.5px;color:var(--text-muted);">No notes yet.</div>`}
           </div>
-          <div id="noteEditor" style="display:none;margin-top:8px;">
-            <textarea class="form-control" id="noteText" rows="4" placeholder="Add internal notes...">${job.internal_notes || ''}</textarea>
+          <div id="noteEditor" style="display:none;margin-top:4px;">
+            <textarea class="form-control" id="noteText" rows="4" placeholder="Add internal notes...">${escapeHtml(job.internal_notes || '')}</textarea>
             <div style="display:flex;gap:8px;margin-top:8px;">
-              <button class="btn btn-secondary" onclick="toggleNoteEditor()">Cancel</button>
-              <button class="btn btn-primary" onclick="saveNote()">Save Note</button>
+              <button class="btn btn-secondary btn-sm" onclick="toggleNoteEditor()">Cancel</button>
+              <button class="btn btn-primary btn-sm" onclick="saveNote()">Save note</button>
             </div>
           </div>
         </div>
@@ -962,126 +913,76 @@ function renderJob() {
       </div>
 
       <!-- Right column -->
-      <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="jd-side">
 
-        <!-- Update Urgency State -->
         <div class="card">
-          <div class="card-title">Update Urgency</div>
-          <div class="form-group">
-            <label>Urgency State</label>
-            <select class="form-control" id="urgencySelect">
-              ${Object.entries(URGENCY_TIERS).map(([u, t]) =>
-                `<option value="${u}" ${job.urgency_state===u?'selected':''}>${t.label} (${t.days} working days)</option>`).join('')}
-              <option value="green"  ${job.urgency_state==='green'  ?'selected':''}>Complete</option>
-            </select>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-              Changing urgency resets the SLA deadline to that many working days from today.
+          <div class="card-title">Status</div>
+          <div class="two">
+            <div class="form-group">
+              <label for="urgencySelect">Urgency</label>
+              <select class="form-control" id="urgencySelect">
+                ${Object.entries(URGENCY_TIERS).map(([u, t]) =>
+                  `<option value="${u}" ${job.urgency_state===u?'selected':''}>${t.label} · ${t.days}d</option>`).join('')}
+                <option value="green"  ${job.urgency_state==='green'  ?'selected':''}>Complete</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="dispatchSelect">Dispatch</label>
+              <select class="form-control" id="dispatchSelect">
+                <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>Pending Approval</option>
+                <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>Waiting for Plans</option>
+                <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>Unallocated</option>
+                <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>Claimed</option>
+                <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>Attended</option>
+                <option value="green"    ${job.dispatch_state==='green'    ?'selected':''}>Report Sent</option>
+                <option value="archived" ${job.dispatch_state==='archived' ?'selected':''}>Archived</option>
+              </select>
             </div>
           </div>
-          <div class="form-group">
-            <label>Dispatch State</label>
-            <select class="form-control" id="dispatchSelect">
-              <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>Pending Approval</option>
-              <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>Waiting for Plans</option>
-              <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>Unallocated</option>
-              <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>Claimed</option>
-              <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>Attended</option>
-              <option value="green"    ${job.dispatch_state==='green'    ?'selected':''}>Report Sent</option>
-              <option value="archived" ${job.dispatch_state==='archived' ?'selected':''}>Archived</option>
-            </select>
-          </div>
-          <button class="btn btn-primary w-100" onclick="updateStates()" style="justify-content:center;">Save</button>
+          <div class="hint">Changing urgency restarts the SLA from today.</div>
+          <button class="btn btn-primary w-100" onclick="updateStates()" style="justify-content:center;">Save status</button>
         </div>
 
-        <!-- Quick Actions -->
         <div class="card">
-          <div class="card-title">Quick Actions</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="card-title">Actions</div>
+          <div class="actions">
             ${renderAllocationStatus()}
             ${renderNDAStatus()}
-            ${renderLinkedJobButton()}
             ${renderDispatchButton()}
+            ${renderInvoiceActions()}
+            ${renderLinkedJobButton()}
             ${job.enquiry_id && enquiry?.contact_email ? `
               <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="sendQuoteEmailFromJob()">
                 ${icon('mail', 14)}Resend Quote Email
-              </button>
-            ` : ''}
-            ${renderInvoiceActions()}
+              </button>` : ''}
           </div>
         </div>
 
-        ${renderReportFlags()}
-
-        ${renderReportProgress()}
-
-        <!-- Invoicing Configuration -->
         <div class="card">
-          <div class="card-title">Invoicing Configuration</div>
-          <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
-            <div style="padding:10px;background:var(--amber-light);border-radius:8px;line-height:1.5;">
-              <strong>Current Method:</strong> ${job.billing_mode === 'staged' ? '50/50 Split on Survey Fee' : 'Single Invoice'}
-              <br><span style="font-size:12px;color:var(--text-muted);">${job.billing_mode === 'staged'
-                ? 'Invoice 1: Surveyor cost + ½ survey fee + urgency fee. Invoice 2: ½ survey fee (only if report generated)'
-                : 'Single invoice: Full job cost in one payment'}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text-muted);">
-              Report generated: <strong>${job.report_generated ? 'Yes' : 'No'}</strong>
-              ${job.billing_mode === 'staged' ? ' — decides whether invoice 2 is issued. Set it in the Report card above.' : ''}
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn w-100" onclick="changeInvoicingMethod('split')"
-                style="justify-content:center;${job.billing_mode === 'staged' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.billing_mode === 'staged' ? icon('checkCircle', 13) : ''}50/50 Split
-              </button>
-              <button class="btn w-100" onclick="changeInvoicingMethod('single')"
-                style="justify-content:center;${job.billing_mode !== 'staged' ? 'background:var(--green-dark);color:white;' : 'background:var(--gray-light);color:var(--text-muted);'}">
-                ${job.billing_mode !== 'staged' ? icon('checkCircle', 13) : ''}Single Invoice
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Record Info -->
-        <div class="card">
-          <div class="card-title">Record Info</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div class="detail-field">
-              <label>Reference</label>
-              <div class="field-value ref">${job.reference || '—'}</div>
-            </div>
-            <div class="detail-field">
-              <label>Created</label>
-              <div class="field-value">${formatDateTime(job.created_at)}</div>
-            </div>
-            ${job.parent_job_id ? `
-            <div class="detail-field">
-              <label>Job Linking</label>
-              <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
-                <div style="font-size:12px;color:var(--text-muted);font-weight:500;display:flex;align-items:center;gap:6px;">${icon('paperclip', 13)}Linked to parent job:</div>
-                <a href="job-detail.html?id=${job.parent_job_id}" style="font-size:14px;color:var(--green-dark);font-weight:600;">← ${job.parent_job_ref || 'Parent Job'}</a>
-              </div>
-            </div>` : ''}
-            ${(job.linkedJobs && job.linkedJobs.length > 0) ? `
-            <div class="detail-field">
-              <label>Job Linking</label>
-              <div class="field-value" style="display:flex;flex-direction:column;gap:8px;">
-                <div style="font-size:12px;color:var(--text-muted);font-weight:500;display:flex;align-items:center;gap:6px;">${icon('paperclip', 13)}Linked child jobs (${job.linkedJobs.length}):</div>
-                ${job.linkedJobs.map(child => `
-                  <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f3f4f6;border-radius:6px;">
-                    <a href="job-detail.html?id=${child.id}" style="flex:1;color:var(--green-dark);font-weight:600;text-decoration:none;">${child.reference} →</a>
-                    <span style="font-size:11px;">${dispatchBadge(child.dispatch_state)}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>` : ''}
-          </div>
+          <div class="card-title">Report</div>
+          ${renderReportFlags()}
+          ${renderReportProgress()}
         </div>
 
         ${renderTwoStageActions()}
 
+        ${renderIntroducer()}
+
+        <div class="card">
+          <div class="card-title">Record</div>
+          <div class="kv one">
+            ${kv('Created', formatDateTime(job.created_at), { always: true })}
+            ${job.parent_job_id ? kv('Parent job', `<a href="job-detail.html?id=${job.parent_job_id}">← ${escapeHtml(job.parent_job_ref || 'Parent job')}</a>`) : ''}
+            ${(job.linkedJobs && job.linkedJobs.length) ? kv('Linked jobs', job.linkedJobs.map(child =>
+              `<div style="display:flex;align-items:center;gap:8px;margin:2px 0;"><a href="job-detail.html?id=${child.id}" style="font-weight:600;">${escapeHtml(child.reference || '')} →</a>${dispatchBadge(child.dispatch_state)}</div>`).join('')) : ''}
+          </div>
+        </div>
+
       </div>
     </div>
   `;
+
+  placeFilesCard();
 
   // Display boundary map
   setTimeout(() => displayParkingMap(), 250);
@@ -1250,31 +1151,20 @@ function renderAllocationStatus() {
   const hoursLeft = job.allocation_timeout_hours;
   const allocatedAt = new Date(job.allocated_at);
   const expiresAt = new Date(allocatedAt.getTime() + hoursLeft * 60 * 60 * 1000);
-  const now = new Date();
-  const hoursRemaining = Math.max(0, (expiresAt - now) / (60 * 60 * 1000));
-
+  const hoursRemaining = Math.max(0, (expiresAt - new Date()) / (60 * 60 * 1000));
   const status = hoursRemaining > 0
-    ? `${icon('clock', 14)}Allocated · ${Math.ceil(hoursRemaining)}h remaining`
-    : `${icon('alarm', 14)}Allocation expired`;
+    ? `${icon('clock', 13)}Allocated · ${Math.ceil(hoursRemaining)}h left`
+    : `${icon('alarm', 13)}Allocation expired`;
 
-  return `
-    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;">
-      <div style="font-size:13px;color:#92400e;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;">${status}</div>
-      <button class="btn btn-secondary btn-sm" onclick="openAllocateModal()" style="justify-content:center;">
-        ${icon('refresh', 14)}Change Allocation
-      </button>
-    </div>`;
+  return `<div class="chip-row warn">${status}
+    <button class="btn btn-secondary btn-sm" onclick="openAllocateModal()">Change</button></div>`;
 }
 
 function renderNDAStatus() {
   if (!job.surveyor_id) return '';
-
   const nda = job.nda_acceptance;
-  return `
-    <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px;">
-      <div style="font-size:13px;color:#166534;font-weight:600;display:flex;align-items:center;gap:6px;">${icon('checkCircle', 14)}NDA Accepted</div>
-      <div style="font-size:12px;color:#166534;margin-top:4px;">${nda?.accepted_at ? formatDateTime(nda.accepted_at) : 'Upon job claim'}</div>
-    </div>`;
+  return `<div class="chip-row good">${icon('checkCircle', 13)}NDA accepted
+    <small>${nda?.accepted_at ? formatDateTime(nda.accepted_at) : 'on claim'}</small></div>`;
 }
 
 function renderLinkedJobButton() {
@@ -1532,31 +1422,25 @@ function renderReportProgress() {
   if (!job.field_data_uploaded) return '';
 
   const items = [
-    { field: 'axi_prepared',     atField: 'axi_prepared_at',     label: 'Axiscape DB Prepared' },
-    { field: 'report_drafted',   atField: 'report_drafted_at',   label: 'Report Drafted' },
-    { field: 'report_finalised', atField: 'report_finalised_at', label: 'Report Finalised', advancesDispatchTo: 'green' },
+    { field: 'axi_prepared',     atField: 'axi_prepared_at',     label: 'Axiscape DB prepared' },
+    { field: 'report_drafted',   atField: 'report_drafted_at',   label: 'Report drafted' },
+    { field: 'report_finalised', atField: 'report_finalised_at', label: 'Report finalised and sent', advancesDispatchTo: 'green' },
   ];
 
-  const rows = items.map(item => {
+  return `<div class="sub-h">Office workflow</div>` + items.map(item => {
     const done = !!job[item.field];
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;"
+      <div class="prog" role="button" tabindex="0"
            onclick="toggleChecklist('${item.field}', '${item.atField}', ${item.advancesDispatchTo ? `'${item.advancesDispatchTo}'` : 'null'})">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="width:18px;height:18px;border-radius:4px;border:1.5px solid ${done ? 'var(--green-dark)' : 'var(--border)'};background:${done ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;">
-            ${done ? icon('checkCircle', 12) : ''}
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="width:17px;height:17px;border-radius:4px;border:1.5px solid ${done ? 'var(--green-dark)' : 'var(--border)'};background:${done ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;">
+            ${done ? icon('checkCircle', 11) : ''}
           </span>
-          <span style="font-size:13px;color:${done ? 'var(--text)' : 'var(--text-muted)'};">${item.label}</span>
-        </div>
+          <span style="color:${done ? 'var(--text)' : 'var(--text-muted)'};">${item.label}</span>
+        </span>
         <span style="font-size:11px;color:var(--text-muted);">${job[item.atField] ? formatDate(job[item.atField]) : ''}</span>
       </div>`;
   }).join('');
-
-  return `
-    <div class="card">
-      <div class="card-title">Report Progress</div>
-      <div>${rows}</div>
-    </div>`;
 }
 
 async function toggleChecklist(field, atField, advancesDispatchTo) {
@@ -1709,20 +1593,15 @@ async function changeInvoicingMethod(method) {
 function renderReportFlags() {
   const allocated = !!job.surveyor_id;
   const box = (field, label, hint) => `
-    <label style="display:flex;align-items:center;gap:8px;margin:0;font-weight:400;font-size:13px;${allocated ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:0.55;'}">
+    <label class="chk" style="margin:0;font-weight:400;${allocated ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:0.55;'}">
       <input type="checkbox" ${job[field] ? 'checked' : ''} ${allocated ? '' : 'disabled'}
         onchange="updateReportFlag('${field}', this.checked)">
-      <span>${label}<br><span style="font-size:11px;color:var(--text-muted);">${hint}</span></span>
+      <span>${label}<small>${hint}</small></span>
     </label>`;
   return `
-    <div class="card">
-      <div class="card-title">Report</div>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        ${box('report_to_generate', 'Report to generate', 'This job needs a report producing')}
-        ${box('report_generated', 'Report generated', 'The report has been produced')}
-        ${allocated ? '' : '<div style="font-size:12px;color:var(--text-muted);">Available once the job is allocated to a surveyor.</div>'}
-      </div>
-    </div>`;
+    ${box('report_to_generate', 'Report to generate', 'This job needs a report producing')}
+    ${box('report_generated', 'Report generated', 'The report has been produced')}
+    ${allocated ? '' : '<div class="hint" style="margin:6px 0 0;">Available once a surveyor is allocated.</div>'}`;
 }
 
 async function updateReportFlag(field, checked) {
@@ -2098,6 +1977,14 @@ async function saveNote() {
   }
 }
 
+// Uploaded files sit at the foot of the main column and survive re-renders
+let filesCardHtml = '';
+function placeFilesCard() {
+  if (!filesCardHtml) return;
+  const main = document.querySelector('#pageBody .jd-main') || document.getElementById('pageBody');
+  if (main && !main.querySelector('#filesCard')) main.insertAdjacentHTML('beforeend', filesCardHtml);
+}
+
 async function loadUploadedFiles() {
   try {
     const files = await dbGet('job_files', { 'job_id': `eq.${jobId}`, 'order': 'uploaded_at.desc' });
@@ -2123,7 +2010,7 @@ async function loadUploadedFiles() {
     }).join('');
 
     const card = `
-      <div class="card">
+      <div class="card" id="filesCard">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div class="card-title" style="margin:0;">Uploaded Files</div>
           <button class="btn btn-secondary btn-sm" onclick="downloadAllFiles('${jobId}')">${icon('download', 13)}Download All</button>
@@ -2134,13 +2021,8 @@ async function loadUploadedFiles() {
       </div>
     `;
 
-    const pageBody = document.getElementById('pageBody');
-    const progressCard = pageBody.querySelector('[id="progressChecklist"]');
-    if (progressCard) {
-      progressCard.insertAdjacentHTML('beforebegin', card);
-    } else {
-      pageBody.insertAdjacentHTML('beforeend', card);
-    }
+    filesCardHtml = card;
+    placeFilesCard();
   } catch (e) {
     console.error('Error loading files:', e);
   }
