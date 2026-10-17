@@ -650,7 +650,11 @@ function renderSurveyAndSiteDetails() {
         ${job?.survey_date_confirmed ? dot('complete') + 'Confirmed' : dot('elevated') + 'Proposed'}: ${formatDate(surveyDate)}
       </span>
       <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Edit</button>
-    </span>` : '';
+    </span>` : `
+    <span id="surveyDateDisplay" style="display:inline-flex;align-items:center;gap:6px;">
+      <span class="dim">Not set</span>
+      <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Set</button>
+    </span>`;
 
   return `
     <div class="card">
@@ -675,8 +679,8 @@ function renderSurveyAndSiteDetails() {
         </div>
         ${kv('Deadline asked', deadlineTier ? escapeHtml(getDeadlineLabel(deadlineTier)) : '', { always: true })}
         ${kv('SLA deadline', slaDeadline ? formatDate(slaDeadline) : '', { always: true })}
-        ${surveyDate ? kv('Survey date', dateValue, { full: true }) : kv('Survey date', '', { always: true })}
-        ${surveyDate ? `<div class="kv-edit" id="surveyDateEdit" style="display:none;">
+        ${kv('Survey date', dateValue, { full: true })}
+        ${`<div class="kv-edit" id="surveyDateEdit" style="display:none;">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="date" class="form-control" id="surveyDateInput" value="${job?.survey_date || ''}" style="width:auto;">
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400;margin:0;">
@@ -686,7 +690,7 @@ function renderSurveyAndSiteDetails() {
             <button class="btn btn-secondary btn-sm" onclick="toggleSurveyDateEdit()">Cancel</button>
             <button class="btn btn-primary btn-sm" onclick="saveSurveyDate()">Save</button>
           </div>
-        </div>` : ''}
+        </div>`}
         ${kv('Site address', address ? `${address}${postcode ? ` <a href="https://maps.google.com/?q=${encodeURIComponent(postcode)}" target="_blank" style="font-size:12px;white-space:nowrap;">Map →</a>` : ''}` : '', { full: true, always: true })}
         ${coordinates ? kv('Coordinates', `<span class="dim" style="font-size:12.5px;">${coordinates}</span>
             <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>`, { full: true })
