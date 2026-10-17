@@ -395,6 +395,15 @@ a { text-decoration: none; color: inherit; }
 .stat-row-label { display: flex; align-items: center; gap: 6px; }
 .stat-row-count { font-size: 18px; font-weight: 700; color: var(--green-dark); line-height: 1.2; }
 
+/* Fourth dashboard column: three short cards stacked to the height of their neighbours */
+.stat-stack { display: grid; grid-template-rows: repeat(3, 1fr); gap: 12px; min-width: 0; }
+.stat-card.compact { padding: 10px 14px; gap: 2px; justify-content: center; }
+.stat-card.compact .stat-label { font-size: 11px; }
+.stat-card.compact .stat-value { font-size: 22px; }
+.stat-card.compact .stat-sub { font-size: 11.5px; }
+.stat-card.revenue { background: #f0fdf4; border-left: 3px solid #16a34a; }
+.stat-card.revenue .stat-label, .stat-card.revenue .stat-value { color: #16a34a; }
+
 .stat-card.urgent { border-left: 4px solid var(--urgent); }
 .stat-card.elevated { border-left: 4px solid var(--elevated); }
 .stat-card.standard { border-left: 4px solid var(--standard); }

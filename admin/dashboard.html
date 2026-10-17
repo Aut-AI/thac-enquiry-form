@@ -80,24 +80,23 @@ async function init() {
             </div>
             <div class="stat-sub">Counted once a surveyor is allocated</div>
           </div>
-          <div class="stat-card multi">
-            <div class="stat-label">Overdue</div>
-            <div class="stat-value" id="statOverdue">—</div>
-            <div class="stat-sub">Past SLA deadline, report not yet sent</div>
-          </div>
-        </div>
-
-        <!-- Revenue Summary -->
-        <div class="stat-grid" id="revenueGrid" style="grid-template-columns:repeat(2,1fr);">
-          <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
-            <div class="stat-label" style="color:#16a34a;">${icon('currency',13)}This Month</div>
-            <div class="stat-value" id="revMonth" style="color:#16a34a;">—</div>
-            <div class="stat-sub">Invoiced in <span id="revMonthLabel"></span></div>
-          </div>
-          <div class="stat-card" style="background:#f0fdf4;border-left:3px solid #16a34a;">
-            <div class="stat-label" style="color:#16a34a;">${icon('chartBar',13)}This Year</div>
-            <div class="stat-value" id="revYear" style="color:#16a34a;">—</div>
-            <div class="stat-sub">Total invoiced <span id="revYearLabel"></span></div>
+          <!-- Overdue + revenue, stacked to the height of the cards beside them -->
+          <div class="stat-stack">
+            <div class="stat-card compact">
+              <div class="stat-label">Overdue</div>
+              <div class="stat-value" id="statOverdue">—</div>
+              <div class="stat-sub">Past SLA, report not yet sent</div>
+            </div>
+            <div class="stat-card compact revenue">
+              <div class="stat-label">${icon('currency',13)}This Month</div>
+              <div class="stat-value" id="revMonth">—</div>
+              <div class="stat-sub">Invoiced in <span id="revMonthLabel"></span></div>
+            </div>
+            <div class="stat-card compact revenue">
+              <div class="stat-label">${icon('chartBar',13)}This Year</div>
+              <div class="stat-value" id="revYear">—</div>
+              <div class="stat-sub">Total invoiced <span id="revYearLabel"></span></div>
+            </div>
           </div>
         </div>
 
