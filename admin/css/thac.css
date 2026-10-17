@@ -1044,3 +1044,23 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .status-tip .st-h { font-weight: 700; font-size: 13px; margin-bottom: 6px; color: #fff; }
 .status-tip .st-row { display: grid; grid-template-columns: 46px 1fr; gap: 6px; margin-top: 4px; }
 .status-tip .st-row span { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9fd0ae; padding-top: 2px; }
+
+/* ============================================================
+   DASHBOARD: Shrink / Expand the stat cards
+   ============================================================ */
+.stats-bar { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 8px; }
+.stats-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.stats-toggle { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--white);
+  color: var(--green-mid); font-family: inherit; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+.stats-toggle:hover { background: var(--green-pale); border-color: var(--green-light); }
+.stats-toggle:focus-visible { outline: 2px solid var(--green-light); outline-offset: 2px; }
+
+.stats-collapsed .stat-card { padding: 9px 12px; gap: 5px; }
+.stats-collapsed .stat-card .stat-label { font-size: 10.5px; }
+.stats-collapsed .stat-card .stat-sub, .stats-collapsed .muted-sub { display: none; }
+.stats-collapsed .stat-rows { flex-direction: row; flex-wrap: wrap; gap: 3px 12px; }
+.stats-collapsed .stat-row { border: 0; padding: 0; font-size: 12px; gap: 5px; justify-content: flex-start; }
+.stats-collapsed .stat-row-count { font-size: 13.5px; }
+.stats-collapsed .stat-stack { gap: 6px; }
+.stats-collapsed .stat-card.compact { flex-direction: row; align-items: baseline; justify-content: space-between; padding: 6px 12px; }
+.stats-collapsed .stat-card.compact .stat-value { font-size: 15px; }

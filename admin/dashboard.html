@@ -19,6 +19,25 @@ let sort = { key: 'urgency', dir: 'asc' };
 let dashJobs = [];
 let introducerById = {};
 
+function statsCollapsed() {
+  try { return localStorage.getItem('thac_dash_stats') === 'collapsed'; } catch (e) { return false; }
+}
+
+function syncStatsToggle() {
+  const btn = document.getElementById('statsToggle');
+  if (!btn) return;
+  const collapsed = document.getElementById('statGrid').classList.contains('stats-collapsed');
+  btn.innerHTML = `${icon(collapsed ? 'chevronDown' : 'chevronUp', 14)}${collapsed ? 'Expand' : 'Shrink'}`;
+  btn.setAttribute('aria-expanded', String(!collapsed));
+  btn.title = collapsed ? 'Show the full stat cards' : 'Shrink the stat cards to a summary';
+}
+
+function toggleStats() {
+  const collapsed = document.getElementById('statGrid').classList.toggle('stats-collapsed');
+  try { localStorage.setItem('thac_dash_stats', collapsed ? 'collapsed' : 'expanded'); } catch (e) { /* storage blocked */ }
+  syncStatsToggle();
+}
+
 async function init() {
   document.getElementById('app').innerHTML = `
     ${renderSidebar('dashboard')}
@@ -38,8 +57,12 @@ async function init() {
       </div>
       <div class="page-body">
 
-        <!-- Stat Cards -->
-        <div class="stat-grid" id="statGrid">
+        <!-- Stat Cards (Shrink / Expand, remembered per browser) -->
+        <div class="stats-bar">
+          <span class="stats-title">Overview</span>
+          <button type="button" class="stats-toggle" id="statsToggle" onclick="toggleStats()"></button>
+        </div>
+        <div class="stat-grid${statsCollapsed() ? ' stats-collapsed' : ''}" id="statGrid">
           <div class="stat-card multi">
             <div class="stat-label">Job Urgency</div>
             <div class="stat-rows">
@@ -111,6 +134,8 @@ async function init() {
       </div>
     </div>
   `;
+
+  syncStatsToggle();
 
   await Promise.all([
     loadStats(),
