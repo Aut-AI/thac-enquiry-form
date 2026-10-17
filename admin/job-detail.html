@@ -335,7 +335,7 @@ function renderInvoiceActions() {
     } else {
       buttons.push(`
         <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
-          ${icon('checkCircle', 14)}Invoice paid and archived
+          ${icon('checkCircle', 14)}${job.is_archived ? 'Invoice paid. Job archived' : 'Invoice paid. Archives once the report is sent'}
         </div>`);
     }
   } else {
@@ -366,7 +366,7 @@ function renderInvoiceActions() {
     } else if (job.invoice1_paid && job.invoice2_paid) {
       buttons.push(`
         <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
-          ${icon('checkCircle', 14)}Both invoices paid and archived
+          ${icon('checkCircle', 14)}${job.is_archived ? 'Both invoices paid. Job archived' : 'Both invoices paid. Archives once the report is sent'}
         </div>`);
     }
   }
@@ -825,7 +825,7 @@ function renderJob() {
         <div class="card">
           <div class="card-title">
             Financial
-            ${!job.invoiced ? `<button class="btn btn-primary btn-sm" style="background:var(--green-dark);" onclick="markInvoiced()">${icon('checkCircle', 13)}Mark Invoiced</button>` : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 13)}Invoiced ${job.invoiced_at ? formatDate(job.invoiced_at) : ''}</span>`}
+            ${!(job.invoiced || job.invoice1_date) ? `<button class="btn btn-primary btn-sm" style="background:var(--green-dark);" onclick="markInvoiced()">${icon('checkCircle', 13)}Mark Invoiced</button>` : `<span style="font-size:12px;color:var(--green-dark);font-weight:600;display:inline-flex;align-items:center;gap:6px;">${icon('checkCircle', 13)}Invoiced ${(job.invoice1_date || job.invoiced_at) ? formatDate(job.invoice1_date || job.invoiced_at) : ''}</span>`}
             <button id="editFinBtn" class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Edit</button>
           </div>
           <div id="financialView">
@@ -1115,8 +1115,11 @@ async function updateStates() {
 // ============================================================
 
 function openInvoiceModal(num) {
-  invoiceTarget = num;
   const isStaged = job.billing_mode === 'staged';
+  // Invoice 2 is meant to follow the report; check rather than block, in case it is deliberate
+  if (num === 2 && isStaged && !job.report_generated &&
+      !confirm('The report is not marked as generated yet. Invoice 2 normally follows the report. Raise it anyway?')) return;
+  invoiceTarget = num;
   const title = isStaged ? `Raise Invoice ${num} (50%)` : 'Raise Invoice';
   document.getElementById('invModalTitle').textContent = title;
 
@@ -1170,6 +1173,8 @@ async function submitInvoice() {
     if (invoiceTarget === 1) {
       updates.invoice1_date   = date;
       updates.invoice1_amount = amount;
+      updates.invoiced        = true;
+      updates.invoiced_at     = new Date(date).toISOString();
     } else {
       updates.invoice2_date   = date;
       updates.invoice2_amount = amount;
@@ -1192,23 +1197,43 @@ async function submitInvoice() {
 }
 
 // ============================================================
-// MARK INVOICED (Toggle + Record Date)
+// QUICK INVOICE (one click, single-invoice jobs)
 // ============================================================
 
-async function markInvoiced() {
+// One-click invoice for a single-invoice job: records invoice 1 today at the agreed
+// fee (excl VAT), exactly as the Custom Invoice form would, then archives the job
+// if the report has already gone out. With no agreed fee yet it opens the form so
+// the amount can be typed instead of recording £0.
+async function quickInvoice(num) {
+  if (num !== 1 || job.billing_mode === 'staged') { openInvoiceModal(num); return; }
+  const amount = Number(job.agreed_amount) || 0;
+  if (amount <= 0) {
+    showToast('No agreed fee on this job yet. Enter the invoice amount.', 'error');
+    openInvoiceModal(1);
+    return;
+  }
   try {
+    const now = new Date();
     const updates = {
-      invoiced: true,
-      invoiced_at: new Date().toISOString()
+      invoice1_date:   now.toISOString().slice(0, 10),
+      invoice1_amount: amount,
+      invoiced:        true,
+      invoiced_at:     now.toISOString(),
     };
-
+    archiveIfComplete(updates);
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
-    showToast('Job marked as invoiced');
+    showToast(`Invoiced £${amount.toLocaleString()}` + (updates.is_archived ? '. Job complete and archived' : ''));
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
+}
+
+// The "Mark Invoiced" button in the Financial card: same record as the quick action,
+// so the revenue totals, "Mark Paid" and archiving all see it.
+function markInvoiced() {
+  return quickInvoice(1);
 }
 
 // ============================================================
