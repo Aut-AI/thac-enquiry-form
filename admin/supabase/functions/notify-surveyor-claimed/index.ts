@@ -3,7 +3,7 @@
 // Trigger: UPDATE on public.jobs
 //          WHERE old.dispatch_state = 'live_unallocated'
 //            AND new.dispatch_state = 'claimed'
-// Fires:   When a surveyor claims a job — dot turns orange
+// Fires:   When a surveyor claims a job -- pin turns green (Allocated)
 // Sends:   Email to admin
 // ============================================================
 
@@ -41,7 +41,11 @@ serve(async (req) => {
     }
 
     const surveyorName = await getSurveyorName(record.surveyor_id);
-    const subject = `Job Claimed — ${record.reference} | ${surveyorName}`;
+    // Trevor (19 Oct 2026): a claim is final, no approval -- and it's his cue
+    // to get the database to the surveyor quickly.
+    const subject = record.axi_prepared
+      ? `Job Allocated — ${record.reference} | ${surveyorName} | Send the Database`
+      : `Job Allocated — ${record.reference} | ${surveyorName} | Create the Database Now`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', {
@@ -56,10 +60,15 @@ serve(async (req) => {
       : 'Not yet set';
 
     const html = emailWrapper(`
-      <h2>Job Claimed by Surveyor</h2>
-      <p>A surveyor has claimed this job on the marketplace.
-         The dot has turned <strong style="color:#c8773a;">${statusDot('#c8773a')}orange</strong>.
-         The job is now locked — no other surveyor can claim it.</p>
+      <h2>Job Allocated to ${surveyorName}</h2>
+      <p>${surveyorName} has taken this job in the app. The pin is now
+         <strong style="color:#16a34a;">${statusDot('#16a34a')}green (Allocated)</strong>
+         and no other surveyor can claim it.</p>
+      <p style="font-weight:600; color:${record.axi_prepared ? '#1a3a2a' : '#c0392b'};">
+        ${record.axi_prepared
+          ? 'The database is already created. Send it to the surveyor.'
+          : 'The database has not been created yet. Create it and get it to the surveyor as soon as possible.'}
+      </p>
 
       ${detailBlock([
         detailRow('Job Reference', record.reference),
@@ -70,10 +79,13 @@ serve(async (req) => {
         detailRow('SLA Deadline', slaDate),
         detailRow('Proposed Survey Date', surveyDate),
         detailRow('Surveyor Pay', `£${record.surveyor_pay_amount?.toFixed(2) ?? '—'}`),
+        detailRow('Database', record.axi_prepared ? 'Created' : '<span style="color:#c0392b;">To create</span>'),
+        detailRow('Report', record.report_drafted ? 'Drafted' : 'To draft'),
       ].join(''))}
 
       <p style="font-size:14px; color:#666; margin-top:8px;">
-        The surveyor now has access to full site details, client address, parking/access notes, and uploaded plans.
+        The surveyor now has the full site details, client address, parking/access notes and plans.
+        When they have been to site they tap Survey Done, then Data Sent once the data is in SharePoint.
       </p>
 
       <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">

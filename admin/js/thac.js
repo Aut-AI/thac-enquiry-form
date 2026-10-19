@@ -254,15 +254,39 @@ function urgencyBadge(deadlineTier) {
 // (with drifting emoji, e.g. 📦 vs 🗄 for "Archived") into 5+ pages.
 // ============================================================
 
+// Job stages, in Trevor's process (19 Oct 2026). The stored values are the
+// original colour codes, kept so app builds already on phones keep working:
+// orange is "Allocated" (a green pin on the map), yellow is "Survey done".
 const DISPATCH_META = {
-  pending_approval:  { label: 'Pending Approval',  cls: 'badge-low',      glyph: 'clock' },
-  waiting_for_plans: { label: 'Waiting for Plans', cls: 'badge-low',      glyph: 'clock' },
-  red:               { label: 'Unallocated',       cls: 'badge-urgent',   tone: 'urgent' },
-  orange:            { label: 'Claimed',           cls: 'badge-elevated', tone: 'elevated' },
-  yellow:            { label: 'Attended',          cls: 'badge-standard', tone: 'standard' },
-  green:             { label: 'Report Sent',       cls: 'badge-accepted', tone: 'complete' },
-  archived:          { label: 'Archived',          cls: 'badge-low',      glyph: 'archive' },
+  pending_approval:  { label: 'Awaiting Go-ahead',  cls: 'badge-low',      glyph: 'clock' },
+  waiting_for_plans: { label: 'Waiting for Plans',  cls: 'badge-low',      glyph: 'clock' },
+  red:               { label: 'Unallocated',        cls: 'badge-urgent',   tone: 'urgent' },
+  orange:            { label: 'Allocated',          cls: 'badge-accepted', tone: 'complete' },
+  yellow:            { label: 'Survey Done',        cls: 'badge-standard', tone: 'standard' },
+  data_received:     { label: 'Data Received',      cls: 'badge-elevated', tone: 'elevated' },
+  awaiting_client:   { label: 'Awaiting Client',    cls: 'badge-low',      glyph: 'clock' },
+  green:             { label: 'Report Sent',        cls: 'badge-accepted', tone: 'complete' },
+  archived:          { label: 'Archived',           cls: 'badge-low',      glyph: 'archive' },
 };
+
+// Longer wording for the job page header, where there's room.
+const DISPATCH_LONG = {
+  yellow:        'Survey done, awaiting data from surveyor',
+  data_received: 'Survey data received, report to complete',
+};
+
+// Labels that depend on more than the stage: whether a job waiting on the
+// client has been part invoiced, and whether an archived job was completed
+// (report sent and invoiced) or declined.
+function jobStageLabel(job, long = false) {
+  if (!job) return '—';
+  const s = job.dispatch_state;
+  if (s === 'awaiting_client') {
+    return 'Awaiting Client · ' + (job.invoice1_date ? 'Part Invoiced' : 'Not Invoiced');
+  }
+  if (s === 'archived') return job.report_finalised ? 'Job Complete' : 'Archived';
+  return (long && DISPATCH_LONG[s]) || getDispatchMeta(s).label;
+}
 
 const URGENCY_COLOR_META = {
   red:    { label: 'Urgent',   cls: 'badge-urgent',   tone: 'urgent' },
@@ -289,26 +313,32 @@ function dispatchGlyph(state) {
 // helper on any element carrying data-status (badges, filter tabs, dashboard rows).
 // Keep in step with help/job-journey.html.
 const STATUS_HELP = {
-  pending_approval: { label: 'Pending approval',
-    before: 'The job was created from a website enquiry, added with New job, or a Stage 2 job was activated.',
-    next: 'Prepare the Axiscape database and report template, then press Approve to Map.' },
+  pending_approval: { label: 'Awaiting go-ahead',
+    before: 'A website quote was sent but the customer has not accepted it yet, or the job was taken off the map.',
+    next: 'When the customer accepts the quote the job goes straight onto the map as Unallocated. Put it on the map yourself with Put on Map.' },
   waiting_for_plans: { label: 'Waiting for plans',
     before: 'A Stage 2 job was created, or the job was started while waiting on drawings. The SLA clock is not running.',
-    next: 'When the plans arrive, press Plans Received, Activate Job. The SLA starts and the job moves to Pending approval.' },
-  red: { label: 'Unallocated',
-    before: 'The office approved it to the map. Surveyor pay was worked out.',
-    next: 'A surveyor in range claims it in the app, or you allocate it to one. Remove from Map sends it back to Pending.' },
-  orange: { label: 'Claimed',
-    before: 'A surveyor claimed it (or accepted an allocation) and agreed to the NDA.',
-    next: 'The surveyor visits the site and taps Mark Field Data Uploaded. Unassign Surveyor puts it back on the map.' },
-  yellow: { label: 'Attended',
-    before: 'The surveyor visited and uploaded the field data.',
-    next: 'Work through the Report checklist on the job page, then tick Report finalised and sent.' },
+    next: 'When the plans arrive, press Plans Received, Activate Job. The SLA starts and the job goes on the map as Unallocated.' },
+  red: { label: 'Unallocated (red pin)',
+    before: 'The customer accepted the quote, or you added the job. It went straight onto the map.',
+    next: 'Create the database (urgent jobs first) and draft the report. A surveyor in range claims it in the app, or you allocate it.' },
+  orange: { label: 'Allocated (green pin)',
+    before: 'A surveyor claimed it (or accepted an allocation) and agreed to the NDA. You were emailed to get the database to them.',
+    next: 'Send the database to the surveyor. They visit the site and tap Survey Done. Unassign Surveyor puts it back on the map.' },
+  yellow: { label: 'Survey done, awaiting data from surveyor',
+    before: 'The surveyor visited the site and tapped Survey Done. The pin left the map.',
+    next: 'The surveyor tidies the database, puts it with photos and site notes in SharePoint, then taps Data Sent.' },
+  data_received: { label: 'Survey data received, report to complete',
+    before: 'The surveyor put the data in SharePoint and tapped Data Sent. You were emailed.',
+    next: 'Finish the job: Report & Invoice Sent (job complete), or Tree Data Sent, part invoiced or not invoiced, while you wait for the client.' },
+  awaiting_client: { label: 'Awaiting further info from client',
+    before: 'You sent the tree data and are waiting on the client (for example their plans). Shown as part invoiced or not invoiced.',
+    next: 'When the client comes back, finish the report and press Report & Invoice Sent. The job is then complete.' },
   green: { label: 'Report sent',
-    before: 'The office ticked Report finalised and sent. The job left the surveyor app.',
-    next: 'Record the invoice (both on a 50/50 job). It archives itself once fully invoiced.' },
-  archived: { label: 'Archived',
-    before: 'The report was sent and the job fully invoiced, or the customer declined the quote.',
+    before: 'An older job whose report was marked sent before invoicing and reporting became one step.',
+    next: 'Record the invoice. It archives itself once fully invoiced.' },
+  archived: { label: 'Job complete / archived',
+    before: 'The report and invoice were sent (Job Complete), or the customer declined the quote (Archived).',
     next: 'Nothing, unless an invoice is still to be marked paid.' },
 };
 
@@ -316,9 +346,12 @@ function statusHelpAttr(state) {
   return STATUS_HELP[state] ? ` data-status="${state}" tabindex="0"` : '';
 }
 
-function dispatchBadge(state) {
+// Pass the job as well to get the fuller label (part invoiced, job complete),
+// and long = true for Trevor's full wording where there's room.
+function dispatchBadge(state, job, long = false) {
   const m = getDispatchMeta(state);
-  return `<span class="badge ${m.cls}"${statusHelpAttr(state)}>${dispatchGlyph(state)}${m.label}</span>`;
+  const label = job ? jobStageLabel(job, long) : m.label;
+  return `<span class="badge ${m.cls}"${statusHelpAttr(state)}>${dispatchGlyph(state)}${label}</span>`;
 }
 
 function urgencyColorBadge(color) {
@@ -715,7 +748,7 @@ async function createIntroducer({ full_name, company_name, email }) {
 // ============================================================
 
 const URGENCY_ORDER  = { red: 0, orange: 1, yellow: 2, grey: 3, green: 4 };
-const DISPATCH_ORDER = { pending_approval: 0, waiting_for_plans: 1, red: 2, orange: 3, yellow: 4, green: 5, archived: 6 };
+const DISPATCH_ORDER = { pending_approval: 0, waiting_for_plans: 1, red: 2, orange: 3, yellow: 4, data_received: 5, awaiting_client: 6, green: 7, archived: 8 };
 
 function sortLevels(sort) {
   if (Array.isArray(sort)) return sort.filter(l => l && l.key);

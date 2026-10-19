@@ -123,7 +123,7 @@
 <div class="modal-overlay" id="invoiceModal" style="display:none">
   <div class="modal">
     <div class="modal-title" id="invModalTitle">Raise Invoice</div>
-    <div class="modal-sub">Raise this invoice in QuickBooks first, then record it here to track payment.</div>
+    <div class="modal-sub" id="invModalSub">Raise this invoice in QuickBooks first, then record it here to track payment.</div>
     <div class="form-group">
       <label>Invoice Date <span class="req">*</span></label>
       <input type="date" class="form-control" id="invDate">
@@ -244,7 +244,6 @@ let enquiry = null;
 let introducers = [];
 let addingIntroducer = false;
 let stage2Job = null; // child job if this is a Stage 1 two-stage job
-let invoiceTarget = 1;
 let paidTarget = 1;
 
 if (!jobId) window.location.href = 'jobs.html';
@@ -384,64 +383,25 @@ function renderInvoiceSection() {
   return `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">${rows.join('')}</div>`;
 }
 
-// Renders contextual invoice action buttons for the Quick Actions card
+// Payment buttons for the Actions card. Invoices themselves are recorded by
+// the finish actions in the Progress card (Report & Invoice Sent, Tree Data
+// Sent part invoiced), since sending the report and invoicing are one step.
 function renderInvoiceActions() {
   const isStaged = job.billing_mode === 'staged';
   const buttons = [];
+  const paidBtn = (num, label) => `
+    <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(${num})">
+      ${icon('checkCircle', 14)}${label}
+    </button>`;
 
-  if (!isStaged) {
-    // Single invoice
-    if (!job.invoice1_date) {
-      buttons.push(`
-        <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="quickInvoice(1)">
-          ${icon('receipt', 14)}Mark Invoiced
-        </button>`);
-      buttons.push(`
-        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openInvoiceModal(1)">
-          ${icon('receipt', 14)}Custom Invoice
-        </button>`);
-    } else if (!job.invoice1_paid) {
-      buttons.push(`
-        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(1)">
-          ${icon('checkCircle', 14)}Mark Invoice Paid
-        </button>`);
-    } else {
-      buttons.push(`
-        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
-          ${icon('checkCircle', 14)}${job.is_archived ? 'Invoice paid. Job archived' : 'Invoice paid. Archives once the report is sent'}
-        </div>`);
-    }
-  } else {
-    // Staged 50/50 — Invoice 1
-    if (!job.invoice1_date) {
-      buttons.push(`
-        <button class="btn btn-primary w-100" style="justify-content:center;" onclick="openInvoiceModal(1)">
-          ${icon('receipt', 14)}Raise Invoice 1 (50%)
-        </button>`);
-    } else if (!job.invoice1_paid) {
-      buttons.push(`
-        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(1)">
-          ${icon('checkCircle', 14)}Mark Invoice 1 Paid
-        </button>`);
-    }
-
-    // Staged — Invoice 2 (only available once Invoice 1 is raised)
-    if (job.invoice1_date && !job.invoice2_date) {
-      buttons.push(`
-        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openInvoiceModal(2)">
-          ${icon('receipt', 14)}Raise Invoice 2 (50%)
-        </button>`);
-    } else if (job.invoice2_date && !job.invoice2_paid) {
-      buttons.push(`
-        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openPaidModal(2)">
-          ${icon('checkCircle', 14)}Mark Invoice 2 Paid
-        </button>`);
-    } else if (job.invoice1_paid && job.invoice2_paid) {
-      buttons.push(`
-        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
-          ${icon('checkCircle', 14)}${job.is_archived ? 'Both invoices paid. Job archived' : 'Both invoices paid. Archives once the report is sent'}
-        </div>`);
-    }
+  if (job.invoice1_date && !job.invoice1_paid) buttons.push(paidBtn(1, isStaged ? 'Mark Invoice 1 Paid' : 'Mark Invoice Paid'));
+  if (isStaged && job.invoice2_date && !job.invoice2_paid) buttons.push(paidBtn(2, 'Mark Invoice 2 Paid'));
+  const allPaid = job.invoice1_paid && (!isStaged || !job.invoice2_date || job.invoice2_paid);
+  if (job.invoice1_date && allPaid) {
+    buttons.push(`
+      <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:6px;">
+        ${icon('checkCircle', 14)}${isStaged && job.invoice2_date ? 'Both invoices paid' : 'Invoice paid'}
+      </div>`);
   }
 
   return buttons.join('');
@@ -790,7 +750,7 @@ function renderJob() {
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         ${job.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle', 12)}Details Received</span>` : `<span class="badge badge-low">${icon('clock', 12)}Awaiting Customer Details</span>`}
         ${urgencyColorBadge(job.urgency_state)}
-        ${dispatchBadge(job.dispatch_state)}
+        ${dispatchBadge(job.dispatch_state, job, true)}
       </div>
     </div>
 
@@ -825,8 +785,8 @@ function renderJob() {
                 </span>`, { always: true })}
             </div>
             <div class="hint" style="margin:8px 0 0;">${isStaged
-              ? 'Invoice 1: surveyor cost + ½ survey fee + urgency fee. Invoice 2: ½ survey fee, once the report is generated' + (job.report_generated ? ' (it is).' : ' (not yet).')
-              : 'One invoice for the full job cost.'}</div>
+              ? 'Part invoiced: invoice 1 when the tree data went out, invoice 2 for the balance when the report and invoice are sent.'
+              : 'One invoice for the full job cost, recorded when the report and invoice are sent.'}</div>
           </div>
           <div id="financialEdit" style="display:none;margin-top:4px;">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
@@ -933,13 +893,9 @@ function renderJob() {
             <div class="form-group">
               <label for="dispatchSelect">Dispatch</label>
               <select class="form-control" id="dispatchSelect">
-                <option value="pending_approval"  ${job.dispatch_state==='pending_approval' ?'selected':''}>Pending Approval</option>
-                <option value="waiting_for_plans" ${job.dispatch_state==='waiting_for_plans'?'selected':''}>Waiting for Plans</option>
-                <option value="red"      ${job.dispatch_state==='red'      ?'selected':''}>Unallocated</option>
-                <option value="orange"   ${job.dispatch_state==='orange'   ?'selected':''}>Claimed</option>
-                <option value="yellow"   ${job.dispatch_state==='yellow'   ?'selected':''}>Attended</option>
-                <option value="green"    ${job.dispatch_state==='green'    ?'selected':''}>Report Sent</option>
-                <option value="archived" ${job.dispatch_state==='archived' ?'selected':''}>Archived</option>
+                ${['pending_approval', 'waiting_for_plans', 'red', 'orange', 'yellow', 'data_received', 'awaiting_client', 'green', 'archived']
+                  .filter(s => s !== 'green' || job.dispatch_state === 'green')
+                  .map(s => `<option value="${s}" ${job.dispatch_state === s ? 'selected' : ''}>${getDispatchMeta(s).label}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -963,9 +919,9 @@ function renderJob() {
         </div>
 
         <div class="card">
-          <div class="card-title">Report</div>
-          ${renderReportFlags()}
-          ${renderReportProgress()}
+          <div class="card-title">Progress</div>
+          ${renderProgress()}
+          ${renderFinishActions()}
         </div>
 
         ${renderTwoStageActions()}
@@ -1019,41 +975,36 @@ async function updateStates() {
 // INVOICE MODAL
 // ============================================================
 
-function openInvoiceModal(num) {
-  const isStaged = job.billing_mode === 'staged';
-  // Invoice 2 is meant to follow the report; check rather than block, in case it is deliberate
-  if (num === 2 && isStaged && !job.report_generated &&
-      !confirm('The report is not marked as generated yet. Invoice 2 normally follows the report. Raise it anyway?')) return;
-  invoiceTarget = num;
-  const title = isStaged ? `Raise Invoice ${num} (50%)` : 'Raise Invoice';
-  document.getElementById('invModalTitle').textContent = title;
+// Two finish actions use this dialog (Trevor, 19 Oct 2026: sending the report
+// and invoicing are one step, never two):
+//   'complete' -- Report & Invoice Sent. Records the invoice (the balance, as
+//                 invoice 2, if the job was part invoiced) and completes the job.
+//   'part'     -- Tree Data Sent, part invoiced. Records invoice 1 and parks the
+//                 job as Awaiting Client until the client comes back.
+let finishMode = 'complete';
 
-  // Pre-fill today's date
-  document.getElementById('invDate').value = new Date().toISOString().slice(0, 10);
-
-  // Pre-fill amount: staged = 50% of agreed, single = full agreed
+function openFinishModal(mode) {
+  finishMode = mode;
   const agreed = Number(job.agreed_amount) || 0;
-  const prefill = isStaged ? (agreed / 2).toFixed(2) : agreed.toFixed(2);
-  document.getElementById('invAmount').value = prefill > 0 ? prefill : '';
-
-  document.getElementById('invoiceModal').style.display = 'flex';
-}
-
-// A job is finished once its report has been sent AND it is fully invoiced
-// (single: invoice 1; staged: invoices 1 and 2). Adds the archive fields to
-// `updates` when that's true after applying them.
-function archiveIfComplete(updates) {
-  const after = { ...job, ...updates };
-  const reportSent = after.report_finalised || after.dispatch_state === 'green';
-  const invoiced = after.billing_mode === 'staged'
-    ? !!(after.invoice1_date && after.invoice2_date)
-    : !!after.invoice1_date;
-  if (reportSent && invoiced && after.dispatch_state !== 'archived') {
-    updates.is_archived    = true;
-    updates.dispatch_state = 'archived';
-    updates.urgency_state  = 'green';
+  const partPaid = !!job.invoice1_date;
+  let title, sub, prefill;
+  if (mode === 'part') {
+    title = 'Tree Data Sent, Part Invoiced';
+    sub = 'Raise the part invoice in QuickBooks first, then record it here. The job comes off the map and waits for the client as Awaiting Client, part invoiced.';
+    prefill = agreed / 2;
+  } else {
+    title = 'Report & Invoice Sent';
+    sub = partPaid
+      ? `Raise the final invoice in QuickBooks first. Invoice 1 (£${Number(job.invoice1_amount).toLocaleString()}) is already recorded, so this is the balance. The job is then complete.`
+      : 'Raise the invoice in QuickBooks first, then record it here. The job is then complete and leaves the jobs list.';
+    prefill = partPaid ? agreed - (Number(job.invoice1_amount) || 0) : agreed;
   }
-  return updates;
+  document.getElementById('invModalTitle').textContent = title;
+  document.getElementById('invModalSub').textContent = sub;
+  document.getElementById('invDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('invAmount').value = prefill > 0 ? prefill.toFixed(2) : '';
+  document.getElementById('invSubmitBtn').textContent = mode === 'part' ? 'Save, Awaiting Client' : 'Save, Job Complete';
+  document.getElementById('invoiceModal').style.display = 'flex';
 }
 
 function closeInvoiceModal() {
@@ -1068,77 +1019,54 @@ async function submitInvoice() {
   if (!amount || amount <= 0) { showToast('Please enter a valid amount', 'error'); return; }
 
   const btn = document.getElementById('invSubmitBtn');
+  const btnText = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
   try {
-    const isStaged = job.billing_mode === 'staged';
+    const now = new Date().toISOString();
     const updates = {};
-
-    if (invoiceTarget === 1) {
-      updates.invoice1_date   = date;
-      updates.invoice1_amount = amount;
-      updates.invoiced        = true;
-      updates.invoiced_at     = new Date(date).toISOString();
+    if (finishMode === 'complete' && job.invoice1_date) {
+      // Part invoiced earlier: this is the balance
+      Object.assign(updates, { invoice2_date: date, invoice2_amount: amount, billing_mode: 'staged' });
     } else {
-      updates.invoice2_date   = date;
-      updates.invoice2_amount = amount;
+      Object.assign(updates, { invoice1_date: date, invoice1_amount: amount, invoiced: true, invoiced_at: new Date(date).toISOString() });
+      if (finishMode === 'part') updates.billing_mode = 'staged';
     }
-    // Raising an invoice never archives a job on its own -- only once the
-    // report has been sent as well (an invoice can go out before the survey).
-    archiveIfComplete(updates);
+
+    if (finishMode === 'part') {
+      updates.dispatch_state = 'awaiting_client';
+    } else {
+      Object.assign(updates, {
+        report_finalised: true, report_finalised_at: now, report_sent_at: now,
+        dispatch_state: 'archived', is_archived: true, urgency_state: 'green',
+      });
+    }
 
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
     closeInvoiceModal();
-    showToast((invoiceTarget === 1 ? 'Invoice raised' : 'Invoice 2 raised') + (updates.is_archived ? ' — job complete and archived' : ''));
+    showToast(finishMode === 'part' ? 'Part invoice recorded. Job is Awaiting Client' : 'Report and invoice recorded. Job complete');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Save Invoice';
+    btn.textContent = btnText;
   }
 }
 
-// ============================================================
-// QUICK INVOICE (one click, single-invoice jobs)
-// ============================================================
-
-// One-click invoice for a single-invoice job: records invoice 1 today at the agreed
-// fee (excl VAT), exactly as the Custom Invoice form would, then archives the job
-// if the report has already gone out. With no agreed fee yet it opens the form so
-// the amount can be typed instead of recording £0.
-async function quickInvoice(num) {
-  if (num !== 1 || job.billing_mode === 'staged') { openInvoiceModal(num); return; }
-  const amount = Number(job.agreed_amount) || 0;
-  if (amount <= 0) {
-    showToast('No agreed fee on this job yet. Enter the invoice amount.', 'error');
-    openInvoiceModal(1);
-    return;
-  }
+// Tree data sent without an invoice: off the map, waiting on the client.
+async function markAwaitingClient() {
+  if (!confirm('Tree data sent, not invoiced? The job waits for the client as Awaiting Client, not invoiced.')) return;
   try {
-    const now = new Date();
-    const updates = {
-      invoice1_date:   now.toISOString().slice(0, 10),
-      invoice1_amount: amount,
-      invoiced:        true,
-      invoiced_at:     now.toISOString(),
-    };
-    archiveIfComplete(updates);
-    await dbUpdate('jobs', `id=eq.${jobId}`, updates);
-    Object.assign(job, updates);
-    showToast(`Invoiced £${amount.toLocaleString()}` + (updates.is_archived ? '. Job complete and archived' : ''));
+    await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'awaiting_client' });
+    job.dispatch_state = 'awaiting_client';
+    showToast('Job is Awaiting Client, not invoiced');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
-}
-
-// The "Mark Invoiced" button in the Financial card: same record as the quick action,
-// so the revenue totals, "Mark Paid" and archiving all see it.
-function markInvoiced() {
-  return quickInvoice(1);
 }
 
 // ============================================================
@@ -1413,89 +1341,71 @@ async function submitPaid() {
 }
 
 // ============================================================
-// PROGRESS CHECKLIST
+// PROGRESS: database, report draft, and finishing the job
 // ============================================================
 
-// Office workflow after the surveyor uploads field data. Ticking "Report
-// Finalised" also stamps report_sent_at and advances the job to green --
-// on_report_sent (the DB trigger that emails the client their report is
-// ready) fires off report_finalised flipping true, there's no separate
-// "send" step. Only shown once there's field data to act on, matching
-// notify-field-data-uploaded's own next-steps list.
-function renderReportProgress() {
-  if (!job.field_data_uploaded) return '';
-
+// Trevor's two office to-dos, shown from the moment the job exists. The
+// database matters most: nothing can happen until it reaches the surveyor.
+function renderProgress() {
   const items = [
-    { field: 'axi_prepared',     atField: 'axi_prepared_at',     label: 'Axiscape DB prepared' },
-    { field: 'report_drafted',   atField: 'report_drafted_at',   label: 'Report drafted' },
-    { field: 'report_finalised', atField: 'report_finalised_at', label: 'Report finalised and sent', advancesDispatchTo: 'green' },
+    { field: 'axi_prepared',   atField: 'axi_prepared_at',   todo: 'Database to create', done: 'Database created',
+      warn: job.surveyor_id ? 'A surveyor has the job and is waiting for it.' : 'Do this first. Nothing can happen until it goes to the surveyor.' },
+    { field: 'report_drafted', atField: 'report_drafted_at', todo: 'Report to draft',    done: 'Report drafted' },
   ];
-
-  return `<div class="sub-h">Office workflow</div>` + items.map(item => {
+  return items.map(item => {
     const done = !!job[item.field];
     return `
-      <div class="prog" role="button" tabindex="0"
-           onclick="toggleChecklist('${item.field}', '${item.atField}', ${item.advancesDispatchTo ? `'${item.advancesDispatchTo}'` : 'null'})">
+      <div class="prog" role="button" tabindex="0" onclick="toggleProgress('${item.field}', '${item.atField}')">
         <span style="display:flex;align-items:center;gap:8px;">
           <span style="width:17px;height:17px;border-radius:4px;border:1.5px solid ${done ? 'var(--green-dark)' : 'var(--border)'};background:${done ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;">
             ${done ? icon('checkCircle', 11) : ''}
           </span>
-          <span style="color:${done ? 'var(--text)' : 'var(--text-muted)'};">${item.label}</span>
+          <span style="color:${done ? 'var(--text)' : '#b45309'};font-weight:${done ? 400 : 600};">${done ? item.done : item.todo}</span>
         </span>
         <span style="font-size:11px;color:var(--text-muted);">${job[item.atField] ? formatDate(job[item.atField]) : ''}</span>
-      </div>`;
+      </div>
+      ${!done && item.warn ? `<div class="hint" style="margin:-2px 0 6px 25px;">${item.warn}</div>` : ''}`;
   }).join('');
 }
 
-async function toggleChecklist(field, atField, advancesDispatchTo) {
-  const isDone = job[field];
-
-  // Confirm before un-ticking
-  if (isDone && !confirm(`Mark "${field.replace(/_/g,' ')}" as incomplete?`)) return;
-
-  const updates = {};
-  if (!isDone) {
-    updates[field]   = true;
-    updates[atField] = new Date().toISOString();
-    // Advance dispatch state only if job isn't already at or past that state
-    if (advancesDispatchTo) {
-      const order = { pending_approval: 0, red: 1, orange: 2, yellow: 3, green: 4, archived: 5 };
-      const current = order[job.dispatch_state] ?? 0;
-      const target  = order[advancesDispatchTo] ?? 0;
-      if (current < target) updates.dispatch_state = advancesDispatchTo;
-    }
-    // report_finalised flipping true is what the on_report_sent DB trigger
-    // watches to email the client -- report_sent_at just mirrors that same
-    // moment for display, there's no separate "send" step.
-    if (field === 'report_finalised') updates.report_sent_at = updates[atField];
-  } else {
-    updates[field]   = false;
-    updates[atField] = null;
-    if (field === 'report_finalised') updates.report_sent_at = null;
-  }
-
+async function toggleProgress(field, atField) {
+  const isDone = !!job[field];
+  const label = field === 'axi_prepared' ? 'Database created' : 'Report drafted';
+  if (isDone && !confirm(`Untick "${label}"?`)) return;
+  const updates = { [field]: !isDone, [atField]: isDone ? null : new Date().toISOString() };
   try {
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
     Object.assign(job, updates);
-    // Report sent on an already fully-invoiced job: archive it. Done as a
-    // separate save so the report-sent email trigger sees its own update.
-    if (field === 'report_finalised' && !isDone) {
-      const archive = archiveIfComplete({});
-      if (archive.is_archived) {
-        await dbUpdate('jobs', `id=eq.${jobId}`, archive);
-        Object.assign(job, archive);
-      }
-    }
-    if (!isDone && advancesDispatchTo && updates.dispatch_state) {
-      const labels = { yellow: 'Attended', green: 'Report Sent' };
-      showToast(`Saved — dispatch state advanced to ${labels[advancesDispatchTo]}`);
-    } else {
-      showToast(!isDone ? 'Marked complete' : 'Marked incomplete');
-    }
+    showToast(`${label}: ${isDone ? 'unticked' : 'ticked'}`);
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
+}
+
+// Step 6 of the process: once the survey is done (or on an amendment, at any
+// point) the job finishes one of three ways.
+function renderFinishActions() {
+  const d = job.dispatch_state;
+  const canFinish = ['yellow', 'data_received', 'awaiting_client', 'green'].includes(d)
+    || (job.job_type === 'amendment' && d !== 'archived');
+  if (!canFinish) return '';
+  const partInvoiced = !!job.invoice1_date;
+  return `
+    <div class="sub-h" style="margin-top:10px;">Finish the job</div>
+    <div class="actions">
+      <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="openFinishModal('complete')">
+        ${icon('checkCircle', 14)}Report &amp; Invoice Sent (Job Complete)
+      </button>
+      ${d !== 'awaiting_client' || !partInvoiced ? `
+        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="openFinishModal('part')"${partInvoiced ? ' disabled title="Already part invoiced"' : ''}>
+          ${icon('receipt', 14)}Tree Data Sent, Part Invoiced
+        </button>` : ''}
+      ${d !== 'awaiting_client' ? `
+        <button class="btn btn-secondary w-100" style="justify-content:center;" onclick="markAwaitingClient()">
+          ${icon('clock', 14)}Tree Data Sent, Not Invoiced
+        </button>` : ''}
+    </div>`;
 }
 
 // ============================================================
@@ -1592,34 +1502,6 @@ async function changeInvoicingMethod(method) {
   }
 }
 
-// Report tickboxes. Disabled until a surveyor is allocated: before that there
-// has been no site visit, so there is nothing to report on.
-function renderReportFlags() {
-  const allocated = !!job.surveyor_id;
-  const box = (field, label, hint) => `
-    <label class="chk" style="margin:0;font-weight:400;${allocated ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:0.55;'}">
-      <input type="checkbox" ${job[field] ? 'checked' : ''} ${allocated ? '' : 'disabled'}
-        onchange="updateReportFlag('${field}', this.checked)">
-      <span>${label}<small>${hint}</small></span>
-    </label>`;
-  return `
-    ${box('report_to_generate', 'Report to generate', 'This job needs a report producing')}
-    ${box('report_generated', 'Report generated', 'The report has been produced')}
-    ${allocated ? '' : '<div class="hint" style="margin:6px 0 0;">Available once a surveyor is allocated.</div>'}`;
-}
-
-async function updateReportFlag(field, checked) {
-  try {
-    await dbUpdate('jobs', `id=eq.${jobId}`, { [field]: checked });
-    job[field] = checked;
-    const label = field === 'report_generated' ? 'Report generated' : 'Report to generate';
-    showToast(`${label}: ${checked ? 'ticked' : 'unticked'}`);
-    renderJob();
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
 // ============================================================
 // TWO-STAGE BS5837
 // ============================================================
@@ -1646,7 +1528,7 @@ function renderTwoStageActions() {
         <div class="card-title">Stage 2 — Waiting for Plans</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
           Plans received from architect? Activate this job to start the SLA timer
-          and make it live on the map.
+          and put it straight onto the map.
         </p>
         <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="activateStage2()">
           ${icon('checkCircle', 14)}Plans Received — Activate Job
@@ -1657,14 +1539,14 @@ function renderTwoStageActions() {
 }
 
 async function activateStage2() {
-  if (!confirm('Activate this Stage 2 job? The SLA timer starts from today and the job moves to Pending Approval, ready for Approve to Map.')) return;
+  if (!confirm('Activate this Stage 2 job? The SLA timer starts from today and the job goes straight onto the map as Unallocated.')) return;
   try {
     const tier = URGENCY_TIERS[job.urgency_state] || URGENCY_TIERS.grey;
     const sla_deadline = addWorkingDays(new Date(), tier.days);
-    await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'pending_approval', sla_deadline });
-    job.dispatch_state = 'pending_approval';
+    await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'red', sla_deadline });
+    job.dispatch_state = 'red';
     job.sla_deadline   = sla_deadline;
-    showToast('Stage 2 activated — SLA set to ' + formatDate(sla_deadline));
+    showToast('Stage 2 live on the map. SLA set to ' + formatDate(sla_deadline));
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1675,39 +1557,38 @@ async function activateStage2() {
 // DISPATCH TO MAP
 // ============================================================
 
+// Jobs go onto the map by themselves when a quote is accepted or a job is
+// added, so the map button only matters for jobs that are off it.
 function renderDispatchButton() {
   const d = job.dispatch_state;
   if (d === 'pending_approval') {
     return `<button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="approveToMap()">
-      ${icon('checkCircle', 14)}Approve to Map
+      ${icon('mapPin', 14)}Put on Map
     </button>`;
   }
   if (d === 'red') {
     return `
       <button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-        ${dot('urgent')}Live on Map
+        ${dot('urgent')}On Map, Unallocated
       </button>
       <button class="btn btn-secondary w-100" style="justify-content:center;color:#dc2626;margin-top:6px;" onclick="removeFromMap()">
         ${icon('x', 14)}Remove from Map
       </button>`;
   }
-  if (d === 'archived') return '';
   if (d === 'orange') {
     return `
       <button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-        ${dot('elevated')}Claimed by Surveyor
+        ${dot('complete')}On Map, Allocated
       </button>
       <button class="btn btn-secondary w-100" style="justify-content:center;color:#dc2626;margin-top:6px;" onclick="handBackJob()">
         ${icon('arrowLeft', 14)}Unassign Surveyor
       </button>`;
   }
-  return `<button class="btn btn-secondary w-100" style="justify-content:center;" disabled>
-    ${icon('mapPin', 14)}Dispatched
-  </button>`;
+  return '';
 }
 
 async function approveToMap() {
-  if (!confirm('Approve this job to the surveyor map? It will become visible to eligible surveyors.')) return;
+  if (!confirm('Put this job on the surveyor map? It will become visible to eligible surveyors.')) return;
   try {
     // Fetch survey time and calculate surveyor pay if not already set
     let surveyor_pay_amount = job.surveyor_pay_amount;
@@ -1763,7 +1644,7 @@ async function approveToMap() {
     job.dispatch_state = 'red';
     if (surveyor_pay_amount) job.surveyor_pay_amount = surveyor_pay_amount;
     Object.assign(job, clientUpdates);
-    showToast('Job approved — live on map');
+    showToast('Job is on the map');
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1771,9 +1652,8 @@ async function approveToMap() {
 }
 
 async function removeFromMap() {
-  if (!confirm('Remove this job from the surveyor map? It goes back to Pending Approval and is no longer visible to surveyors.')) return;
+  if (!confirm('Remove this job from the surveyor map? It waits as Awaiting Go-ahead and surveyors can no longer see it.')) return;
   try {
-    // Back to pending (was 'yellow', which is Attended and wrongly counted as a site visit)
     await dbUpdate('jobs', `id=eq.${jobId}`, {
       dispatch_state: 'pending_approval'
     });

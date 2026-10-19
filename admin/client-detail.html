@@ -211,7 +211,7 @@ function renderView() {
                 <td>${getSurveyLabel(j.survey_type)}</td>
                 <td>${formatDate(j.survey_date)}</td>
                 <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
-                <td>${statusBadge(j.dispatch_state)}</td>
+                <td>${dispatchBadge(j.dispatch_state)}</td>
               </tr>`).join('')}</tbody>
           </table>
         </div>` : ''}

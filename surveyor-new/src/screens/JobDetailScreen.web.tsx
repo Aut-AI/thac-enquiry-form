@@ -271,17 +271,34 @@ export default function JobDetailScreen() {
     ]);
   }
 
-  async function markFieldDataUploaded() {
-    Alert.alert('Confirm', 'Mark field data as uploaded? This notifies the office.', [
+  // Trevor's process (19 Oct 2026): two taps after the visit. Survey Done
+  // takes the job off the map; Data Sent tells the office the database,
+  // photos and site notes are in SharePoint.
+  async function markSurveyDone() {
+    Alert.alert('Survey Done', 'Have you been to site and finished the survey? The job leaves the map.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: async () => {
+      { text: 'Survey Done', onPress: async () => {
         const { error } = await supabase.from('jobs').update({
-          field_data_uploaded: true,
-          field_data_uploaded_at: new Date().toISOString(),
           dispatch_state: 'yellow',
+          survey_done_at: new Date().toISOString(),
         }).eq('id', jobId);
         if (error) Alert.alert('Error', error.message);
-        else { Alert.alert('Done', 'Field data marked as uploaded.'); loadData(); }
+        else { Alert.alert('Done', 'Marked as surveyed. Tap Data Sent once the data is in SharePoint.'); loadData(); }
+      }},
+    ]);
+  }
+
+  async function markDataSent() {
+    Alert.alert('Data Sent', 'Have you put the database, photos and site notes in SharePoint? This tells the office.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Data Sent', onPress: async () => {
+        const { error } = await supabase.from('jobs').update({
+          dispatch_state: 'data_received',
+          field_data_uploaded: true,
+          field_data_uploaded_at: new Date().toISOString(),
+        }).eq('id', jobId);
+        if (error) Alert.alert('Error', error.message);
+        else { Alert.alert('Done', 'The office has been told your data is in SharePoint.'); loadData(); }
       }},
     ]);
   }
@@ -543,21 +560,29 @@ export default function JobDetailScreen() {
             <Text style={s.btnPrimaryText}><Ionicons name="checkmark-circle-outline" size={17} color="#fff" /> Claim This Job</Text>
           </TouchableOpacity>
         )}
-        {isMine && (
+        {isMine && job.dispatch_state === 'orange' && (
           <>
-            {job.dispatch_state === 'orange' && (
-              <TouchableOpacity style={s.btnPrimary} onPress={markFieldDataUploaded}>
-                <Text style={s.btnPrimaryText}><Ionicons name="cloud-upload-outline" size={17} color="#fff" /> Mark Field Data Uploaded</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={s.btnPrimary} onPress={markSurveyDone}>
+              <Text style={s.btnPrimaryText}><Ionicons name="checkmark-done-outline" size={17} color="#fff" /> Survey Done</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={s.btnSecondary} onPress={handBack}>
               <Text style={s.btnSecondaryText}>↩ Hand Back Job</Text>
             </TouchableOpacity>
           </>
         )}
         {isMine && job.dispatch_state === 'yellow' && (
+          <>
+            <View style={s.infoBox}>
+              <Text style={s.infoText}><StatusDot color="yellow" size={12} /> Survey done. Put the database, photos and site notes in SharePoint, then tap Data Sent.</Text>
+            </View>
+            <TouchableOpacity style={s.btnPrimary} onPress={markDataSent}>
+              <Text style={s.btnPrimaryText}><Ionicons name="cloud-done-outline" size={17} color="#fff" /> Data Sent</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {isMine && ['data_received', 'awaiting_client', 'green', 'archived'].includes(job.dispatch_state) && (
           <View style={s.infoBox}>
-            <Text style={s.infoText}><StatusDot color="yellow" size={12} /> Field data uploaded. Awaiting report finalisation.</Text>
+            <Text style={s.infoText}><StatusDot color="green" size={12} /> Data sent to the office. Nothing more to do on this job.</Text>
           </View>
         )}
       </View>

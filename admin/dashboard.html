@@ -77,38 +77,40 @@ async function init() {
             </div>
           </div>
           <div class="stat-card multi">
-            <div class="stat-label">Dispatch</div>
+            <div class="stat-label">Job Stage</div>
             <div class="stat-rows">
-              <div class="stat-row" data-status="pending_approval" tabindex="0" onclick="window.location.href='jobs.html?dispatch=pending_approval'">
-                <span class="stat-row-label">${icon('clock', 12)}Pending approval</span><span class="stat-row-count" id="statPending">—</span></div>
-              <div class="stat-row" data-status="waiting_for_plans" tabindex="0" onclick="window.location.href='jobs.html?dispatch=waiting_for_plans'">
-                <span class="stat-row-label">${icon('clock', 12)}Waiting for plans</span><span class="stat-row-count" id="statWaiting">—</span></div>
               <div class="stat-row" data-status="red" tabindex="0" onclick="window.location.href='jobs.html?dispatch=red'">
                 <span class="stat-row-label">${dot('urgent')}Unallocated</span><span class="stat-row-count" id="statUnallocated">—</span></div>
               <div class="stat-row" data-status="orange" tabindex="0" onclick="window.location.href='jobs.html?dispatch=orange'">
-                <span class="stat-row-label">${dot('elevated')}Claimed</span><span class="stat-row-count" id="statClaimed">—</span></div>
+                <span class="stat-row-label">${dot('complete')}Allocated</span><span class="stat-row-count" id="statAllocated">—</span></div>
               <div class="stat-row" data-status="yellow" tabindex="0" onclick="window.location.href='jobs.html?dispatch=yellow'">
-                <span class="stat-row-label">${dot('standard')}Attended</span><span class="stat-row-count" id="statAttended">—</span></div>
-              <div class="stat-row" data-status="green" tabindex="0" onclick="window.location.href='jobs.html?dispatch=green'">
-                <span class="stat-row-label">${dot('complete')}Report sent</span><span class="stat-row-count" id="statSent">—</span></div>
+                <span class="stat-row-label">${dot('standard')}Survey done, awaiting data</span><span class="stat-row-count" id="statSurveyDone">—</span></div>
+              <div class="stat-row" data-status="data_received" tabindex="0" onclick="window.location.href='jobs.html?dispatch=data_received'">
+                <span class="stat-row-label">${dot('elevated')}Data received, report to complete</span><span class="stat-row-count" id="statDataReceived">—</span></div>
+              <div class="stat-row" data-status="awaiting_client" tabindex="0" onclick="window.location.href='jobs.html?dispatch=awaiting_client'">
+                <span class="stat-row-label">${icon('clock', 12)}Awaiting client</span><span class="stat-row-count" id="statAwaitingClient">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=pending_approval'" data-status="pending_approval" tabindex="0">
+                <span class="stat-row-label">${icon('clock', 12)}Awaiting go-ahead / plans</span><span class="stat-row-count" id="statOffMap">—</span></div>
             </div>
           </div>
           <div class="stat-card multi">
-            <div class="stat-label">Reports <span class="muted-sub">allocated jobs</span></div>
+            <div class="stat-label">To Do</div>
             <div class="stat-rows">
-              <div class="stat-row" onclick="window.location.href='jobs.html?reports=to_generate'">
-                <span class="stat-row-label">${icon('clock', 12)}To generate</span><span class="stat-row-count" id="statToGenerate">—</span></div>
-              <div class="stat-row" onclick="window.location.href='jobs.html?reports=generated'">
-                <span class="stat-row-label">${icon('checkCircle', 12)}Generated</span><span class="stat-row-count" id="statGenerated">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=orange&reports=db_todo'">
+                <span class="stat-row-label">${icon('alertTriangle', 12)}Database needed, surveyor waiting</span><span class="stat-row-count" id="statDbWaiting">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?reports=db_todo'">
+                <span class="stat-row-label">${icon('clock', 12)}Database to create</span><span class="stat-row-count" id="statDbTodo">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?reports=report_todo'">
+                <span class="stat-row-label">${icon('clock', 12)}Report to draft</span><span class="stat-row-count" id="statReportTodo">—</span></div>
             </div>
-            <div class="stat-sub">Counted once a surveyor is allocated</div>
+            <div class="stat-sub">Active jobs that are on the map or further on</div>
           </div>
           <!-- Overdue + revenue, stacked to the height of the cards beside them -->
           <div class="stat-stack">
             <div class="stat-card compact">
               <div class="stat-label">Overdue</div>
               <div class="stat-value" id="statOverdue">—</div>
-              <div class="stat-sub">Past SLA, report not yet sent</div>
+              <div class="stat-sub">Past SLA, report not yet sent (not counting jobs awaiting the client)</div>
             </div>
             <div class="stat-card compact revenue">
               <div class="stat-label">${icon('currency',13)}This Month</div>
@@ -150,17 +152,10 @@ async function init() {
 async function loadStats() {
   const set = (id, n) => { document.getElementById(id).textContent = n; };
   try {
-    // One fetch, counted here. The report flags need the report_to_generate
-    // column (migration 20261005000); if it isn't there yet, retry without it.
-    const base = 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,report_generated';
-    let jobs, flagsOk = true;
-    try {
-      jobs = await dbGet('jobs', { 'select': base + ',report_to_generate', 'is_archived': 'not.eq.true', 'limit': 5000 });
-    } catch (e) {
-      flagsOk = false;
-      jobs = await dbGet('jobs', { 'select': base, 'is_archived': 'not.eq.true', 'limit': 5000 });
-    }
-    jobs = (jobs || []).filter(j => j.dispatch_state !== 'archived');
+    const jobs = ((await dbGet('jobs', {
+      'select': 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,axi_prepared,report_drafted',
+      'is_archived': 'not.eq.true', 'limit': 5000,
+    })) || []).filter(j => j.dispatch_state !== 'archived');
     const n = fn => jobs.filter(fn).length;
 
     set('statUrgent',   n(j => j.urgency_state === 'red'));
@@ -168,23 +163,22 @@ async function loadStats() {
     set('statStandard', n(j => j.urgency_state === 'yellow'));
     set('statLow',      n(j => j.urgency_state === 'grey'));
 
-    set('statPending',     n(j => j.dispatch_state === 'pending_approval'));
-    set('statWaiting',     n(j => j.dispatch_state === 'waiting_for_plans'));
-    set('statUnallocated', n(j => j.dispatch_state === 'red'));
-    set('statClaimed',     n(j => j.dispatch_state === 'orange'));
-    set('statAttended',    n(j => j.dispatch_state === 'yellow'));
-    set('statSent',        n(j => j.dispatch_state === 'green'));
+    set('statUnallocated',    n(j => j.dispatch_state === 'red'));
+    set('statAllocated',      n(j => j.dispatch_state === 'orange'));
+    set('statSurveyDone',     n(j => j.dispatch_state === 'yellow'));
+    set('statDataReceived',   n(j => j.dispatch_state === 'data_received'));
+    set('statAwaitingClient', n(j => j.dispatch_state === 'awaiting_client'));
+    set('statOffMap',         n(j => ['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state)));
 
-    // Reports: only meaningful once a surveyor is allocated. Before that there
-    // has been no site visit, so there is nothing to report on and counting
-    // unallocated jobs would just add noise.
-    if (flagsOk) {
-      set('statToGenerate', n(j => j.surveyor_id && j.report_to_generate && !j.report_generated));
-      set('statGenerated',  n(j => j.surveyor_id && j.report_generated));
-    }
+    // Office to-dos only count once the job is live: a quote not yet accepted
+    // or a Stage 2 still waiting for plans needs no database yet.
+    const live = j => !['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state);
+    set('statDbWaiting',  n(j => j.dispatch_state === 'orange' && !j.axi_prepared));
+    set('statDbTodo',     n(j => live(j) && !j.axi_prepared));
+    set('statReportTodo', n(j => live(j) && !j.report_drafted));
 
     const today = new Date().toISOString().slice(0, 10);
-    set('statOverdue', n(j => j.sla_deadline && j.sla_deadline < today && j.dispatch_state !== 'green'));
+    set('statOverdue', n(j => j.sla_deadline && j.sla_deadline < today && !['green', 'awaiting_client'].includes(j.dispatch_state)));
   } catch (e) {
     console.error('Stats error:', e);
   }
@@ -263,28 +257,10 @@ function slaCountdown(dateStr) {
   return `<span style="color:var(--text-muted);">${days}d left</span>`;
 }
 
-// NOTE: labels/classes here intentionally differ slightly from the shared
-// getDispatchMeta() table in thac.js (e.g. "Pending" vs "Pending Approval"),
-// so this local copy is kept rather than switched to the shared dispatchBadge()
-// helper. Only the glyphs were swapped from emoji to the shared icon()/dot().
-function dispatchBadge(state) {
-  const map = {
-    pending_approval:  [icon('clock', 12),   'Pending',            'badge-low'],
-    waiting_for_plans: [icon('clock', 12),   'Waiting for Plans',  'badge-low'],
-    red:      [dot('urgent'),   'Unallocated', 'badge-urgent'],
-    orange:   [dot('elevated'), 'Claimed',     'badge-elevated'],
-    yellow:   [dot('standard'), 'Attended',    'badge-standard'],
-    green:    [dot('complete'), 'Report Sent', 'badge-accepted'],
-    archived: [icon('archive', 12), 'Archived', 'badge-low'],
-  };
-  const [glyph, label, cls] = map[state] || ['', state || '—', 'badge-low'];
-  return `<span class="badge ${cls}"${statusHelpAttr(state)}>${glyph}${label}</span>`;
-}
-
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,report_generated,introducer_client_id,end_client_name,billing_contact_name',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
       'limit': 500
@@ -295,7 +271,7 @@ async function loadUrgencyDashboard() {
         <div class="empty-state">
           <div class="empty-icon">${icon('briefcase', 48)}</div>
           <h3>No active jobs</h3>
-          <p>Jobs will appear here once enquiries are converted</p>
+          <p>Jobs appear here when a quote is accepted or you add one</p>
         </div>`;
       return;
     }
@@ -309,22 +285,23 @@ async function loadUrgencyDashboard() {
   }
 }
 
-// Report Generated tickbox: only available once a surveyor is allocated.
-function reportTick(j) {
-  const allocated = !!j.surveyor_id;
-  return `<input type="checkbox" ${j.report_generated ? 'checked' : ''} ${allocated ? '' : 'disabled'}
-    title="${allocated ? '' : 'Available once the job is allocated to a surveyor'}"
-    onchange="toggleReportGenerated('${j.id}', this)">`;
+// Database / Report drafted tickboxes, same as the jobs list.
+const PROGRESS_LABELS = { axi_prepared: 'Database created', report_drafted: 'Report drafted' };
+
+function progressTick(j, field) {
+  return `<input type="checkbox" ${j[field] ? 'checked' : ''} title="${PROGRESS_LABELS[field]}"
+    onchange="toggleProgress('${j.id}', '${field}', this)">`;
 }
 
-async function toggleReportGenerated(id, el) {
+async function toggleProgress(id, field, el) {
   const job = dashJobs.find(j => j.id === id);
   const checked = el.checked;
+  const atField = field === 'axi_prepared' ? 'axi_prepared_at' : 'report_drafted_at';
   try {
-    await dbUpdate('jobs', `id=eq.${id}`, { report_generated: checked });
-    job.report_generated = checked;
-    showToast(`Report generated: ${checked ? 'ticked' : 'unticked'}`);
-    loadStats();   // keep the Reports box in step
+    await dbUpdate('jobs', `id=eq.${id}`, { [field]: checked, [atField]: checked ? new Date().toISOString() : null });
+    job[field] = checked;
+    showToast(`${PROGRESS_LABELS[field]}: ${checked ? 'ticked' : 'unticked'}`);
+    loadStats();   // keep the To Do box in step
   } catch (e) {
     el.checked = !checked;
     showToast('Error: ' + e.message, 'error');
@@ -348,7 +325,8 @@ function renderUrgencyTable() {
       value:    j => j.agreed_amount == null ? null : Number(j.agreed_amount),
       dispatch: j => DISPATCH_ORDER[j.dispatch_state] ?? 99,
       urgency:  j => URGENCY_ORDER[j.urgency_state] ?? 99,
-      generated: j => j.report_generated ? 1 : 0,
+      database: j => j.axi_prepared ? 1 : 0,
+      drafted:  j => j.report_drafted ? 1 : 0,
     });
 
     const rows = jobs.map(j => `
@@ -363,9 +341,10 @@ function renderUrgencyTable() {
         <td>${j.site_postcode || '—'}</td>
         <td>${slaCountdown(j.sla_deadline)}</td>
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
-        <td>${dispatchBadge(j.dispatch_state)}</td>
+        <td>${dispatchBadge(j.dispatch_state, j)}</td>
         <td>${urgencyColorBadge(j.urgency_state)}</td>
-        <td class="tick-cell" onclick="event.stopPropagation()">${reportTick(j)}</td>
+        <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'axi_prepared')}</td>
+        <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'report_drafted')}</td>
       </tr>
     `).join('');
 
@@ -380,9 +359,10 @@ function renderUrgencyTable() {
             ${sortTh('Postcode', 'postcode', sort)}
             ${sortTh('SLA Deadline', 'sla', sort)}
             ${sortTh('Value', 'value', sort)}
-            ${sortTh('Dispatch', 'dispatch', sort)}
+            ${sortTh('Stage', 'dispatch', sort)}
             ${sortTh('Urgency', 'urgency', sort)}
-            ${sortTh('Report Generated', 'generated', sort)}
+            ${sortTh('Database', 'database', sort)}
+            ${sortTh('Report Drafted', 'drafted', sort)}
           </tr>
         </thead>
         <tbody>${rows}</tbody>

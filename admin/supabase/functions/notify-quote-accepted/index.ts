@@ -17,7 +17,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SB_THAC_SERVICE_ROLE_KEY')!;
 
 // There's no enquiry-detail.html page in the admin CRM -- the job for this
 // enquiry already exists (created immediately by submit-enquiry, sitting
-// as Pending Approval), so link straight to it instead.
+// as Awaiting Go-ahead), so link straight to it instead.
 async function getLinkedJobId(enquiryId: string): Promise<string | null> {
   try {
     const res = await fetch(
@@ -59,8 +59,9 @@ serve(async (req) => {
     const html = emailWrapper(`
       <h2>Client Has Accepted Their Quote</h2>
       <p>A client has clicked <strong>Accept Quote</strong>.
-         The job is already in the CRM as Pending Approval — review it and approve
-         when ready.</p>
+         ${record.enquiry_type === 'amendment'
+           ? 'This is an amendment, so it has not gone on the map. Pick it up from the job page.'
+           : 'The job has gone straight onto the surveyor map as Unallocated (red pin).'}</p>
 
       ${detailBlock([
         detailRow('Reference', record.job_number || '—'),
@@ -75,9 +76,9 @@ serve(async (req) => {
 
       <p style="font-size:14px; color:#6b756f; margin-top:8px;">
         <strong>Next steps:</strong><br>
-        1. Prepare the Axiscape database entry<br>
-        2. Draft the initial report template<br>
-        3. Approve the job — it goes live on the surveyor map
+        1. Create the database (urgent jobs first) and tick Database created<br>
+        2. Draft the report if you can, and tick Report drafted<br>
+        3. A surveyor claims the job in the app. You'll be emailed when they do
       </p>
 
       <a href="${crmLink}" class="cta-button">

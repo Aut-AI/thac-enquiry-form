@@ -1,10 +1,14 @@
 // ============================================================
-// THAC — notify-job-approved
+// THAC — notify-job-approved  (now: "job back on the map")
 // Trigger: UPDATE on public.jobs
 //          WHERE old.dispatch_state IS DISTINCT FROM new.dispatch_state
 //            AND new.dispatch_state = 'red'
-// Fires:   When Trevor approves a job — red dot goes live on map
-// Sends:   Email to admin confirming job is live
+// Fires:   When a job that a surveyor had goes back on the map
+// Sends:   Email to admin -- the job needs a new surveyor
+//
+// There is no approval step any more (Trevor, 19 Oct 2026): jobs go on the
+// map when a quote is accepted (the quote-accepted email covers that) or when
+// the office adds or activates one. So only a hand-back is worth an email.
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -16,16 +20,11 @@ serve(async (req) => {
     const record  = payload.record;       // new row state
     const oldRecord = payload.old_record; // previous row state
 
-    // Only fire when transitioning TO 'red' (the DB trigger already filters
-    // on this, but keep the check here as a defensive second layer).
-    if (record.dispatch_state !== 'red') {
-      return new Response('Not a job-approval transition', { status: 200 });
-    }
-    if (oldRecord?.dispatch_state === 'red') {
-      return new Response('Already live — skipping', { status: 200 });
+    if (record.dispatch_state !== 'red' || oldRecord?.dispatch_state !== 'orange') {
+      return new Response('Not a hand-back -- skipping', { status: 200 });
     }
 
-    const subject = `Job Live on Map — ${record.reference} | Awaiting Surveyor Claim`;
+    const subject = `Job Back on Map — ${record.reference} | Surveyor Handed It Back`;
 
     const slaDate = record.sla_deadline
       ? new Date(record.sla_deadline).toLocaleDateString('en-GB', {
@@ -34,10 +33,10 @@ serve(async (req) => {
       : 'Not set';
 
     const html = emailWrapper(`
-      <h2>Job Approved & Live on Marketplace</h2>
-      <p>Trevor has approved this job. It is now visible as a
-         <strong style="color:#c0392b;">${statusDot('#c0392b')}red dot</strong> on the surveyor marketplace map
-         and awaiting a surveyor claim.</p>
+      <h2>Job Back on the Map</h2>
+      <p>The surveyor no longer has this job. It is back on the map as
+         <strong style="color:#c0392b;">${statusDot('#c0392b')}Unallocated</strong>
+         and needs another surveyor.</p>
 
       ${detailBlock([
         detailRow('Job Reference', record.reference),
@@ -45,8 +44,7 @@ serve(async (req) => {
         detailRow('Site Postcode', record.site_postcode || '—'),
         detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
         detailRow('SLA Deadline', slaDate),
-        detailRow('Agreed Amount', `£${record.agreed_amount?.toFixed(2) ?? record.quoted_amount?.toFixed(2) ?? '—'}`),
-        detailRow('Approved', new Date(record.approved_at || Date.now()).toLocaleString('en-GB')),
+        detailRow('Reason given', record.handed_back_note || '—'),
       ].join(''))}
 
       <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">

@@ -46,7 +46,7 @@ h1 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 5vw, 
 
 /* status rail */
 .rail-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 20px 16px; }
-.rail { display: grid; grid-template-columns: repeat(6, minmax(118px, 1fr)); min-width: 760px; position: relative; }
+.rail { display: grid; grid-template-columns: repeat(5, minmax(118px, 1fr)); min-width: 680px; position: relative; }
 .rail::before { content: ""; position: absolute; left: 7%; right: 7%; top: 13px; border-top: 2px solid var(--line); }
 .stop { position: relative; display: grid; justify-items: center; text-align: center; gap: 6px; padding: 0 6px; text-decoration: none; color: inherit; }
 .stop .dot { width: 26px; height: 26px; border-radius: 999px; border: 4px solid var(--surface); box-shadow: 0 0 0 1.5px var(--line); }
@@ -116,39 +116,41 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
 <div class="wrap">
   <header>
     <p class="eyebrow">Heaps Arboriculture · how a job moves through the CRM</p>
-    <h1>The job journey, status by status</h1>
-    <p class="lede">Every job carries one dispatch status, shown as a coloured dot on the jobs list, the dashboard and the live map. This page walks through each status: what it means, what moves the job on, who gets an email, and what the surveyors can see.</p>
+    <h1>The job journey, stage by stage</h1>
+    <p class="lede">Every job is at one stage, shown on the jobs list, the dashboard and the live map. This page walks through each stage: what it means, what moves the job on, who gets an email, and what the surveyors can see. On the map a red pin is a job nobody has yet, and a green pin is a job a surveyor has taken.</p>
   </header>
 
-  <section aria-label="Status overview">
+  <section aria-label="Stage overview">
     <div class="rail-wrap">
       <div class="rail">
-        <a class="stop" href="#pending"><span class="dot d-pending"></span><b>Pending approval</b><span>Office preparing the job</span></a>
-        <a class="stop" href="#red"><span class="dot d-red"></span><b>Unallocated</b><span>Live on the map, waiting for a surveyor</span></a>
-        <a class="stop" href="#orange"><span class="dot d-orange"></span><b>Claimed</b><span>A surveyor has taken it</span></a>
-        <a class="stop" href="#yellow"><span class="dot d-yellow"></span><b>Attended</b><span>Site visited, data uploaded</span></a>
-        <a class="stop" href="#green"><span class="dot d-green"></span><b>Report sent</b><span>Report out, invoicing</span></a>
-        <a class="stop" href="#archived"><span class="dot d-archived"></span><b>Archived</b><span>Finished and filed</span></a>
+        <a class="stop" href="#red"><span class="dot d-red"></span><b>Unallocated</b><span>On the map as a red pin</span></a>
+        <a class="stop" href="#orange"><span class="dot d-green"></span><b>Allocated</b><span>A surveyor has it, green pin</span></a>
+        <a class="stop" href="#yellow"><span class="dot d-yellow"></span><b>Survey done</b><span>Awaiting data from the surveyor</span></a>
+        <a class="stop" href="#data"><span class="dot d-orange"></span><b>Data received</b><span>Report to complete</span></a>
+        <a class="stop" href="#archived"><span class="dot d-archived"></span><b>Job complete</b><span>Report and invoice sent</span></a>
       </div>
       <div class="branch">
-        <i><span class="mini d-waiting"></span>Waiting for plans</i> A Stage 2 (or plans-dependent) job parks here, then joins at Pending approval once the plans arrive.
+        <i><span class="mini d-waiting"></span>Awaiting client</i> Tree data sent, waiting on the client (part invoiced or not invoiced). Finishes as Job complete when they come back.
+      </div>
+      <div class="branch">
+        <i><span class="mini d-pending"></span>Off the map</i> Awaiting go-ahead (quote not accepted yet) and Waiting for plans (Stage 2) jobs join at Unallocated.
       </div>
     </div>
   </section>
 
   <section>
     <div class="sec-head"><h2>How a job starts</h2>
-      <p>There are two ways in. Either way the job appears straight away in the CRM as Pending approval.</p></div>
+      <p>There are two ways in. Either way, once it's a real job it goes straight onto the map as Unallocated. There's no approval step.</p></div>
     <div class="start">
       <div class="box">
-        <h3>A customer uses the website form</h3>
+        <h3>A customer accepts a quote on the website</h3>
         <ol class="steps">
-          <li>The customer fills in the enquiry form. The enquiry and its job are created together.</li>
+          <li>The customer fills in the enquiry form. The enquiry and its job are created together. The job waits off the map as <b>Awaiting go-ahead</b>.</li>
           <li>You send the quote from the CRM. The customer gets the price by email.</li>
-          <li>The customer accepts with one click, then fills in their full details. The job shows <b>Details Received</b>.</li>
+          <li>The customer accepts with one click. The job goes <b>straight onto the map</b> as Unallocated. They then fill in their full details, and the job shows <b>Details Received</b>.</li>
           <li>If they decline instead, the job is archived and you get an email with their reason.</li>
         </ol>
-        <span class="mail">to you on a new enquiry, on acceptance and on decline; to the customer with the quote and a "confirm your details" link.</span>
+        <span class="mail">to you on a new enquiry, on acceptance ("create the database") and on decline; to the customer with the quote and a "confirm your details" link.</span>
       </div>
       <div class="box">
         <h3>You add it yourself</h3>
@@ -156,85 +158,110 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
           <li>Use <b>New job</b> on the Jobs or Clients page, or <b>Add job</b> on a customer's page.</li>
           <li>Pick an existing customer or add a new one in the same form. Customers are matched by email, so nobody is added twice.</li>
           <li>Choose the survey type, site postcode and deadline. The urgency and SLA date are worked out for you.</li>
-          <li>Start it as Pending approval, or as Waiting for plans if you're still waiting on drawings.</li>
+          <li>It starts on the map as Unallocated, or as Waiting for plans if you're still waiting on drawings.</li>
         </ol>
-        <span class="mail">to you: "Job created, ready for preparation".</span>
+        <span class="mail">to you: "New job on map, database to create".</span>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><h2>Each status in turn</h2>
+    <div class="sec-head"><h2>Your two to-dos on every job</h2>
+      <p>From the moment a job is on the map, the job page, the jobs list and the dashboard's <b>To Do</b> box show two tick-boxes.</p></div>
+    <div class="two">
+      <div class="box">
+        <h3>Database to create → Database created</h3>
+        <p>The most important one. Nothing can happen until the database goes to the surveyor. Urgent jobs first. When a surveyor takes a job whose database isn't ready, you're emailed to create it now, and the dashboard shows it under <b>Database needed, surveyor waiting</b>.</p>
+      </div>
+      <div class="box">
+        <h3>Report to draft → Report drafted</h3>
+        <p>Tick it whenever you draft the report. You can do it early, but it matters less than the database.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Each stage in turn</h2>
       <p>Who does what at every stage, and what happens on its own.</p></div>
 
-    <article class="stage" id="waiting">
-      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Waiting for plans</span>
-        <small>Parked until the architect's revised plans arrive. Not on any map, and the SLA clock isn't running.</small></div>
+    <article class="stage" id="pending">
+      <div class="stage-id"><span class="tag"><span class="dot d-pending"></span>Awaiting go-ahead</span>
+        <small>Off the map. A website quote not yet accepted, or a job you took off the map.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Typically</h4><p>A Stage 2 BS5837 job (AIA, AMS, TPP), made from the Stage 1 job with <span class="btn">Create Stage 2 Job</span>.</p></div>
-        <div class="col"><h4>Moves on when</h4><p>Plans arrive and you press <span class="btn">Plans Received, Activate Job</span>.</p></div>
-        <div class="col"><h4>What happens</h4><ul><li>The SLA clock starts from today.</li><li>The job moves to Pending approval.</li></ul></div>
+        <div class="col"><h4>Typically</h4><p>The customer hasn't accepted the quote yet. Amendment requests also wait here, since they need no site visit.</p></div>
+        <div class="col"><h4>Moves on when</h4><ul><li>The customer accepts the quote, or</li><li>you press <span class="btn">Put on Map</span> on the job page.</li></ul></div>
+        <div class="col"><h4>What happens</h4><p>The job goes on the map as Unallocated.</p></div>
       </div>
     </article>
 
-    <article class="stage" id="pending">
-      <div class="stage-id"><span class="tag"><span class="dot d-pending"></span>Pending approval</span>
-        <small>The job exists, but surveyors can't see it yet.</small></div>
+    <article class="stage" id="waiting">
+      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Waiting for plans</span>
+        <small>Off the map until the architect's revised plans arrive. The SLA clock isn't running.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Office does</h4><ul><li>Prepare the Axiscape survey database.</li><li>Draft the initial report template.</li><li>Check the site address, trees and fee.</li></ul></div>
-        <div class="col"><h4>Moves on when</h4><p>You press <span class="btn">Approve to Map</span> on the job page.</p></div>
-        <div class="col"><h4>What happens</h4><ul><li>The surveyor's pay is worked out (hours × their rate).</li><li>A red dot appears on the surveyor map.</li></ul><span class="mail">to you, confirming the job is live.</span></div>
+        <div class="col"><h4>Typically</h4><p>A Stage 2 BS5837 job (AIA, AMS, TPP), made from the Stage 1 job with <span class="btn">Create Stage 2 Job</span>.</p></div>
+        <div class="col"><h4>Moves on when</h4><p>Plans arrive and you press <span class="btn">Plans Received, Activate Job</span>.</p></div>
+        <div class="col"><h4>What happens</h4><ul><li>The SLA clock starts from today.</li><li>The job goes straight onto the map as Unallocated.</li></ul></div>
       </div>
     </article>
 
     <article class="stage" id="red">
       <div class="stage-id"><span class="tag"><span class="dot d-red"></span>Unallocated</span>
-        <small>Live on the map. Any active surveyor whose coverage area includes the site can see and claim it.</small></div>
+        <small>A red pin on the map. Any active surveyor whose area includes the site can see and claim it.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Surveyors see</h4><p>The job on the app's map and its Available list, if the site is within their travel radius.</p></div>
-        <div class="col"><h4>Moves on when</h4><ul><li>A surveyor taps Claim in the app and accepts the NDA, or</li><li>you <span class="btn">Allocate to Surveyor</span> with a time limit and they accept.</li></ul></div>
-        <div class="col"><h4>What happens</h4><p>The job turns orange and leaves everyone else's map.</p><span class="mail">to you when it's claimed.</span></div>
-        <p class="back"><b>Going back:</b> <span class="btn">Remove from Map</span> returns the job to Pending approval.</p>
+        <div class="col"><h4>Office does</h4><ul><li>Create the database (urgent jobs first).</li><li>Draft the report if there's time.</li></ul></div>
+        <div class="col"><h4>Moves on when</h4><ul><li>A surveyor taps Claim in the app and accepts the NDA. If they click it, they've got it. There's no approval, or</li><li>you <span class="btn">Allocate to Surveyor</span> and they accept.</li></ul></div>
+        <div class="col"><h4>What happens</h4><p>The pin turns green and leaves everyone else's map.</p><span class="mail">to you: "Job allocated, create the database now" (or "send the database" if it's ready).</span></div>
+        <p class="back"><b>Going back:</b> <span class="btn">Remove from Map</span> takes the job off the map as Awaiting go-ahead.</p>
       </div>
     </article>
 
     <article class="stage" id="orange">
-      <div class="stage-id"><span class="tag"><span class="dot d-orange"></span>Claimed</span>
-        <small>One surveyor owns the job and is arranging the visit.</small></div>
+      <div class="stage-id"><span class="tag"><span class="dot d-green"></span>Allocated</span>
+        <small>A green pin. One surveyor has the job and is arranging the visit.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Surveyor does</h4><ul><li>Agrees the survey date.</li><li>Visits the site.</li><li>Uploads photos and field data in the app.</li></ul></div>
-        <div class="col"><h4>Moves on when</h4><p>The surveyor taps <span class="btn">Mark Field Data Uploaded</span> in the app.</p></div>
-        <div class="col"><h4>What happens</h4><p>The job turns yellow.</p><span class="mail">to you: report finalisation needed.</span></div>
-        <p class="back"><b>Going back:</b> <span class="btn">Unassign Surveyor</span> returns the job to Unallocated, back on the map.</p>
+        <div class="col"><h4>Office does</h4><p>Get the database to the surveyor.</p></div>
+        <div class="col"><h4>Surveyor does</h4><ul><li>Agrees the survey date and visits the site.</li><li>Back at the office, taps <span class="btn">Survey Done</span> in the app.</li></ul></div>
+        <div class="col"><h4>What happens</h4><p>The pin leaves the map. The job shows <b>Survey done, awaiting data from surveyor</b>.</p></div>
+        <p class="back"><b>Going back:</b> the surveyor can hand the job back, or you can press <span class="btn">Unassign Surveyor</span>. Either way it's back on the map as Unallocated, and you're emailed.</p>
       </div>
     </article>
 
     <article class="stage" id="yellow">
-      <div class="stage-id"><span class="tag"><span class="dot d-yellow"></span>Attended</span>
-        <small>The site visit is done. The report is now with the office.</small></div>
+      <div class="stage-id"><span class="tag"><span class="dot d-yellow"></span>Survey done</span>
+        <small>The site visit is done. Waiting for the surveyor's data.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Office does</h4><p>Works down the job page's Report checklist:</p><ul><li>Axiscape DB prepared</li><li>Report drafted</li><li>Report finalised and sent</li></ul></div>
-        <div class="col"><h4>Also on the job page</h4><p><b>Report to generate</b> and <b>Report generated</b> tick-boxes. They feed the dashboard's Reports box and decide when Invoice 2 is due on a 50/50 job.</p></div>
-        <div class="col"><h4>Moves on when</h4><p>You tick <span class="btn">Report finalised and sent</span>.</p><span class="mail">to you, confirming, with a reminder to invoice.</span></div>
+        <div class="col"><h4>Surveyor does</h4><ul><li>Tidies the database.</li><li>Puts it, with photos and site notes, in SharePoint.</li><li>Taps <span class="btn">Data Sent</span> in the app.</li></ul></div>
+        <div class="col"><h4>Moves on when</h4><p>The surveyor taps Data Sent.</p></div>
+        <div class="col"><h4>What happens</h4><p>The job shows <b>Survey data received, report to complete</b>.</p><span class="mail">to you: "Survey data received".</span></div>
       </div>
     </article>
 
-    <article class="stage" id="green">
-      <div class="stage-id"><span class="tag"><span class="dot d-green"></span>Report sent</span>
-        <small>The report is out. The job leaves the surveyor's app. It's waiting on invoicing.</small></div>
+    <article class="stage" id="data">
+      <div class="stage-id"><span class="tag"><span class="dot d-orange"></span>Data received</span>
+        <small>The data is in SharePoint. The job is ready for you to finalise.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Office does</h4><p>Raise the invoice in QuickBooks, then record it on the job (see Invoicing below).</p></div>
-        <div class="col"><h4>Moves on when</h4><p>The job is fully invoiced: one invoice, or both on a 50/50 job.</p></div>
-        <div class="col"><h4>What happens</h4><p>It archives itself. This works in either order, so if you invoiced before the report went out, ticking "report sent" archives it.</p></div>
+        <div class="col"><h4>Office does</h4><p>Picks up the data and finishes the job one of three ways, from <b>Finish the job</b> on the job page.</p></div>
+        <div class="col"><h4>Finish the job</h4><ul><li><span class="btn">Report &amp; Invoice Sent</span>: records the invoice. <b>Job complete</b>.</li><li><span class="btn">Tree Data Sent, Part Invoiced</span>: records the part invoice. Awaiting client.</li><li><span class="btn">Tree Data Sent, Not Invoiced</span>: Awaiting client.</li></ul></div>
+        <div class="col"><h4>Note</h4><p>Raise the invoice in QuickBooks first. The CRM records it for the dashboard totals and overdue flags. Sending the report and invoicing are one step.</p></div>
+      </div>
+    </article>
+
+    <article class="stage" id="client">
+      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Awaiting client</span>
+        <small>Tree data sent. Waiting on more information from the client, for example their plans. Shown as <b>part invoiced</b> or <b>not invoiced</b>.</small></div>
+      <div class="stage-body">
+        <div class="col"><h4>Where it lives</h4><p>Off the map, but still in the jobs list (the <b>Awaiting Client</b> tab) and on the dashboard. Its SLA is paused.</p></div>
+        <div class="col"><h4>Moves on when</h4><p>The client comes back and you press <span class="btn">Report &amp; Invoice Sent</span>.</p></div>
+        <div class="col"><h4>What happens</h4><p>If it was part invoiced, the final invoice is the balance (it's filled in for you). The job is complete.</p></div>
       </div>
     </article>
 
     <article class="stage" id="archived">
-      <div class="stage-id"><span class="tag"><span class="dot d-archived"></span>Archived</span>
-        <small>Finished: report sent and fully invoiced, or the quote was declined.</small></div>
+      <div class="stage-id"><span class="tag"><span class="dot d-archived"></span>Job complete</span>
+        <small>Report and invoice sent. (A declined quote shows as Archived instead.)</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Where it lives</h4><p>The <b>Archived</b> filter on the Jobs page. Hidden from the default list and every map.</p></div>
-        <div class="col"><h4>Payment</h4><p>Marking an invoice paid doesn't change the status. Archived jobs still show paid and unpaid invoices.</p></div>
+        <div class="col"><h4>Where it lives</h4><p>The <b>Complete</b> tab on the Jobs page. Hidden from the default list and every map.</p></div>
+        <div class="col"><h4>Payment</h4><p>Mark each invoice paid on the job page when the money arrives. That doesn't change the stage.</p></div>
         <div class="col"><h4>Overdue</h4><p>An invoice unpaid after 30 days is flagged overdue on the job.</p></div>
       </div>
     </article>
@@ -244,15 +271,16 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
     <div class="sec-head"><h2>Who sees the job, and where</h2>
       <p>When a job is on each map.</p></div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Status</th><th>Surveyor app: Available</th><th>Surveyor app: My Jobs</th><th>Your live map</th></tr></thead>
+      <thead><tr><th>Stage</th><th>Surveyor app: Available</th><th>Surveyor app: My Jobs</th><th>Your live map</th></tr></thead>
       <tbody>
-        <tr><td><span class="mini d-waiting"></span> Waiting for plans</td><td class="no">No</td><td class="yes">Yes, if a surveyor is assigned</td><td class="yes">Yes</td></tr>
-        <tr><td><span class="mini d-pending"></span> Pending approval</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-        <tr><td><span class="mini d-red"></span> Unallocated</td><td class="yes">Yes, within each surveyor's area</td><td class="no">No</td><td class="yes">Yes</td></tr>
-        <tr><td><span class="mini d-orange"></span> Claimed</td><td class="no">No</td><td class="yes">Yes, the claiming surveyor</td><td class="yes">Yes</td></tr>
-        <tr><td><span class="mini d-yellow"></span> Attended</td><td class="no">No</td><td class="yes">Yes, the claiming surveyor</td><td class="yes">Yes</td></tr>
-        <tr><td><span class="mini d-green"></span> Report sent</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes, until archived</td></tr>
-        <tr><td><span class="mini d-archived"></span> Archived</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-pending"></span> Awaiting go-ahead</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-waiting"></span> Waiting for plans</td><td class="no">No</td><td class="yes">Yes, if a surveyor is assigned</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-red"></span> Unallocated</td><td class="yes">Yes, within each surveyor's area (red pin)</td><td class="no">No</td><td class="yes">Yes, red pin</td></tr>
+        <tr><td><span class="mini d-green"></span> Allocated</td><td class="no">No</td><td class="yes">Yes, green pin</td><td class="yes">Yes, green pin</td></tr>
+        <tr><td><span class="mini d-yellow"></span> Survey done</td><td class="no">No</td><td class="yes">Yes, in the list (to tap Data Sent)</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-orange"></span> Data received</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-waiting"></span> Awaiting client</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-archived"></span> Job complete</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
       </tbody></table></div>
     <p class="note">A job only plots on a map once it has coordinates. They come from the site postcode, and the job page looks them up if they're missing. A paused surveyor sees no available jobs.</p>
   </section>
@@ -270,35 +298,34 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
       </tbody></table></div>
     <div class="two">
       <p class="note">Changing urgency on the job page restarts the SLA from today. That's also how an imported job gets an SLA for the first time.</p>
-      <p class="note">The dashboard's <b>Overdue</b> box counts jobs past their SLA date whose report hasn't been sent.</p>
+      <p class="note">The dashboard's <b>Overdue</b> box counts jobs past their SLA date that aren't finished, leaving out jobs awaiting the client.</p>
     </div>
   </section>
 
   <section>
     <div class="sec-head"><h2>Invoicing</h2>
-      <p>Invoices are raised in QuickBooks. The CRM records them so the dashboard totals, overdue flags and archiving all work.</p></div>
+      <p>Invoices are raised in QuickBooks. The CRM records them, through the finish buttons, so the dashboard totals and overdue flags work.</p></div>
     <div class="two">
       <div class="box">
-        <h3>Single invoice (the default)</h3>
+        <h3>Invoiced in one go</h3>
         <ul class="plain">
-          <li><b>Mark Invoiced</b> records one invoice for the agreed fee, dated today.</li>
-          <li><b>Custom Invoice</b> lets you type a different amount or date.</li>
+          <li><b>Report &amp; Invoice Sent</b> records one invoice (the agreed fee is filled in; change it if needed) and completes the job.</li>
           <li><b>Mark Invoice Paid</b> records the payment date.</li>
         </ul>
       </div>
       <div class="box">
-        <h3>50/50 split</h3>
+        <h3>Part invoiced</h3>
         <ul class="plain">
-          <li><b>Invoice 1</b>: surveyor cost, half the survey fee and any urgency fee.</li>
-          <li><b>Invoice 2</b>: the other half of the survey fee, once the report is generated. The CRM asks you to confirm if you raise it before then.</li>
+          <li><b>Tree Data Sent, Part Invoiced</b> records invoice 1 (half the fee is filled in; change it if needed).</li>
+          <li><b>Report &amp; Invoice Sent</b> later records invoice 2 for the balance and completes the job.</li>
           <li>Each invoice is marked paid separately.</li>
         </ul>
       </div>
     </div>
-    <p class="note">Switch between Single and 50/50 in the Financial section of the job page. The dashboard's <b>This month</b> and <b>This year</b> figures add up invoices raised (excluding VAT), not payments received.</p>
+    <p class="note">The dashboard's <b>This month</b> and <b>This year</b> figures add up invoices raised (excluding VAT), not payments received.</p>
   </section>
 
-  <footer>Taken from the THAC CRM as it works today. If a step here doesn't match what you see, tell Nick.</footer>
+  <footer>Trevor's process, agreed 19 October 2026. If a step here doesn't match what you see, tell Nick.</footer>
 </div>
 
 </body>

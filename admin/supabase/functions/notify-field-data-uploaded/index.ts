@@ -3,7 +3,7 @@
 // Trigger: UPDATE on public.jobs
 //          WHERE old.field_data_uploaded = false
 //            AND new.field_data_uploaded = true
-// Fires:   When surveyor marks field data as uploaded — dot turns yellow
+// Fires:   When the surveyor taps Data Sent (data is in SharePoint) -- Data Received
 // Sends:   Email to admin — report finalisation needed
 // ============================================================
 
@@ -38,7 +38,7 @@ serve(async (req) => {
     }
 
     const surveyorName = await getSurveyorName(record.surveyor_id);
-    const subject = `Field Data Ready — ${record.reference} | Finalise Report Now`;
+    const subject = `Survey Data Received — ${record.reference} | Report to Complete`;
 
     const uploadedAt = record.field_data_uploaded_at
       ? new Date(record.field_data_uploaded_at).toLocaleString('en-GB')
@@ -62,32 +62,34 @@ serve(async (req) => {
     }
 
     const html = emailWrapper(`
-      <h2>Field Data Uploaded — Report Finalisation Required</h2>
-      <p>The surveyor has completed the site visit and uploaded field data, photos, and notes.
-         The dot has turned <strong style="color:#b8960a;">${statusDot('#b8960a')}yellow</strong>.
-         The draft report now needs to be finalised.</p>
+      <h2>Survey Data Received — Report to Complete</h2>
+      <p>${surveyorName} has put the database, photos and site notes in SharePoint and marked the job
+         <strong style="color:#c8773a;">${statusDot('#c8773a')}Data Received</strong>.
+         The job is ready for you to finalise.</p>
 
       ${detailBlock([
         detailRow('Job Reference', record.reference),
         detailRow('Survey Type', SURVEY_LABELS[record.survey_type] || record.survey_type || '—'),
         detailRow('Surveyor', surveyorName),
-        detailRow('Data Uploaded At', uploadedAt),
+        detailRow('Data Sent At', uploadedAt),
         detailRow('SLA Deadline', slaDate),
         daysRemaining ? detailRow('Time Remaining', daysRemaining) : '',
         detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
-        detailRow('Axiscape DB Prepared', `<span style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>`),
+        detailRow('Database Created', `<span style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>`),
         detailRow('Report Drafted', `<span style="color:${record.report_drafted ? '#1a3a2a' : '#c8773a'};">${record.report_drafted ? 'Yes' : 'Pending'}</span>`),
       ].join(''))}
 
       <p style="font-size:14px; color:#666; margin-top:8px;">
         <strong>Next steps:</strong><br>
-        1. Incorporate surveyor's field data into the draft report<br>
-        2. Submit to Trevor for final sign-off<br>
-        3. Send completed report to client — dot turns green
+        1. Pick up the data from SharePoint and complete the report<br>
+        2. On the job page, finish the job one of three ways:<br>
+        &nbsp;&nbsp;&bull; Report &amp; Invoice Sent: the job is complete<br>
+        &nbsp;&nbsp;&bull; Tree Data Sent, Part Invoiced: waits for the client<br>
+        &nbsp;&nbsp;&bull; Tree Data Sent, Not Invoiced: waits for the client
       </p>
 
       <a href="https://thac-enquiry-form-production.up.railway.app/admin/job-detail.html?id=${record.id}" class="cta-button">
-        Open Job & Finalise Report →
+        Open Job in CRM →
       </a>
     `);
 

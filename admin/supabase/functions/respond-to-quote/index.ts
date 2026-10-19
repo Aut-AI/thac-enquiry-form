@@ -53,6 +53,58 @@ async function sbFetch(path: string, init: RequestInit = {}) {
   });
 }
 
+// Matches (or creates) the customer for an email, via the same dedupe
+// function the enquiry trigger uses. Existing customers' details are kept.
+async function clientIdForEmail(email: string | null, name: string | null) {
+  if (!email) return null;
+  const res = await sbFetch("rpc/upsert_client_by_email", {
+    method: "POST",
+    body: JSON.stringify({ p_email: email, p_name: name, p_phone: null, p_company: null, p_overwrite: false }),
+  });
+  if (!res.ok) {
+    console.error("Accept: client lookup failed:", await res.text());
+    return null;
+  }
+  return (await res.json()) || null;
+}
+
+// Trevor's process (19 Oct 2026): an accepted quote goes straight onto the
+// surveyor map as Unallocated -- there is no separate approval step. Only a
+// new survey waiting on this acceptance moves; amendments (no site visit) and
+// jobs already further on are left alone, so a second form submit is harmless.
+// Also links who pays and who the report is for, as approval used to.
+async function putJobOnMap(jobId: string, enquiry: Record<string, any>) {
+  const res = await sbFetch(
+    `jobs?id=eq.${jobId}&select=id,dispatch_state,job_type,paying_client_id,report_client_id`,
+  );
+  const job = (await res.json())?.[0];
+  if (!job) return;
+
+  const update: Record<string, unknown> = {};
+  if (job.dispatch_state === "pending_approval" && job.job_type === "new") {
+    update.dispatch_state = "red";
+  }
+  if (!job.paying_client_id) {
+    const payingId = await clientIdForEmail(
+      enquiry.billing_contact_email || enquiry.contact_email,
+      enquiry.billing_contact_name || enquiry.contact_name,
+    );
+    if (payingId) {
+      update.paying_client_id = payingId;
+      if (!job.report_client_id) update.report_client_id = payingId;
+    }
+  }
+  if (!job.report_client_id && enquiry.end_client_email &&
+      enquiry.end_client_email !== (enquiry.billing_contact_email || enquiry.contact_email)) {
+    const reportId = await clientIdForEmail(enquiry.end_client_email, enquiry.end_client_name);
+    if (reportId) update.report_client_id = reportId;
+  }
+  if (!Object.keys(update).length) return;
+
+  const upd = await sbFetch(`jobs?id=eq.${jobId}`, { method: "PATCH", body: JSON.stringify(update) });
+  if (!upd.ok) console.error("Accept: putting job on map failed:", await upd.text());
+}
+
 async function getLinkedJob(enquiryId: string) {
   const res = await sbFetch(`jobs?enquiry_id=eq.${enquiryId}&select=id&limit=1`);
   const rows = await res.json();
@@ -165,6 +217,7 @@ serve(async (req) => {
           body: JSON.stringify(jobUpdate),
         });
         if (!jobRes.ok) console.error("Accept: job update failed:", await jobRes.text());
+        await putJobOnMap(jobId, enquiry);
       } else {
         // Defensive fallback -- submit-enquiry always creates the job
         // immediately now, so this should be unreachable in practice.
@@ -177,7 +230,9 @@ serve(async (req) => {
             enquiry_id: id,
             survey_type: enquiry.survey_type,
             site_postcode: enquiry.site_postcode,
-            dispatch_state: "pending_approval",
+            // Accepted, so straight onto the map (amendments wait for Trevor)
+            dispatch_state: enquiry.enquiry_type === "amendment" ? "pending_approval" : "red",
+            job_type: enquiry.enquiry_type === "amendment" ? "amendment" : "new",
             urgency_state: urgency,
             deadline_tier: tier,
             sla_deadline: addWorkingDays(new Date(), daysForTier(tier)),

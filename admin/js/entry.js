@@ -303,8 +303,8 @@
           <input class="form-control" id="nj_endemail" type="email" autocomplete="off"></div>
         <div class="form-group"><label>Start as</label>
           <select class="form-control" id="nj_dispatch">
-            <option value="pending_approval">Pending approval</option>
-            <option value="waiting_for_plans">Waiting for plans</option>
+            <option value="red">On the map (Unallocated)</option>
+            <option value="waiting_for_plans">Waiting for plans (off the map)</option>
           </select></div>
         <div class="form-group full"><label>Notes</label>
           <textarea class="form-control" id="nj_notes" rows="3" placeholder="Internal notes"></textarea></div>
@@ -379,7 +379,7 @@
           if (r.existing) reusedNote = ` (used the existing customer ${clientName(r.client)})`;
         }
         const geo = await lookupPostcode(pc);
-        const dispatch_state = val('nj_dispatch') || 'pending_approval';
+        const dispatch_state = val('nj_dispatch') || 'red';
         const urgency_state = urgencyFromTier(deadline);
         const days = (URGENCY_TIERS[urgency_state] || {}).days;
         const amount = val('nj_amount');

@@ -35,6 +35,13 @@ const SURVEY_LABELS: Record<string, string> = {
 
 type Filter = 'available' | 'mine';
 
+// What the surveyor does next on each of their jobs (Trevor's process, 19 Oct 2026)
+const MINE_NEXT_STEP: Record<string, string> = {
+  waiting_for_plans: 'Waiting for plans from the client',
+  orange: 'Next: visit site, then tap Survey Done',
+  yellow: 'Survey done. Next: put the data in SharePoint, tap Data Sent',
+};
+
 export default function JobListScreen() {
   const [jobs,      setJobs]      = useState<Job[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -110,6 +117,9 @@ export default function JobListScreen() {
           </View>
           <Text style={s.type}>{SURVEY_LABELS[job.survey_type] || job.survey_type}</Text>
           <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
+          {filter === 'mine' && MINE_NEXT_STEP[job.dispatch_state] ? (
+            <Text style={s.nextStep}>{MINE_NEXT_STEP[job.dispatch_state]}</Text>
+          ) : null}
           {daysLeft !== null && (
             <Text style={[s.sla, { color: daysLeft < 2 ? '#dc2626' : daysLeft < 4 ? '#ea580c' : '#6b7280' }]}>
               {daysLeft <= 0 ? <><Ionicons name="warning-outline" size={13} color="#dc2626" /> Overdue</> : `${daysLeft}d remaining`}
@@ -127,7 +137,7 @@ export default function JobListScreen() {
         {(['available', 'mine'] as Filter[]).map(f => (
           <TouchableOpacity key={f} style={[s.tab, filter === f && s.tabActive]} onPress={() => setFilter(f)}>
             <Text style={[s.tabText, filter === f && s.tabTextActive]}>
-              {f === 'available' ? <><StatusDot color="red" size={11} /> Available</> : <><StatusDot color="orange" size={11} /> My Jobs</>}
+              {f === 'available' ? <><StatusDot color="red" size={11} /> Available</> : <><StatusDot color="green" size={11} /> My Jobs</>}
             </Text>
           </TouchableOpacity>
         ))}
@@ -169,6 +179,7 @@ const s = StyleSheet.create({
   pay:          { fontSize: 14, fontWeight: '700', color: '#16a34a' },
   type:         { fontSize: 13, color: '#374151', marginBottom: 2 },
   postcode:     { fontSize: 12, color: '#6b7280' },
+  nextStep:     { fontSize: 12, color: '#1a3c2e', fontWeight: '600', marginTop: 3 },
   sla:          { fontSize: 12, fontWeight: '600', marginTop: 4 },
   arrow:        { fontSize: 24, color: '#d1d5db', paddingHorizontal: 14 },
   center:       { flex: 1, justifyContent: 'center', alignItems: 'center' },

@@ -89,19 +89,16 @@ let mapInstance = null;
 let infoWindow  = null;
 let mapJobs     = [];
 
+// Only live jobs are on the map (Trevor's process): red until a surveyor
+// takes it, green once allocated. The pin goes when the survey is done.
 const DOT_COLORS = {
-  red:      '#3b82f6',
-  orange:   '#f97316',
-  yellow:   '#eab308',
-  green:    '#22c55e',
-  archived: '#d1d5db',
+  red:      '#dc2626',
+  orange:   '#16a34a',
 };
 
 const DOT_LABELS = {
   red:      'Unallocated',
-  orange:   'Claimed',
-  yellow:   'Attended',
-  green:    'Report Sent',
+  orange:   'Allocated',
 };
 
 let surveyorNameById = {};
@@ -142,7 +139,7 @@ async function init() {
 
       <!-- Legend -->
       <div class="map-legend">
-        <div class="map-legend-title">Dispatch State</div>
+        <div class="map-legend-title">Job Stage</div>
         ${Object.entries(DOT_LABELS).map(([state, label]) => `
           <div class="legend-row">
             <div class="legend-dot" style="background:${DOT_COLORS[state]};"></div>
@@ -216,7 +213,7 @@ async function fetchAndPlot() {
     const jobs = await dbGet('jobs', {
       'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount,surveyor_id',
       'is_archived': 'not.eq.true',
-      'dispatch_state': 'not.eq.pending_approval',
+      'dispatch_state': 'in.(red,orange)',
       'order': 'created_at.desc',
       'limit': 200
     });

@@ -54,15 +54,29 @@ Deno/TypeScript functions deployed to Supabase. All share `_shared/email-templat
 | Function | Trigger | Purpose |
 |---|---|---|
 | `notify-new-enquiry` | `enquiries` INSERT | Alert admin of new public form submission |
-| `notify-job-created` | `jobs` INSERT | Alert admin when enquiry is accepted → job created |
-| `notify-job-approved` | `jobs` UPDATE (status → approved) | Notify when Trevor approves |
-| `notify-surveyor-claimed` | `jobs` UPDATE (surveyor assigned) | Notify surveyor of assignment |
-| `notify-field-data-uploaded` | `jobs` UPDATE | Alert admin when surveyor uploads data |
-| `notify-report-sent` | `jobs` UPDATE (status → report_sent) | Notify client when report is ready |
+| `notify-quote-accepted` | `enquiries` UPDATE (status → accepted) | Alert admin: quote accepted, job now on the map, create the database |
+| `notify-job-created` | `jobs` INSERT | Alert admin when a job is added straight onto the map (skips website jobs awaiting acceptance) |
+| `notify-job-approved` | `jobs` UPDATE (dispatch → red) | Now only emails on a hand-back (orange → red); there is no approval step |
+| `notify-surveyor-claimed` | `jobs` UPDATE (dispatch → orange) | Alert admin: job allocated, create/send the database |
+| `notify-field-data-uploaded` | `jobs` UPDATE (field_data_uploaded → true) | Alert admin: survey data received (surveyor tapped Data Sent) |
+| `notify-report-sent` | `jobs` UPDATE (report_finalised → true) | Retired 2026-10-19 (stub, sends nothing): report and invoice are one step |
 
 ### Job Lifecycle
 
-Enquiry (public form) → `enquiries` table (statuses: `new` → `reviewed` → `quoted` → `accepted` / `declined` / `spam`) → accepted enquiry becomes a row in `jobs` table → surveyor claims → field data uploaded → report sent.
+Trevor's process, agreed 2026-10-19 (in-app guide: `admin/help/job-journey.html`; stage labels and hover help: `DISPATCH_META` / `STATUS_HELP` in `admin/js/thac.js`). `jobs.dispatch_state` keeps its original colour-code values so app builds already on phones keep working:
+
+| `dispatch_state` | Shown as | Set by |
+|---|---|---|
+| `pending_approval` | Awaiting go-ahead (off map) | `submit-enquiry` creates the job here; Remove from Map |
+| `waiting_for_plans` | Waiting for plans (off map) | Stage 2 / New job |
+| `red` | Unallocated (red pin) | quote accepted (`respond-to-quote`), New job, Put on Map, Stage 2 activate, hand-back |
+| `orange` | Allocated (green pin) | `claim_job` RPC |
+| `yellow` | Survey done, awaiting data | surveyor app: Survey Done |
+| `data_received` | Data received, report to complete | surveyor app: Data Sent (data is in SharePoint) |
+| `awaiting_client` | Awaiting client · part invoiced / not invoiced | job page: Tree Data Sent |
+| `archived` | Job complete (or Archived if declined) | job page: Report & Invoice Sent (records invoice + report_finalised) |
+
+There is no approval step: a claim is final. Office to-dos are the `axi_prepared` (Database created) and `report_drafted` flags, shown from creation. `guard_surveyor_job_update` limits what surveyors can write, and maps old app builds' one-tap "Mark Field Data Uploaded" to `data_received`. `green` (Report sent) is legacy and no longer set.
 
 ### Key Production Values
 

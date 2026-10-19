@@ -34,12 +34,12 @@ const URGENCY_LABELS: Record<string, string> = {
   red: 'Urgent', orange: 'Elevated', yellow: 'Standard', grey: 'Low', green: 'On Track',
 };
 
-// Distinct from the urgency palette above so a surveyor's own committed
-// jobs read as clearly different from available (red) ones at a glance --
-// urgency doesn't matter once a job's already claimed, so these don't
-// share that colour vocabulary.
-const MINE_COLOR = '#2563eb';
-const MINE_STATE_LABELS: Record<string, string> = { orange: 'Claimed', yellow: 'Attended' };
+// Trevor's map colours (19 Oct 2026): red pin = unallocated, green pin =
+// allocated. A job leaves the map once the survey is done. Urgency still
+// shows on the preview card of an available job.
+const AVAILABLE_COLOR = '#dc2626';
+const MINE_COLOR = '#16a34a';
+const MINE_STATE_LABELS: Record<string, string> = { orange: 'Allocated to you' };
 
 export default function JobMapScreen() {
   const [jobs,    setJobs]    = useState<Job[]>([]);
@@ -75,7 +75,7 @@ export default function JobMapScreen() {
     const JOB_FIELDS = 'id,reference,survey_type,site_postcode,site_lat,site_lng,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,enquiry_id,enquiries(tree_count_band)';
 
     // Available jobs (unclaimed, within this surveyor's coverage area) and
-    // this surveyor's own already-committed jobs (claimed/attended, no
+    // this surveyor's own allocated jobs not yet surveyed (no
     // coverage filter needed -- they're already assigned regardless of
     // current coverage) load together, so a surveyor can see how new
     // available work sits relative to jobs they're already committed to.
@@ -91,7 +91,7 @@ export default function JobMapScreen() {
           .from('jobs')
           .select(JOB_FIELDS)
           .eq('surveyor_id', surveyorId)
-          .in('dispatch_state', ['waiting_for_plans', 'orange', 'yellow'])
+          .eq('dispatch_state', 'orange')
           .not('site_lat', 'is', null)
           .not('site_lng', 'is', null)
       : null;
@@ -138,7 +138,7 @@ export default function JobMapScreen() {
           <Marker
             key={job.id}
             coordinate={{ latitude: job.site_lat!, longitude: job.site_lng! }}
-            pinColor={job.dispatch_state === 'red' ? (URGENCY_COLORS[job.urgency_state] || '#9ca3af') : MINE_COLOR}
+            pinColor={job.dispatch_state === 'red' ? AVAILABLE_COLOR : MINE_COLOR}
             onPress={() => setPreview(job)}
           />
         ))}

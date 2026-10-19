@@ -1,6 +1,7 @@
 export type DispatchState =
   | 'pending_approval' | 'waiting_for_plans'
-  | 'red' | 'orange' | 'yellow' | 'green' | 'archived';
+  | 'red' | 'orange' | 'yellow' | 'data_received' | 'awaiting_client'
+  | 'green' | 'archived';
 
 export type UrgencyState = 'red' | 'orange' | 'yellow' | 'grey' | 'green';
 
