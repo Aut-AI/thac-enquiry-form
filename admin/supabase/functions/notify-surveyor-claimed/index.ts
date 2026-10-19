@@ -79,7 +79,9 @@ serve(async (req) => {
         detailRow('SLA Deadline', slaDate),
         detailRow('Proposed Survey Date', surveyDate),
         detailRow('Surveyor Pay', `£${record.surveyor_pay_amount?.toFixed(2) ?? '—'}`),
-        detailRow('Database', record.axi_prepared ? 'Created' : '<span style="color:#c0392b;">To create</span>'),
+        detailRow('Database', !record.axi_prepared ? '<span style="color:#c0392b;">To create</span>'
+          : record.database_plan === 'jpeg' ? '<span style="color:#c8773a;">Created from a JPEG, awaiting digital plan</span>'
+          : record.database_plan === 'digital' ? 'Created from the digital plan' : 'Created'),
         detailRow('Report', record.report_drafted ? 'Drafted' : 'To draft'),
       ].join(''))}
 

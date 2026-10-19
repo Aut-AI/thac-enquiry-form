@@ -75,7 +75,10 @@ serve(async (req) => {
         detailRow('SLA Deadline', slaDate),
         daysRemaining ? detailRow('Time Remaining', daysRemaining) : '',
         detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
-        detailRow('Database Created', `<span style="color:${record.axi_prepared ? '#1a3a2a' : '#c8773a'};">${record.axi_prepared ? 'Yes' : 'Pending'}</span>`),
+        detailRow('Database', `<span style="color:${record.axi_prepared && record.database_plan !== 'jpeg' ? '#1a3a2a' : '#c8773a'};">${
+          !record.axi_prepared ? 'Not created yet'
+          : record.database_plan === 'jpeg' ? 'From a JPEG, awaiting digital plan'
+          : record.database_plan === 'digital' ? 'From the digital plan' : 'Created'}</span>`),
         detailRow('Report Drafted', `<span style="color:${record.report_drafted ? '#1a3a2a' : '#c8773a'};">${record.report_drafted ? 'Yes' : 'Pending'}</span>`),
       ].join(''))}
 

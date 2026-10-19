@@ -67,7 +67,7 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,axi_prepared,report_drafted,report_finalised,invoice1_date,end_client_name',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,end_client_name',
       'order': 'created_at.desc',
       'limit': 1000
     });
@@ -120,6 +120,8 @@ function renderTable() {
 
   if (activeReports === 'db_todo') {
     filtered = filtered.filter(j => !j.axi_prepared);
+  } else if (activeReports === 'db_jpeg') {
+    filtered = filtered.filter(j => j.axi_prepared && j.database_plan === 'jpeg');
   } else if (activeReports === 'report_todo') {
     filtered = filtered.filter(j => !j.report_drafted);
   }
@@ -164,7 +166,7 @@ function renderTable() {
     dispatch:    j => DISPATCH_ORDER[j.dispatch_state] ?? 99,
     info:        j => j.extended_info_received ? 1 : 0,
     surveyor:    j => j.surveyor_name,
-    database:    j => j.axi_prepared ? 1 : 0,
+    database:    j => ({ '': 0, jpeg: 1, created: 2, digital: 3 })[databaseValue(j)],
     drafted:     j => j.report_drafted ? 1 : 0,
     value:       j => j.agreed_amount == null ? null : Number(j.agreed_amount),
   });
@@ -187,7 +189,7 @@ function renderTable() {
       <td>${dispatchBadge(j.dispatch_state, j)}</td>
       <td>${infoStatus}</td>
       <td>${surveyorCell}</td>
-      <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'axi_prepared')}</td>
+      <td onclick="event.stopPropagation()">${databaseSelect(j, 'setDatabase')}</td>
       <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'report_drafted')}</td>
       <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '<span class="muted">—</span>'}</td>
     </tr>`;
@@ -230,7 +232,7 @@ const STATUS_FILTERS = [
   ['archived', 'Complete', 'archive'],
 ];
 const URGENCY_FILTERS = [['all', 'Any', null], ['red', 'Urgent', 'urgent'], ['orange', 'Elevated', 'elevated'], ['yellow', 'Standard', 'standard'], ['grey', 'Low', 'low']];
-const REPORT_FILTERS = [['all', 'Any'], ['db_todo', 'Database to create'], ['report_todo', 'Report to draft']];
+const REPORT_FILTERS = [['all', 'Any'], ['db_todo', 'Database to create'], ['db_jpeg', 'Awaiting digital plan'], ['report_todo', 'Report to draft']];
 
 // Archived surveyors stay in the filter while they still have jobs
 function allJobsHaveSurveyor(jobs, id) {
@@ -365,6 +367,21 @@ async function toggleProgress(id, field, el) {
     if (activeReports !== 'all') renderTable();
   } catch (e) {
     el.checked = !checked;
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function setDatabase(id, el) {
+  const job = allJobs.find(j => j.id === id);
+  const before = databaseValue(job);
+  const updates = databaseUpdates(job, el.value);
+  try {
+    await dbUpdate('jobs', `id=eq.${id}`, updates);
+    Object.assign(job, updates);
+    showToast(databaseLabel(job));
+    renderTable();
+  } catch (e) {
+    el.value = before;
     showToast('Error: ' + e.message, 'error');
   }
 }

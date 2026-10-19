@@ -1346,31 +1346,54 @@ async function submitPaid() {
 
 // Trevor's two office to-dos, shown from the moment the job exists. The
 // database matters most: nothing can happen until it reaches the surveyor.
+// Once created he records whether it came from the digital plan or a JPEG
+// (then it's still awaiting the digital plan).
 function renderProgress() {
-  const items = [
-    { field: 'axi_prepared',   atField: 'axi_prepared_at',   todo: 'Database to create', done: 'Database created',
-      warn: job.surveyor_id ? 'A surveyor has the job and is waiting for it.' : 'Do this first. Nothing can happen until it goes to the surveyor.' },
-    { field: 'report_drafted', atField: 'report_drafted_at', todo: 'Report to draft',    done: 'Report drafted' },
-  ];
-  return items.map(item => {
-    const done = !!job[item.field];
-    return `
-      <div class="prog" role="button" tabindex="0" onclick="toggleProgress('${item.field}', '${item.atField}')">
-        <span style="display:flex;align-items:center;gap:8px;">
-          <span style="width:17px;height:17px;border-radius:4px;border:1.5px solid ${done ? 'var(--green-dark)' : 'var(--border)'};background:${done ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;">
-            ${done ? icon('checkCircle', 11) : ''}
-          </span>
-          <span style="color:${done ? 'var(--text)' : '#b45309'};font-weight:${done ? 400 : 600};">${done ? item.done : item.todo}</span>
+  const v = databaseValue(job);
+  const todo = v === '' || v === 'jpeg';
+  const dbHint = v === ''
+    ? (job.surveyor_id ? 'A surveyor has the job and is waiting for it.' : 'Do this first. Nothing can happen until it goes to the surveyor.')
+    : v === 'jpeg' ? 'Made from a JPEG. Switch to Digital plan once the digital plan arrives and the database is updated.' : '';
+  const drafted = !!job.report_drafted;
+  return `
+    <div class="form-group" style="margin-bottom:8px;">
+      <label for="dbSelect" style="display:flex;justify-content:space-between;">Database
+        <span style="font-weight:400;font-size:11px;color:var(--text-muted);">${job.axi_prepared_at ? formatDate(job.axi_prepared_at) : ''}</span></label>
+      <select class="form-control" id="dbSelect" onchange="setDatabase(this.value)"
+        style="${todo ? 'border-color:#f59e0b;background:#fffbeb;color:#92400e;font-weight:600;' : ''}">
+        ${DATABASE_OPTIONS.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('')}
+        ${v === 'created' ? '<option value="created" selected>Created (plan not recorded)</option>' : ''}
+      </select>
+      ${dbHint ? `<div class="hint" style="margin:4px 0 0;">${dbHint}</div>` : ''}
+    </div>
+    <div class="prog" role="button" tabindex="0" onclick="toggleProgress('report_drafted', 'report_drafted_at')">
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span style="width:17px;height:17px;border-radius:4px;border:1.5px solid ${drafted ? 'var(--green-dark)' : 'var(--border)'};background:${drafted ? 'var(--green-dark)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;">
+          ${drafted ? icon('checkCircle', 11) : ''}
         </span>
-        <span style="font-size:11px;color:var(--text-muted);">${job[item.atField] ? formatDate(job[item.atField]) : ''}</span>
-      </div>
-      ${!done && item.warn ? `<div class="hint" style="margin:-2px 0 6px 25px;">${item.warn}</div>` : ''}`;
-  }).join('');
+        <span style="color:${drafted ? 'var(--text)' : '#b45309'};font-weight:${drafted ? 400 : 600};">${drafted ? 'Report drafted' : 'Report to draft'}</span>
+      </span>
+      <span style="font-size:11px;color:var(--text-muted);">${job.report_drafted_at ? formatDate(job.report_drafted_at) : ''}</span>
+    </div>`;
+}
+
+async function setDatabase(value) {
+  if (!value && job.axi_prepared && !confirm('Set the database back to "to create"?')) { renderJob(); return; }
+  const updates = databaseUpdates(job, value);
+  try {
+    await dbUpdate('jobs', `id=eq.${jobId}`, updates);
+    Object.assign(job, updates);
+    showToast(databaseLabel(job));
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+    renderJob();
+  }
 }
 
 async function toggleProgress(field, atField) {
   const isDone = !!job[field];
-  const label = field === 'axi_prepared' ? 'Database created' : 'Report drafted';
+  const label = 'Report drafted';
   if (isDone && !confirm(`Untick "${label}"?`)) return;
   const updates = { [field]: !isDone, [atField]: isDone ? null : new Date().toISOString() };
   try {

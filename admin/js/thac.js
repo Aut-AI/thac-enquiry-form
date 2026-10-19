@@ -321,7 +321,7 @@ const STATUS_HELP = {
     next: 'When the plans arrive, press Plans Received, Activate Job. The SLA starts and the job goes on the map as Unallocated.' },
   red: { label: 'Unallocated (red pin)',
     before: 'The customer accepted the quote, or you added the job. It went straight onto the map.',
-    next: 'Create the database (urgent jobs first) and draft the report. A surveyor in range claims it in the app, or you allocate it.' },
+    next: 'Create the database (urgent jobs first), noting digital plan or JPEG, and draft the report. A surveyor in range claims it in the app, or you allocate it.' },
   orange: { label: 'Allocated (green pin)',
     before: 'A surveyor claimed it (or accepted an allocation) and agreed to the NDA. You were emailed to get the database to them.',
     next: 'Send the database to the surveyor. They visit the site and tap Survey Done. Unassign Surveyor puts it back on the map.' },
@@ -344,6 +344,46 @@ const STATUS_HELP = {
 
 function statusHelpAttr(state) {
   return STATUS_HELP[state] ? ` data-status="${state}" tabindex="0"` : '';
+}
+
+// Database status (Trevor, 19 Oct 2026): once created, was it built from the
+// digital plan, or from a JPEG while the digital plan is still awaited?
+// One value per job: '' to create, 'digital', 'jpeg', or 'created' for
+// databases ticked before this existed (plan not recorded).
+const DATABASE_OPTIONS = [
+  ['',        'Database to create'],
+  ['digital', 'Created: digital plan'],
+  ['jpeg',    'Created: JPEG, awaiting digital plan'],
+];
+
+function databaseValue(j) {
+  return !j.axi_prepared ? '' : (j.database_plan || 'created');
+}
+
+function databaseLabel(j) {
+  const v = databaseValue(j);
+  return v === 'created' ? 'Database created' : DATABASE_OPTIONS.find(o => o[0] === v)[1];
+}
+
+// The columns to save for a new database value, given the job as it is now.
+function databaseUpdates(j, value) {
+  if (!value) return { axi_prepared: false, axi_prepared_at: null, database_plan: null };
+  return {
+    axi_prepared: true,
+    axi_prepared_at: j.axi_prepared_at || new Date().toISOString(),
+    database_plan: value === 'created' ? null : value,
+  };
+}
+
+// Compact dropdown for tables. `handler(jobId, selectEl)` saves it.
+function databaseSelect(j, handler) {
+  const v = databaseValue(j);
+  const opts = [['', 'To create'], ['digital', 'Digital plan'], ['jpeg', 'JPEG, awaiting digital'],
+    ...(v === 'created' ? [['created', 'Created (plan not set)']] : [])];
+  const todo = v === '' || v === 'jpeg';
+  return `<select class="db-select${todo ? ' todo' : ''}" title="${escapeHtml(databaseLabel(j))}" onclick="event.stopPropagation()"
+    onchange="${handler}('${j.id}', this)">${opts.map(([k, l]) =>
+      `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 }
 
 // Pass the job as well to get the fuller label (part invoiced, job complete),

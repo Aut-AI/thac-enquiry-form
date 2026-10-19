@@ -76,7 +76,7 @@ Trevor's process, agreed 2026-10-19 (in-app guide: `admin/help/job-journey.html`
 | `awaiting_client` | Awaiting client · part invoiced / not invoiced | job page: Tree Data Sent |
 | `archived` | Job complete (or Archived if declined) | job page: Report & Invoice Sent (records invoice + report_finalised) |
 
-There is no approval step: a claim is final. Office to-dos are the `axi_prepared` (Database created) and `report_drafted` flags, shown from creation. `guard_surveyor_job_update` limits what surveyors can write, and maps old app builds' one-tap "Mark Field Data Uploaded" to `data_received`. `green` (Report sent) is legacy and no longer set.
+There is no approval step: a claim is final. Office to-dos are the database (`axi_prepared` + `database_plan`: digital plan or JPEG awaiting the digital plan) and `report_drafted`, shown from creation. `guard_surveyor_job_update` limits what surveyors can write, and maps old app builds' one-tap "Mark Field Data Uploaded" to `data_received`. `green` (Report sent) is legacy and no longer set.
 
 ### Key Production Values
 

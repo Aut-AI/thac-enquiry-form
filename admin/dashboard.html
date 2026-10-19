@@ -100,6 +100,8 @@ async function init() {
                 <span class="stat-row-label">${icon('alertTriangle', 12)}Database needed, surveyor waiting</span><span class="stat-row-count" id="statDbWaiting">—</span></div>
               <div class="stat-row" onclick="window.location.href='jobs.html?reports=db_todo'">
                 <span class="stat-row-label">${icon('clock', 12)}Database to create</span><span class="stat-row-count" id="statDbTodo">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?reports=db_jpeg'">
+                <span class="stat-row-label">${icon('clock', 12)}Awaiting digital plan</span><span class="stat-row-count" id="statDbJpeg">—</span></div>
               <div class="stat-row" onclick="window.location.href='jobs.html?reports=report_todo'">
                 <span class="stat-row-label">${icon('clock', 12)}Report to draft</span><span class="stat-row-count" id="statReportTodo">—</span></div>
             </div>
@@ -153,7 +155,7 @@ async function loadStats() {
   const set = (id, n) => { document.getElementById(id).textContent = n; };
   try {
     const jobs = ((await dbGet('jobs', {
-      'select': 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,axi_prepared,report_drafted',
+      'select': 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,axi_prepared,database_plan,report_drafted',
       'is_archived': 'not.eq.true', 'limit': 5000,
     })) || []).filter(j => j.dispatch_state !== 'archived');
     const n = fn => jobs.filter(fn).length;
@@ -175,6 +177,7 @@ async function loadStats() {
     const live = j => !['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state);
     set('statDbWaiting',  n(j => j.dispatch_state === 'orange' && !j.axi_prepared));
     set('statDbTodo',     n(j => live(j) && !j.axi_prepared));
+    set('statDbJpeg',     n(j => live(j) && j.axi_prepared && j.database_plan === 'jpeg'));
     set('statReportTodo', n(j => live(j) && !j.report_drafted));
 
     const today = new Date().toISOString().slice(0, 10);
@@ -260,7 +263,7 @@ function slaCountdown(dateStr) {
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
       'limit': 500
@@ -308,6 +311,22 @@ async function toggleProgress(id, field, el) {
   }
 }
 
+async function setDatabase(id, el) {
+  const job = dashJobs.find(j => j.id === id);
+  const before = databaseValue(job);
+  const updates = databaseUpdates(job, el.value);
+  try {
+    await dbUpdate('jobs', `id=eq.${id}`, updates);
+    Object.assign(job, updates);
+    showToast(databaseLabel(job));
+    renderUrgencyTable();
+    loadStats();
+  } catch (e) {
+    el.value = before;
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
 function setSort(key, ev) {
   sort = nextSort(sort, key, 'asc', isAddLevel(ev));
   renderUrgencyTable();
@@ -325,7 +344,7 @@ function renderUrgencyTable() {
       value:    j => j.agreed_amount == null ? null : Number(j.agreed_amount),
       dispatch: j => DISPATCH_ORDER[j.dispatch_state] ?? 99,
       urgency:  j => URGENCY_ORDER[j.urgency_state] ?? 99,
-      database: j => j.axi_prepared ? 1 : 0,
+      database: j => ({ '': 0, jpeg: 1, created: 2, digital: 3 })[databaseValue(j)],
       drafted:  j => j.report_drafted ? 1 : 0,
     });
 
@@ -343,7 +362,7 @@ function renderUrgencyTable() {
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
         <td>${dispatchBadge(j.dispatch_state, j)}</td>
         <td>${urgencyColorBadge(j.urgency_state)}</td>
-        <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'axi_prepared')}</td>
+        <td onclick="event.stopPropagation()">${databaseSelect(j, 'setDatabase')}</td>
         <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'report_drafted')}</td>
       </tr>
     `).join('');
