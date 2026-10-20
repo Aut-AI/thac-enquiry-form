@@ -105,6 +105,16 @@
   footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--moss); font-size: 12.5px; font-family: var(--mono); }
 </style>
 
+<style>
+  .uc-where { white-space: normal; }
+  .fig-scroll { overflow-x: auto; }
+  .fig-scroll svg { min-width: 760px; display: block; }
+  .mailtbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .mailtbl th, .mailtbl td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line-soft); vertical-align: top; }
+  .mailtbl th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--moss); border-top: none; }
+  .tbl-box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 14px; overflow-x: auto; }
+</style>
+
 <div class="wrap">
   <nav class="toc">
     <div class="toc-title">Contents</div>
@@ -113,41 +123,46 @@
     <div class="grp">Customer</div>
     <a href="#uc1">New survey enquiry</a>
     <a href="#uc2">Amendment request</a>
-    <a href="#uc3">On-behalf-of a client</a>
+    <a href="#uc3">On behalf of a client</a>
     <a href="#uc4">Accept a quote</a>
     <a href="#uc5">Decline a quote</a>
-    <div class="grp">Admin</div>
-    <a href="#uc6">Approve enquiry to map</a>
-    <a href="#uc7">Allocate to a surveyor</a>
-    <a href="#uc8">Edit job details</a>
-    <a href="#uc9">Report progress</a>
-    <a href="#uc10">Invoicing</a>
-    <a href="#uc11">Approve/manage surveyors</a>
-    <a href="#uc12">Manage CRM users</a>
+    <div class="grp">Office (CRM)</div>
+    <a href="#uc6">Add a job yourself</a>
+    <a href="#uc7">Database and report to-dos</a>
+    <a href="#uc8">Allocate to a surveyor</a>
+    <a href="#uc9">Off the map, unassign</a>
+    <a href="#uc10">Edit job details</a>
+    <a href="#uc11">Finish a job and invoice</a>
+    <a href="#uc12">Waiting for plans</a>
+    <a href="#uc13">Find jobs in the list</a>
+    <a href="#uc14">Manage surveyors</a>
+    <a href="#uc15">Manage CRM users</a>
     <div class="grp">Surveyor app</div>
-    <a href="#uc13">Register</a>
-    <a href="#uc14">Claim a job</a>
-    <a href="#uc15">Respond to allocation</a>
-    <a href="#uc16">Field work &amp; hand-back</a>
-    <a href="#uc17">Profile &amp; coverage</a>
+    <a href="#uc16">Register</a>
+    <a href="#uc17">Claim a job</a>
+    <a href="#uc18">Respond to an allocation</a>
+    <a href="#uc19">Survey Done and Data Sent</a>
+    <a href="#uc20">Profile and coverage</a>
     <div class="grp">Reference</div>
+    <a href="#emails">Who gets which email</a>
     <a href="#open-items">Known behaviours</a>
   </nav>
 
   <main>
     <header class="hero" id="overview">
-      <div class="eyebrow">THAC · Trevor Heaps Arboricultural Consultancy</div>
+      <div class="eyebrow">THAC · Heaps Arboriculture</div>
       <h1>Field Guide</h1>
-      <p class="lede">A working reference for how the enquiry form, admin CRM, and surveyor app fit together today — and a walkthrough for every real use case, written so you can test each one directly against what's actually in the code.</p>
-      <div class="how-to"><strong>How to use this tomorrow:</strong> work through each use case in order, doing exactly what the numbered steps say. Each step has an <b style="color:var(--accent)">expected result</b> — if what you see doesn't match, that's precisely the kind of gap worth flagging back. The "Known behaviours" section at the end lists things that are correct-but-surprising, so you don't waste time on those.</div>
+      <p class="lede">How the enquiry form, the CRM and the surveyor app fit together under Trevor's job process, agreed on 19 October 2026, with a walkthrough for each real use case.</p>
+      <div class="how-to"><strong>How to use it:</strong> work through a use case doing exactly what the numbered steps say. Each step has an <b style="color:var(--accent)">expected result</b>. If what you see doesn't match, that's a gap to flag. "Known behaviours" at the end lists things that are correct but surprising, so you don't chase them. Trevor's step-by-step sign-off list is the separate THAC CRM Test Script page. This guide is the fuller reference behind it.</div>
     </header>
 
     <section id="flow">
       <h2><span class="num">01</span>Process at a glance</h2>
-      <p class="section-lede">Two separate paths from the same public form: a <b>new survey</b> gets an instant computed quote; an <b>amendment</b> to existing work never does — Trevor prices those by hand.</p>
+      <p class="section-lede">A job goes onto the map the moment it's real: when a customer accepts a quote, or when Trevor adds it. There's no approval step, and a surveyor's claim is final. After the visit the surveyor taps <b>Survey Done</b>, then <b>Data Sent</b> once the data is in SharePoint. Trevor finishes the job in one of three ways.</p>
 
       <figure class="diagram-fig">
-        <svg viewBox="0 0 980 300" role="img" aria-label="New survey enquiries flow through submission, an automatic quote email, accept or decline, admin approval to the map, a surveyor claiming the job, field data upload, and report finalisation which invoices and archives the job. Declining at any point archives the job immediately. Amendment enquiries skip the automatic quote entirely and are reviewed and priced by Trevor by hand.">
+        <div class="fig-scroll">
+        <svg viewBox="0 0 980 330" role="img" aria-label="A new survey goes from submitted, to quote emailed, to accepted, which puts it on the map as unallocated with a red pin. A surveyor claims it and it becomes allocated with a green pin. The surveyor taps Survey Done and the pin leaves the map, then Data Sent, which makes it Data received. Trevor then either sends the report and invoice, completing the job, or sends tree data part invoiced or not invoiced, which parks it as Awaiting client until it is completed. A declined quote is archived. A job Trevor adds himself starts at Unallocated. Amendments wait off the map and are finished directly.">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -156,295 +171,401 @@
 
           <text x="20" y="18" class="lane-label" font-size="11">NEW SURVEY</text>
 
-          <!-- main row arrows -->
           <g stroke="currentColor" fill="none" marker-end="url(#arrow)">
-            <line x1="128" y1="49" x2="152" y2="49"/>
-            <line x1="260" y1="49" x2="284" y2="49"/>
-            <line x1="392" y1="49" x2="416" y2="49"/>
-            <line x1="524" y1="49" x2="548" y2="49"/>
-            <line x1="656" y1="49" x2="680" y2="49"/>
-            <line x1="788" y1="49" x2="812" y2="49"/>
+            <line x1="122" y1="49" x2="140" y2="49"/>
+            <line x1="242" y1="49" x2="260" y2="49"/>
+            <line x1="362" y1="49" x2="380" y2="49"/>
+            <line x1="482" y1="49" x2="500" y2="49"/>
+            <line x1="602" y1="49" x2="620" y2="49"/>
+            <line x1="722" y1="49" x2="740" y2="49"/>
+            <line x1="842" y1="49" x2="860" y2="49"/>
           </g>
 
-          <!-- main row boxes -->
           <g font-size="11.5" text-anchor="middle">
-            <rect x="20"  y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="74" y="53">Submitted</text>
+            <rect x="20" y="28" width="102" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="71" y="53">Submitted</text>
 
-            <rect x="152" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="206" y="47">Quote</text>
-            <text x="206" y="60" class="muted" font-size="10">emailed automatically</text>
+            <rect x="140" y="28" width="102" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="191" y="47">Quote</text>
+            <text x="191" y="60" class="muted" font-size="10">emailed</text>
 
-            <rect x="284" y="28" width="108" height="42" rx="8" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
-            <text x="338" y="53" fill="var(--accent)" font-weight="600">Accepted</text>
+            <rect x="260" y="28" width="102" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="311" y="53">Accepted</text>
 
-            <rect x="416" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="470" y="47">Approved</text>
-            <text x="470" y="60" class="muted" font-size="10">admin, to the map</text>
+            <rect x="380" y="28" width="102" height="42" rx="8" fill="none" stroke="var(--flag)" stroke-width="1.6"/>
+            <text x="431" y="47" fill="var(--flag)" font-weight="600">Unallocated</text>
+            <text x="431" y="60" class="muted" font-size="10">red pin</text>
 
-            <rect x="548" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="602" y="53">Claimed</text>
+            <rect x="500" y="28" width="102" height="42" rx="8" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+            <text x="551" y="47" fill="var(--accent)" font-weight="600">Allocated</text>
+            <text x="551" y="60" class="muted" font-size="10">green pin</text>
 
-            <rect x="680" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="734" y="47">Data</text>
-            <text x="734" y="60" class="muted" font-size="10">uploaded, field visit</text>
+            <rect x="620" y="28" width="102" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="671" y="47">Survey done</text>
+            <text x="671" y="60" class="muted" font-size="10">off the map</text>
 
-            <rect x="812" y="28" width="108" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="866" y="47">Finalised</text>
-            <text x="866" y="60" class="muted" font-size="10">invoiced &amp; archived</text>
+            <rect x="740" y="28" width="102" height="42" rx="8" fill="none" stroke="var(--amber)" stroke-width="1.6"/>
+            <text x="791" y="47" fill="var(--amber)" font-weight="600">Data received</text>
+            <text x="791" y="60" class="muted" font-size="10">report to do</text>
+
+            <rect x="860" y="28" width="102" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="911" y="47">Job complete</text>
+            <text x="911" y="60" class="muted" font-size="10">report + invoice</text>
           </g>
 
-          <!-- decline branch off the "Accepted" box -->
-          <line x1="338" y1="70" x2="338" y2="100" stroke="currentColor" fill="none" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+          <!-- decline branch -->
+          <line x1="311" y1="70" x2="311" y2="100" stroke="currentColor" fill="none" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
           <g font-size="11" text-anchor="middle">
-            <rect x="258" y="100" width="160" height="34" rx="8" fill="none" stroke="var(--flag)" stroke-dasharray="3 3"/>
-            <text x="338" y="121" fill="var(--flag)">Declined → archived</text>
+            <rect x="241" y="100" width="140" height="32" rx="8" fill="none" stroke="var(--flag)" stroke-dasharray="3 3"/>
+            <text x="311" y="120" fill="var(--flag)">Declined → archived</text>
           </g>
 
-          <line x1="20" y1="168" x2="960" y2="168" stroke="var(--line)" stroke-dasharray="4 4"/>
-          <text x="20" y="192" class="lane-label" font-size="11">AMENDMENT</text>
+          <!-- added by Trevor -->
+          <line x1="431" y1="100" x2="431" y2="74" stroke="currentColor" fill="none" marker-end="url(#arrow)"/>
+          <g font-size="11" text-anchor="middle">
+            <rect x="396" y="100" width="150" height="32" rx="8" fill="none" stroke="currentColor"/>
+            <text x="471" y="120">Trevor adds a job</text>
+          </g>
+
+          <!-- awaiting client branch -->
+          <line x1="791" y1="70" x2="791" y2="100" stroke="currentColor" fill="none" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+          <line x1="871" y1="116" x2="905" y2="74" stroke="currentColor" fill="none" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+          <g font-size="11" text-anchor="middle">
+            <rect x="711" y="100" width="160" height="42" rx="8" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+            <text x="791" y="118">Awaiting client</text>
+            <text x="791" y="132" class="muted" font-size="10">tree data sent, part / not invoiced</text>
+          </g>
+
+          <line x1="20" y1="178" x2="960" y2="178" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <text x="20" y="202" class="lane-label" font-size="11">AMENDMENT</text>
 
           <g stroke="currentColor" fill="none" marker-end="url(#arrow)">
-            <line x1="120" y1="222" x2="150" y2="222"/>
-            <line x1="370" y1="222" x2="400" y2="222"/>
+            <line x1="120" y1="232" x2="150" y2="232"/>
+            <line x1="370" y1="232" x2="400" y2="232"/>
+            <line x1="660" y1="232" x2="690" y2="232"/>
           </g>
           <g font-size="11.5" text-anchor="middle">
-            <rect x="20"  y="201" width="100" height="42" rx="8" fill="none" stroke="currentColor"/>
-            <text x="70" y="226">Submitted</text>
+            <rect x="20" y="211" width="100" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="70" y="236">Submitted</text>
 
-            <rect x="150" y="201" width="220" height="42" rx="8" fill="none" stroke="var(--amber)" stroke-width="1.6"/>
-            <text x="260" y="219" fill="var(--amber)" font-weight="600">Original job ref +</text>
-            <text x="260" y="232" fill="var(--amber)" font-weight="600">scope of change</text>
+            <rect x="150" y="211" width="220" height="42" rx="8" fill="none" stroke="var(--amber)" stroke-width="1.6"/>
+            <text x="260" y="229" fill="var(--amber)" font-weight="600">Original job ref +</text>
+            <text x="260" y="242" fill="var(--amber)" font-weight="600">scope of change</text>
 
-            <rect x="400" y="201" width="260" height="42" rx="8" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
-            <text x="530" y="219">Trevor reviews &amp; quotes</text>
-            <text x="530" y="232" class="muted" font-size="10">by hand — hourly, no auto-email</text>
+            <rect x="400" y="211" width="260" height="42" rx="8" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+            <text x="530" y="229">Trevor prices and does it</text>
+            <text x="530" y="242" class="muted" font-size="10">by hand, hourly · stays off the map</text>
+
+            <rect x="690" y="211" width="152" height="42" rx="8" fill="none" stroke="currentColor"/>
+            <text x="766" y="229">Report &amp; Invoice</text>
+            <text x="766" y="242" class="muted" font-size="10">Sent, job complete</text>
           </g>
 
-          <text x="20" y="272" class="muted" font-size="11.5">No dispatch/claim/report cycle — amendments are worked and billed directly, outside the survey pipeline.</text>
+          <text x="20" y="290" class="muted" font-size="11.5">Amendments never reach a surveyor. The job waits as Awaiting go-ahead, and Trevor finishes it from the job page.</text>
         </svg>
-        <figcaption>The two enquiry paths from <code>enquiry-form/index.html</code> through to completion, as the code runs today.</figcaption>
+        </div>
+        <figcaption>The two enquiry paths from the website form through to completion.</figcaption>
       </figure>
     </section>
 
     <!-- ============ CUSTOMER ============ -->
-    <h2 id="customer-group"><span class="num">02</span>Customer — public enquiry form</h2>
-    <p class="section-lede"><code>enquiry-form/index.html</code> and its linked pages. No login; every action is a single anonymous visit driven by a link.</p>
+    <h2 id="customer-group"><span class="num">02</span>Customer: the website form</h2>
+    <p class="section-lede"><code>enquiry-form/index.html</code> and its linked pages. No login. Each action is one visit, started from the form or from a link in an email.</p>
 
     <div class="uc" id="uc1">
       <div class="uc-head"><span class="uc-title">Submit a new survey enquiry</span><span class="uc-where">enquiry-form/index.html</span></div>
-      <p class="uc-purpose">The core path: a customer describes a job and gets an instant, computed price.</p>
+      <p class="uc-purpose">The main path: a customer describes a job and gets an instant, worked-out price.</p>
       <ol class="steps">
-        <li>Open the form, choose <b>New Survey</b>, and pick a survey type (Stage 1, Stage 2, Tree Condition/Risk, Insurer/Mortgage, Subsidence, NHBC, or Site Visit).
-          <div class="expect">Expect: a short description of that survey type appears under the selected card.</div></li>
-        <li>Enter tree count (a band, or use the <code>m²</code> calculator) and a site postcode.
-          <div class="expect">Expect: postcode is checked against coverage before you can continue — a message appears if it's out of area.</div></li>
-        <li>Choose a deadline: <code>15+ days</code> (free), <code>10 days</code> (+£75), <code>5 days</code> (+£150), or <code>3 days</code> (+£200).
-          <div class="expect">Expect: the price for each option updates live as you change tree count/deadline. "No rush" no longer appears — it was retired in favour of the 15-day tier.</div></li>
-        <li>Enter contact details and submit.
-          <div class="expect">Expect: a reference number (<code>TH ####</code>) is shown, and a quote email arrives within a minute or two, with the tree icon 🌳 leading the subject line.</div></li>
+        <li>Open the form, choose <b>New Survey</b>, and pick a survey type: Stage 1, Stage 2, Tree Condition / Risk, Insurer / Mortgage, Subsidence, NHBC or Site Visit.
+          <div class="expect">Expect: a short description of that survey appears under the chosen card.</div></li>
+        <li>Enter the tree count (a band, or the <code>m²</code> calculator) and the site postcode.
+          <div class="expect">Expect: the postcode is checked against the area you cover before you can continue. Out of area shows a message and stops you.</div></li>
+        <li>Choose a deadline: <code>15 working days</code> (no charge), <code>10</code> (+£75), <code>5</code> (+£150) or <code>3</code> (+£200).
+          <div class="expect">Expect: the price for each option updates as you change the tree count or deadline.</div></li>
+        <li>Enter your contact details and submit.
+          <div class="expect">Expect: a <code>TH ####</code> reference is shown, and a quote email (subject starting 🌳) arrives within a minute or two. In the CRM a job appears as <b>Awaiting go-ahead</b>. It is not on the map yet. Trevor gets a "new enquiry" email.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc2">
-      <div class="uc-head"><span class="uc-title">Submit an amendment request</span><span class="uc-where">enquiry-form/index.html → "Amend an existing report"</span></div>
-      <p class="uc-purpose">For changes to a report THAC already delivered. Never auto-priced.</p>
+      <div class="uc-head"><span class="uc-title">Submit an amendment request</span><span class="uc-where">enquiry-form/index.html → Amend Existing Report</span></div>
+      <p class="uc-purpose">For changes to a report already delivered. Never priced automatically.</p>
       <ol class="steps">
-        <li>Choose <b>Amend Existing Report</b>, enter the original job reference (e.g. <code>TH 5291</code>) and describe the change needed.
-          <div class="expect">Expect: the form explicitly states amendments are charged at £100+VAT/hour (min £25+VAT) and that no automated quote is generated.</div></li>
-        <li>Pick a deadline (same tiers as new surveys, used only for SLA tracking — none carry a surcharge for amendments) and submit.
-          <div class="expect">Expect: a confirmation, but <b>no price and no quote-accept email</b> — Trevor reviews it directly in the CRM.</div></li>
+        <li>Choose <b>Amend Existing Report</b>, enter the original job reference (e.g. <code>TH 5291</code>) and describe the change.
+          <div class="expect">Expect: the form says amendments are charged at £100 + VAT per hour (minimum £25 + VAT) and no automated quote is generated.</div></li>
+        <li>Pick a deadline and submit.
+          <div class="expect">Expect: a confirmation, but <b>no price and no quote email</b>. The CRM shows an amendment job as Awaiting go-ahead. It never goes on the map.</div></li>
       </ol>
-      <div class="callout open"><b>Note:</b> there's currently no dedicated admin screen for "quote this amendment" — Trevor's response happens outside the system (email/phone) after seeing it land in the CRM as a new enquiry.</div>
+      <div class="callout open"><b>Note:</b> Trevor quotes amendments outside the system. When the work is done he uses <b>Report &amp; Invoice Sent</b> on the job page, which is offered on amendments at any stage.</div>
     </div>
 
     <div class="uc" id="uc3">
-      <div class="uc-head"><span class="uc-title">Submit on behalf of a client</span><span class="uc-where">enquiry-form/index.html → "I'm enquiring on behalf of someone else"</span></div>
-      <p class="uc-purpose">For introducers/agents/brokers submitting for their own client.</p>
+      <div class="uc-head"><span class="uc-title">Enquire on behalf of a client</span><span class="uc-where">enquiry-form/index.html → on-behalf-of option</span></div>
+      <p class="uc-purpose">For introducers, agents and brokers enquiring for their own client.</p>
       <ol class="steps">
-        <li>Tick the on-behalf-of checkbox (unchecked by default on every page load — this doesn't persist between visits).
-          <div class="expect">Expect: three extra fields appear — introducer name, email, company.</div></li>
-        <li>Complete the rest of the form as normal and submit.
-          <div class="expect">Expect: the quote email goes to the client's email <i>and</i> CCs the introducer's email.</div></li>
+        <li>Tick the option to add your client's email address so they get a copy of the quote. It's unticked on every visit.
+          <div class="expect">Expect: two extra fields appear: Your Client's Name and Your Client's Email Address.</div></li>
+        <li>Complete the rest of the form and submit.
+          <div class="expect">Expect: the quote email goes to the client and a copy goes to the introducer. The introducer is linked to the job in the CRM.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc4">
       <div class="uc-head"><span class="uc-title">Accept a quote</span><span class="uc-where">accept-quote.html → confirm-quote.html</span></div>
-      <p class="uc-purpose">Two pages, back to back — see the callout below on why.</p>
+      <p class="uc-purpose">This is where a website job becomes real and goes on the map.</p>
       <ol class="steps">
         <li>From the quote email, click <b>Accept Quote</b>.
-          <div class="expect">Expect: the quote details load (reference, survey type, postcode, deadline, price).</div></li>
-        <li>Fill in billing contact, end-client details, report addressee, and site access, then confirm.
-          <div class="expect">Expect: a success message, and — within a minute — a second, separate email inviting you to <b>confirm-quote.html</b> to add any remaining details.</div></li>
-        <li>(Optional) Follow that second link and fill in the same class of details again if anything was missed the first time.
-          <div class="expect">Expect: this never overwrites what you already gave with blanks — only fields you actually fill in this time are saved.</div></li>
+          <div class="expect">Expect: the quote details load (reference, survey type, postcode, deadline, price). In the CRM the job moves straight to <b>Unallocated</b> and appears as a red pin on the Live Map and in surveyors' apps within their area. The paying and report-to customers are linked to the job.</div></li>
+        <li>Fill in billing contact, end client, report addressee and site access, then confirm.
+          <div class="expect">Expect: a success message. The job page shows <b>Details Received</b>. Trevor gets a "quote accepted" email saying the job is on the map and the database needs creating. The customer gets a second email linking to <code>confirm-quote.html</code>.</div></li>
+        <li>(Optional) Follow that second link and add anything missed.
+          <div class="expect">Expect: only fields you fill in are saved. Nothing you gave before is blanked, and the job doesn't move again.</div></li>
       </ol>
-      <div class="callout open"><b>Known overlap:</b> <code>accept-quote.html</code>'s own step 2 and <code>confirm-quote.html</code> collect substantially the same fields (billing/end-client/report/access details) — built independently, never consolidated. Both work correctly and are non-destructive of each other, but a customer who completes step 2 fully has nothing new to add on the second page. Worth a product decision on whether to keep sending the follow-up email at all.</div>
+      <div class="callout open"><b>Known overlap:</b> the accept page's second step and <code>confirm-quote.html</code> collect mostly the same details. Both are safe, but a customer who completes the first has nothing new to add on the second.</div>
     </div>
 
     <div class="uc" id="uc5">
       <div class="uc-head"><span class="uc-title">Decline a quote</span><span class="uc-where">accept-quote.html</span></div>
       <ol class="steps">
-        <li>From the quote email, click <b>Decline</b> and optionally give a reason.
-          <div class="expect">Expect: the enquiry is marked declined and its linked job is automatically archived — it drops out of the admin pipeline entirely, no further action needed.</div></li>
+        <li>From the quote email, click <b>Decline</b> and give a reason if you like.
+          <div class="expect">Expect: the enquiry is marked declined and the job is archived. It never goes on the map, and appears under the Complete tab labelled <b>Archived</b> (not Job Complete). Trevor gets an email with the reason.</div></li>
       </ol>
     </div>
 
-    <!-- ============ ADMIN ============ -->
-    <h2 id="admin-group"><span class="num">03</span>Admin — CRM</h2>
-    <p class="section-lede"><code>admin/*.html</code>. Every action below needs a logged-in admin or user account.</p>
+    <!-- ============ OFFICE ============ -->
+    <h2 id="admin-group"><span class="num">03</span>Office: the CRM</h2>
+    <p class="section-lede"><code>admin/</code> on Railway. Every action below needs a signed-in admin or user account. The ? button at the top right of every page opens the job journey guide, and hovering a stage badge shows what got the job there and what happens next.</p>
 
     <div class="uc" id="uc6">
-      <div class="uc-head"><span class="uc-title">Approve an enquiry to the map</span><span class="uc-where">job-detail.html</span></div>
-      <p class="uc-purpose">The one manual gate between "customer accepted" and "surveyors can see it." Accepting a quote does <i>not</i> do this automatically.</p>
+      <div class="uc-head"><span class="uc-title">Add a job yourself</span><span class="uc-where">Jobs or Clients → New job · customer page → Add job</span></div>
       <ol class="steps">
-        <li>Open the job (created the moment the enquiry was submitted — it exists in <code>pending_approval</code> from the very first step, well before any quote is accepted).
-          <div class="expect">Expect: tree count, postcode, and — once accepted — the customer's billing/site details are already visible.</div></li>
-        <li>Click <b>Approve to Map</b>.
-          <div class="expect">Expect: dispatch state flips to <b>red</b> (live/unclaimed), a surveyor pay estimate is calculated if not already set, and a client row is created/linked automatically if this is the first time this contact has been seen.</div></li>
+        <li>Click <b>New job</b>. Pick an existing customer, or add one on the New customer tab. Customers are matched by email, so nobody is added twice.
+          <div class="expect">Expect: the reference box suggests the next free <code>TH</code> number. A reference already in use is refused.</div></li>
+        <li>Choose survey type, site postcode, deadline and agreed fee. Leave <b>Start as</b> on <i>On the map (Unallocated)</i> and create the job.
+          <div class="expect">Expect: the job page opens as <b>Unallocated</b>, with urgency and SLA date worked out (working days, weekends skipped). It is a red pin on the map straight away. Trevor gets a "New job on map, database to create" email.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc7">
-      <div class="uc-head"><span class="uc-title">Allocate a job directly to a surveyor</span><span class="uc-where">job-detail.html → "Allocate to Surveyor"</span></div>
-      <p class="uc-purpose">Bypasses the open marketplace — offers the job to one named surveyor with a response deadline.</p>
+      <div class="uc-head"><span class="uc-title">Database and report to-dos</span><span class="uc-where">job page → Progress · Jobs list · Dashboard → To Do</span></div>
+      <p class="uc-purpose">Trevor's two jobs on every live job. The database matters most: nothing can happen until it goes to the surveyor.</p>
       <ol class="steps">
-        <li>Click <b>Allocate to Surveyor</b>, choose a surveyor and a response window (default or custom hours).
-          <div class="expect">Expect: a countdown ("Allocated · Xh remaining") appears on the job.</div></li>
+        <li>On a new job, look at <b>Database</b> in the Progress card.
+          <div class="expect">Expect: "Database to create", in amber, with a hint saying to do it first. The dashboard counts it under Database to create, and under <b>Database needed, surveyor waiting</b> once a surveyor has claimed it.</div></li>
+        <li>Once it's made, set Database to <b>Created: digital plan</b> or <b>Created: JPEG, awaiting digital plan</b>. The same dropdown is in the Jobs list and the dashboard table.
+          <div class="expect">Expect: the date is stamped. JPEG stays amber and is counted under <b>Awaiting digital plan</b> until switched to Digital plan. A JPEG database still counts as created for a waiting surveyor.</div></li>
+        <li>Click <b>Report to draft</b> when you've drafted the report.
+          <div class="expect">Expect: it turns to "Report drafted" with the date. Clicking again asks before unticking.</div></li>
       </ol>
-      <div class="callout open"><b>Note:</b> this is a real, working admin feature (RLS-correct as of this session) but currently has no matching screen in the surveyor app to accept or reject the offer — it's a database-and-CRM-only feature until that UI exists.</div>
     </div>
 
     <div class="uc" id="uc8">
-      <div class="uc-head"><span class="uc-title">Edit tree count, financials, and site details</span><span class="uc-where">job-detail.html</span></div>
+      <div class="uc-head"><span class="uc-title">Allocate a job to a named surveyor</span><span class="uc-where">job page → Allocate to Surveyor</span></div>
+      <p class="uc-purpose">Offers a job to one surveyor with a time limit, instead of waiting for someone to claim it.</p>
       <ol class="steps">
-        <li>Use the <b>Set/Edit</b> button on Tree Count Band, Financials, Site Access, or Documents.
-          <div class="expect">Expect: each saves independently and immediately reflects in the page — tree count also updates the linked enquiry, not just the job.</div></li>
+        <li>Click <b>Allocate to Surveyor</b>, choose the surveyor and a response window.
+          <div class="expect">Expect: an amber line "Allocated · Nh left" with a Change button. The surveyor sees the offer in the app (see the Respond to an allocation use case).</div></li>
+        <li>The surveyor accepts in the app.
+          <div class="expect">Expect: the job is <b>Allocated</b> with their name, and Trevor gets the "Job allocated" email. If they reject it, the offer clears and the job stays on the map for anyone to claim.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc9">
-      <div class="uc-head"><span class="uc-title">Track report progress</span><span class="uc-where">job-detail.html → "Report Progress" card</span></div>
-      <p class="uc-purpose">Only appears once the surveyor has marked field data as uploaded.</p>
+      <div class="uc-head"><span class="uc-title">Take a job off the map, or unassign a surveyor</span><span class="uc-where">job page → Actions</span></div>
       <ol class="steps">
-        <li>Tick <b>Axiscape DB Prepared</b>, then <b>Report Drafted</b> as each is done.
-          <div class="expect">Expect: a timestamp appears next to each.</div></li>
-        <li>Tick <b>Report Finalised</b>.
-          <div class="expect">Expect: dispatch state advances to <b>green</b>, and — automatically, no extra click — the client receives their "report ready" email.</div></li>
+        <li>On an Unallocated job, click <b>Remove from Map</b>.
+          <div class="expect">Expect: the job becomes <b>Awaiting go-ahead</b> and leaves the map. <b>Put on Map</b> puts it back as Unallocated.</div></li>
+        <li>On an Allocated job, click <b>Unassign Surveyor</b> and give a reason.
+          <div class="expect">Expect: back to Unallocated with a red pin. Trevor gets a "Job back on map, surveyor handed it back" email with the reason. The same happens when a surveyor hands a job back from the app.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc10">
-      <div class="uc-head"><span class="uc-title">Raise and mark invoices</span><span class="uc-where">job-detail.html</span></div>
+      <div class="uc-head"><span class="uc-title">Edit job details</span><span class="uc-where">job page</span></div>
       <ol class="steps">
-        <li>Click <b>Raise Invoice</b> (or <b>Invoice 1</b>/<b>2</b> for split billing), confirm the amount and date.
-          <div class="expect">Expect: for single invoicing, the job archives immediately; for split billing, only invoice 2 archives it.</div></li>
-        <li>Click <b>Mark as Paid</b> once payment lands.
-          <div class="expect">Expect: paid date is recorded per invoice, independent of the archive step.</div></li>
+        <li>Edit trees, survey date, site access, parking, documents, the agreed fee or the introducer.
+          <div class="expect">Expect: each saves on its own and shows at once. Trees also updates the linked enquiry. A confirmed survey date shows green "Confirmed", otherwise orange "Proposed".</div></li>
+        <li>Change <b>Urgency</b> in the Status card and click Save status.
+          <div class="expect">Expect: the SLA restarts from today at that tier's working days (Urgent 3, Elevated 5, Standard 10, Low 15).</div></li>
       </ol>
+      <div class="callout open"><b>Note:</b> the <b>Stage</b> dropdown in the Status card sets the stage directly. It's for fixing mistakes. The normal moves happen through the buttons and the app, which also send the right emails.</div>
     </div>
 
     <div class="uc" id="uc11">
-      <div class="uc-head"><span class="uc-title">Approve, pause, or archive a surveyor</span><span class="uc-where">surveyor-detail.html, surveyors.html</span></div>
+      <div class="uc-head"><span class="uc-title">Finish a job and invoice it</span><span class="uc-where">job page → Progress → Finish the job</span></div>
+      <p class="uc-purpose">Offered once the survey is done. Raise each invoice in QuickBooks first. The CRM records it for the dashboard totals and overdue flags.</p>
       <ol class="steps">
-        <li>Filter the surveyor list by <b>Pending Approval</b> to find new self-registrations.
-          <div class="expect">Expect: you should also get an email the moment someone registers — this was broken until today and is now fixed.</div></li>
-        <li>Open one and click <b>Approve &amp; Activate</b>, entering their hourly rate.
-          <div class="expect">Expect: they can now log into the app immediately, and receive an approval email.</div></li>
-        <li>Use <b>Pause Account</b> for a temporary hold, or <b>Archive</b> to remove access permanently and clear their postcode coverage.
-          <div class="expect">Expect: archiving also unlinks their login — they're locked out immediately, and their coverage stops counting toward any postcode being "served."</div></li>
+        <li>Click <b>Report &amp; Invoice Sent (Job Complete)</b>. Check the amount (the agreed fee is filled in) and save.
+          <div class="expect">Expect: the invoice is recorded and the job becomes <b>Job Complete</b>: off the main list, under the Complete tab. Sending the report and invoicing are one step. No separate "report sent" stage and no "invoice now" email.</div></li>
+        <li>Or click <b>Tree Data Sent, Part Invoiced</b>. Half the fee is filled in. Save.
+          <div class="expect">Expect: invoice 1 is recorded and the job shows <b>Awaiting Client · Part Invoiced</b>, off the map but still listed. Its SLA is paused. Later, Report &amp; Invoice Sent fills in the balance as invoice 2 and completes the job.</div></li>
+        <li>Or click <b>Tree Data Sent, Not Invoiced</b>.
+          <div class="expect">Expect: <b>Awaiting Client · Not Invoiced</b>. Later you can part invoice it or complete it.</div></li>
+        <li>When money arrives, click <b>Mark Invoice Paid</b> (or Invoice 1 / 2) in Actions.
+          <div class="expect">Expect: a green Paid badge on that invoice. An invoice unpaid after 30 days shows an Overdue flag.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc12">
-      <div class="uc-head"><span class="uc-title">Manage CRM login users</span><span class="uc-where">users.html</span></div>
+      <div class="uc-head"><span class="uc-title">Jobs waiting for plans, and Stage 2</span><span class="uc-where">job page → Create Stage 2 Job · Plans Received</span></div>
       <ol class="steps">
-        <li>Click <b>Invite User</b>, choose Admin or User role.
-          <div class="expect">Expect: they get an email invite to set their own password — you never see or set it.</div></li>
-        <li>Use <b>Disable</b>/<b>Enable</b> or <b>Remove Access</b> on an existing account as needed.
-          <div class="expect">Expect: you can't disable, demote, or delete your own account — the option is blocked.</div></li>
+        <li>On a two-stage Stage 1 job, click <b>Create Stage 2 Job</b>. Or add a job with Start as <i>Waiting for plans</i>.
+          <div class="expect">Expect: the job sits as <b>Waiting for Plans</b>: off the map, with no SLA date.</div></li>
+        <li>When the plans arrive, click <b>Plans Received, Activate Job</b>.
+          <div class="expect">Expect: the SLA starts from today and the job goes straight onto the map as Unallocated.</div></li>
       </ol>
     </div>
 
-    <!-- ============ SURVEYOR ============ -->
-    <h2 id="surveyor-group"><span class="num">04</span>Surveyor — mobile app</h2>
-    <p class="section-lede">The actively developed app is <code>surveyor-new/</code> (self-registration, insurance/compliance tracking, coverage-area management). <code>surveyor-app/</code> is an earlier, simpler build — both talk to the same one database.</p>
-
     <div class="uc" id="uc13">
-      <div class="uc-head"><span class="uc-title">Register a new surveyor account</span><span class="uc-where">RegisterScreen</span></div>
+      <div class="uc-head"><span class="uc-title">Find jobs in the list</span><span class="uc-where">Jobs page</span></div>
       <ol class="steps">
-        <li>Open the app, tap <b>Create an account</b>, and fill in contact, coverage area, insurance, and compliance details.
-          <div class="expect">Expect: submission succeeds and you're told your account is awaiting approval — this was fully broken as of yesterday and is fixed as of today.</div></li>
-        <li>Try logging in before being approved.
-          <div class="expect">Expect: you land on a "pending approval" screen, not the job list — you cannot see or claim any job yet.</div></li>
+        <li>Use the stage tabs: Go-ahead, Plans, Unallocated, Allocated, Survey Done, Data Received, Awaiting Client, Complete.
+          <div class="expect">Expect: each tab shows a count. All shows everything except completed jobs.</div></li>
+        <li>Open <b>Filters</b>: urgency, To do (Database to create, Awaiting digital plan, Report to draft), surveyor and introducer.
+          <div class="expect">Expect: each active filter shows as a chip you can clear with ×. Dashboard counts link straight to the matching filtered list.</div></li>
+        <li>Click a column header to sort, and Shift-click more headers to sort by several, e.g. surveyor, then survey date.
+          <div class="expect">Expect: small 1, 2, 3 badges on the sorted headers, like Excel's "sort by, then by".</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc14">
-      <div class="uc-head"><span class="uc-title">Browse and claim an available job</span><span class="uc-where">Jobs → Available tab</span></div>
+      <div class="uc-head"><span class="uc-title">Approve, pause or archive a surveyor</span><span class="uc-where">surveyors.html, surveyor-detail.html</span></div>
+      <p class="uc-purpose">Surveyors are the one thing Trevor approves. Their claims are not.</p>
       <ol class="steps">
-        <li>Once approved, open the <b>Available</b> tab.
-          <div class="expect">Expect: only jobs within your travel radius of your home postcode appear — this depends on the job having real coordinates, which is now set automatically on submission (previously it silently never was, for any job).</div></li>
-        <li>Open a job and tap <b>Claim This Job</b>, accept the confidentiality agreement.
-          <div class="expect">Expect: your estimated pay is shown before you confirm, and the job moves to your <b>My Jobs</b> tab immediately after.</div></li>
+        <li>Filter the surveyor list by <b>Pending Approval</b> to find new registrations.
+          <div class="expect">Expect: Trevor is also emailed when someone registers.</div></li>
+        <li>Open one and click <b>Approve &amp; Activate</b>, entering their hourly rate.
+          <div class="expect">Expect: they can sign in to the app at once and get an approval email. They see jobs within their radius of their home postcode.</div></li>
+        <li>Use <b>Pause Account</b> for a temporary hold, or <b>Archive</b> to remove access.
+          <div class="expect">Expect: a paused surveyor sees no available jobs. Archiving also unlinks their login and stops their coverage counting.</div></li>
       </ol>
     </div>
 
     <div class="uc" id="uc15">
-      <div class="uc-head"><span class="uc-title">Respond to a job allocated to you</span><span class="uc-where">Job Detail — allocated-job banner</span></div>
+      <div class="uc-head"><span class="uc-title">Manage CRM users</span><span class="uc-where">users.html</span></div>
       <ol class="steps">
-        <li>Open a job an admin has allocated directly to you.
-          <div class="expect">Expect: a red banner with a countdown, and Claim/Reject buttons.</div></li>
-        <li>Tap <b>Claim</b> to accept it, or <b>Reject</b> to release it back for others.
-          <div class="expect">Expect: rejecting clears the allocation and returns the job to the open marketplace.</div></li>
+        <li>Click <b>Invite User</b> and choose Admin or User.
+          <div class="expect">Expect: they get an email invite to set their own password.</div></li>
+        <li>Use Disable / Enable or Remove Access on an existing account.
+          <div class="expect">Expect: you can't disable, demote or delete your own account.</div></li>
       </ol>
     </div>
 
+    <!-- ============ SURVEYOR ============ -->
+    <h2 id="surveyor-group"><span class="num">04</span>Surveyor: the mobile app</h2>
+    <p class="section-lede">The app in <code>surveyor-new/</code> (Heaps Arboriculture Surveyors on the App Store and Play Store). The Survey Done and Data Sent buttons arrive in version <b>1.0.8</b>.</p>
+
     <div class="uc" id="uc16">
-      <div class="uc-head"><span class="uc-title">Field work and hand-back</span><span class="uc-where">Job Detail</span></div>
+      <div class="uc-head"><span class="uc-title">Register a surveyor account</span><span class="uc-where">Register screen</span></div>
       <ol class="steps">
-        <li>Add field notes as you work, and tap <b>Mark Field Data Uploaded</b> once the visit is done.
-          <div class="expect">Expect: the office is notified automatically, and admin's Report Progress checklist becomes available on this job.</div></li>
-        <li>If you need to release a job you've claimed, tap <b>Hand Back</b>.
-          <div class="expect">Expect: it returns to the open marketplace for another surveyor.</div></li>
+        <li>Tap <b>Create an account</b> and fill in contact, coverage area, insurance and compliance details.
+          <div class="expect">Expect: you're told the account is awaiting approval.</div></li>
+        <li>Sign in before Trevor approves you.
+          <div class="expect">Expect: a "pending approval" screen. No jobs are visible yet.</div></li>
       </ol>
-      <div class="callout open"><b>Not yet built:</b> the file-upload button on a job ("Upload File") is a placeholder — tapping it just shows a "coming in the next release" message. There's no way to attach documents from the app yet.</div>
     </div>
 
     <div class="uc" id="uc17">
-      <div class="uc-head"><span class="uc-title">Manage profile, coverage, availability, insurance</span><span class="uc-where">Profile tab</span></div>
+      <div class="uc-head"><span class="uc-title">Find and claim a job</span><span class="uc-where">Jobs → Available · Map tab</span></div>
       <ol class="steps">
-        <li>Update your home postcode and travel radius under <b>Coverage Area</b>.
-          <div class="expect">Expect: a list of matched outcodes appears below, auto-computed from that postcode and radius.</div></li>
-        <li>Mark yourself available/unavailable on the <b>Availability</b> calendar by tapping or dragging across days.
-          <div class="expect">Expect: days default to unavailable until you actively mark them — a grey day means "no answer yet," not "unavailable."</div></li>
-        <li>Upload or replace a PI/PL/DBS certificate under <b>Insurance</b>.
-          <div class="expect">Expect: only you (and admin) can see or replace your own certificates — this was a real gap (any surveyor could read or overwrite anyone else's) closed today.</div></li>
+        <li>Open <b>Available</b>, or the <b>Map</b> tab.
+          <div class="expect">Expect: only jobs within your radius of your home postcode. On the map they're red pins, and your own allocated jobs are green. The pop-up for an available job shows its urgency.</div></li>
+        <li>Open a job, tap <b>Claim This Job</b> and accept the NDA.
+          <div class="expect">Expect: it's yours straight away. No one approves the claim. It moves to My Jobs as "Next: visit site, then tap Survey Done", and leaves everyone else's map.</div></li>
       </ol>
     </div>
 
-    <h2 id="open-items"><span class="num">05</span>Known behaviours, not bugs</h2>
-    <p class="section-lede">Things that are correct as designed but might look surprising while testing.</p>
+    <div class="uc" id="uc18">
+      <div class="uc-head"><span class="uc-title">Respond to a job allocated to you</span><span class="uc-where">Job detail → allocation banner</span></div>
+      <ol class="steps">
+        <li>Open a job Trevor allocated to you.
+          <div class="expect">Expect: a banner with the time left, and Claim / Reject buttons.</div></li>
+        <li>Tap <b>Claim</b> (accepting the NDA), or <b>Reject</b>.
+          <div class="expect">Expect: claiming makes it yours exactly as a normal claim does. Rejecting clears the offer and leaves the job on the map for others.</div></li>
+      </ol>
+    </div>
+
+    <div class="uc" id="uc19">
+      <div class="uc-head"><span class="uc-title">Survey Done, Data Sent, and handing back</span><span class="uc-where">Job detail · version 1.0.8</span></div>
+      <ol class="steps">
+        <li>Back from site, tap <b>Survey Done</b>.
+          <div class="expect">Expect: the pin leaves every map. The CRM shows "Survey done, awaiting data from surveyor". My Jobs says "Next: put the data in SharePoint, tap Data Sent".</div></li>
+        <li>Put the tidied database, photos and site notes in SharePoint, then tap <b>Data Sent</b>.
+          <div class="expect">Expect: the CRM shows "Survey data received, report to complete" and Trevor gets an email. The app says there's nothing more to do, and the job leaves My Jobs.</div></li>
+        <li>Before the survey, tap <b>Hand Back Job</b> to give a job up.
+          <div class="expect">Expect: it returns to the map as Unallocated, and Trevor is emailed. Hand Back isn't offered once Survey Done is tapped.</div></li>
+      </ol>
+      <div class="callout open"><b>Older app versions:</b> 1.0.7 and earlier have one button, <b>Mark Field Data Uploaded</b>. The database treats it as Survey Done and Data Sent together, so the job goes straight to Data received.</div>
+    </div>
+
+    <div class="uc" id="uc20">
+      <div class="uc-head"><span class="uc-title">Profile, coverage, availability, insurance</span><span class="uc-where">Profile tab</span></div>
+      <ol class="steps">
+        <li>Update your home postcode and travel radius under <b>Coverage Area</b>.
+          <div class="expect">Expect: the matched outcodes are listed below, worked out from postcode and radius.</div></li>
+        <li>Mark days on the <b>Availability</b> calendar by tapping or dragging.
+          <div class="expect">Expect: grey means no answer yet, not unavailable.</div></li>
+        <li>Upload or replace a PI, PL or DBS certificate under <b>Insurance</b>.
+          <div class="expect">Expect: only you and the office can see or replace your certificates.</div></li>
+        <li>Use <b>Delete Account</b> at the bottom of Profile if you leave.
+          <div class="expect">Expect: your login and certificates are removed. Past jobs and pay records stay for the office.</div></li>
+      </ol>
+    </div>
+
+    <h2 id="emails"><span class="num">05</span>Who gets which email</h2>
+    <p class="section-lede">Office emails go to Trevor. During testing, every email is also copied to Nick (see Known behaviours).</p>
+    <div class="tbl-box">
+      <table class="mailtbl">
+        <thead><tr><th>When</th><th>Who</th><th>Email</th></tr></thead>
+        <tbody>
+          <tr><td>Website enquiry submitted</td><td>Trevor</td><td>New enquiry (new survey or amendment)</td></tr>
+          <tr><td>Quote worked out</td><td>Customer, plus introducer copy</td><td>Your tree survey quote, with Accept and Decline</td></tr>
+          <tr><td>Quote accepted</td><td>Trevor</td><td>Quote accepted: job is on the map, create the database</td></tr>
+          <tr><td>Quote accepted</td><td>Customer</td><td>Confirm your quote details (link to confirm-quote)</td></tr>
+          <tr><td>Quote declined</td><td>Trevor</td><td>Quote declined, with the reason</td></tr>
+          <tr><td>Office adds a job on the map</td><td>Trevor</td><td>New job on map: database to create</td></tr>
+          <tr><td>Surveyor claims or accepts</td><td>Trevor</td><td>Job allocated: create the database now (or send it, if ready), with digital / JPEG status</td></tr>
+          <tr><td>Surveyor hands back, or office unassigns</td><td>Trevor</td><td>Job back on map, with the reason</td></tr>
+          <tr><td>Surveyor taps Data Sent</td><td>Trevor</td><td>Survey data received: report to complete</td></tr>
+          <tr><td>Surveyor registers / is approved</td><td>Trevor / surveyor</td><td>New registration / you're approved</td></tr>
+          <tr><td>Survey done, job finished, part invoiced</td><td>Nobody</td><td>No email. The CRM shows the stage.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="open-items"><span class="num">06</span>Known behaviours, not bugs</h2>
+    <p class="section-lede">Things that are correct as built but might look surprising while testing.</p>
     <div class="openlist">
       <div class="item">
-        <div class="item-title">Every email CCs nick@aut-ai.com</div>
-        <div class="item-body">Deliberate, for testing — flip <code>TESTING_CC</code> to <code>null</code> in <code>email-templates.ts</code> when ready to go fully live.</div>
+        <div class="item-title">Every email is copied to nick@aut-ai.com, and customer replies go to Nick</div>
+        <div class="item-body">Deliberate while testing. Set <code>TESTING_CC</code> to <code>null</code> and change <code>REPLY_TO_ADDRESS</code> to Trevor's address in <code>email-templates.ts</code> when going fully live.</div>
       </div>
       <div class="item">
-        <div class="item-title">Reply-to on customer emails is nick@aut-ai.com, not Trevor's address</div>
-        <div class="item-body">Same testing-mode flag — <code>REPLY_TO_ADDRESS</code> in the same file.</div>
+        <div class="item-title">The customer is never emailed their report by the system</div>
+        <div class="item-body">Trevor sends the report and invoice himself, then records it with Report &amp; Invoice Sent.</div>
       </div>
       <div class="item">
-        <div class="item-title">Two duplicate-looking surveyor test accounts may still exist</div>
-        <div class="item-body"><code>ciaran1@gmail.com</code>, <code>ciaran@gmail.com</code>, <code>c2590murphy@gmail.com</code> — noticed during testing, never confirmed as safe to delete.</div>
+        <div class="item-title">Older databases show "Created (plan not recorded)"</div>
+        <div class="item-body">Databases ticked before the digital / JPEG choice existed. Pick Digital plan or JPEG to record it. The 76 imported allocated jobs started as "Database to create", so the dashboard's "surveyor waiting" count is high until Trevor sets the ones already done.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">The app's Upload File button doesn't upload yet</div>
+        <div class="item-body">It shows "Document picker will be enabled in the next release". Surveyors send their data through SharePoint, so the process doesn't depend on it.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">The Live Map shows only red and green pins</div>
+        <div class="item-body">Only Unallocated and Allocated jobs are shown. Every other job is off the map by design, and is found through the Jobs list.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">"Report Sent" can still appear on a few old jobs</div>
+        <div class="item-body">A stage from the previous process. New jobs never reach it. Use Report &amp; Invoice Sent to finish those jobs.</div>
       </div>
       <div class="item">
         <div class="item-title">A nested, unused GitHub Actions workflow file still exists</div>
-        <div class="item-body"><code>admin/.github/workflows/deploy-functions.yml</code> — never runs (GitHub only reads the top-level <code>.github/</code>), harmless but should eventually be deleted.</div>
+        <div class="item-body"><code>admin/.github/workflows/deploy-functions.yml</code> never runs (GitHub only reads the top-level <code>.github/</code>). Harmless, but it can be deleted.</div>
       </div>
     </div>
 
-    <footer>THAC Field Guide — generated 2026-09-09, reflects the codebase as of commit c06283a2.</footer>
+    <footer>THAC Field Guide, rewritten 2026-10-20 for Trevor's job process of 19 October 2026.</footer>
   </main>
 </div>
