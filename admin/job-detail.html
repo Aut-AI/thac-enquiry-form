@@ -891,7 +891,7 @@ function renderJob() {
               </select>
             </div>
             <div class="form-group">
-              <label for="dispatchSelect">Dispatch</label>
+              <label for="dispatchSelect">Stage</label>
               <select class="form-control" id="dispatchSelect">
                 ${['pending_approval', 'waiting_for_plans', 'red', 'orange', 'yellow', 'data_received', 'awaiting_client', 'green', 'archived']
                   .filter(s => s !== 'green' || job.dispatch_state === 'green')
@@ -1544,11 +1544,11 @@ function renderTwoStageActions() {
         </button>
       </div>`;
   }
-  // Stage 2: show "Activate" button when waiting for plans
-  if (job.parent_job_id && job.dispatch_state === 'waiting_for_plans') {
+  // Waiting for plans (a Stage 2 job, or one added with New job): activate when they arrive
+  if (job.dispatch_state === 'waiting_for_plans') {
     return `
       <div class="card">
-        <div class="card-title">Stage 2 — Waiting for Plans</div>
+        <div class="card-title">${job.parent_job_id ? 'Stage 2 — ' : ''}Waiting for Plans</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
           Plans received from architect? Activate this job to start the SLA timer
           and put it straight onto the map.
@@ -1562,14 +1562,14 @@ function renderTwoStageActions() {
 }
 
 async function activateStage2() {
-  if (!confirm('Activate this Stage 2 job? The SLA timer starts from today and the job goes straight onto the map as Unallocated.')) return;
+  if (!confirm('Plans received? The SLA timer starts from today and the job goes straight onto the map as Unallocated.')) return;
   try {
     const tier = URGENCY_TIERS[job.urgency_state] || URGENCY_TIERS.grey;
     const sla_deadline = addWorkingDays(new Date(), tier.days);
     await dbUpdate('jobs', `id=eq.${jobId}`, { dispatch_state: 'red', sla_deadline });
     job.dispatch_state = 'red';
     job.sla_deadline   = sla_deadline;
-    showToast('Stage 2 live on the map. SLA set to ' + formatDate(sla_deadline));
+    showToast('Job is on the map. SLA set to ' + formatDate(sla_deadline));
     renderJob();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
