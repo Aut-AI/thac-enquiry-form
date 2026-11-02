@@ -8,12 +8,9 @@ export const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 // heapsarboriculture.co.uk is verified in Trevor's own Resend account
 // (as of 2026-09-08) -- sending from his real mailbox, not an alias.
 export const FROM_ADDRESS = 'Heaps Arboriculture <trevor@heapsarboriculture.co.uk>';
-// FROM_ADDRESS is now Trevor's real mailbox (unlike the old send-only
-// sends.aut-ai.com setup), so replies would land there by default anyway --
-// this override still points them at Nick's inbox while testing. Worth
-// revisiting once Trevor's cutover is confirmed working: this may no longer
-// need to differ from FROM_ADDRESS.
-export const REPLY_TO_ADDRESS = 'nick@aut-ai.com';
+// Replies (e.g. a client sending plans back on their confirmation email) go
+// to Trevor's mailbox. Was Nick's inbox while testing; moved 2 Nov 2026.
+export const REPLY_TO_ADDRESS = 'trevor@heapsarboriculture.co.uk';
 // TESTING ONLY -- CC every outbound email (both admin-facing notifications
 // and customer-facing quote/acceptance emails) to Nick while validating the
 // new Resend account and the Trevor cutover. Set to null once testing is
