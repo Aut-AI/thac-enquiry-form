@@ -1,16 +1,17 @@
 // Urgency <-> enquiry-form deadline option <-> SLA. Keep in step with
 // URGENCY_TIERS in admin/js/thac.js. The form offers 3 / 5 / 10 / 15 working
 // days; each option is one urgency, and the SLA is that many working days out.
+// The report request form (report-request.html) adds 1day: next working day.
 
 export function urgencyFromTier(tier: string | null | undefined): string {
-  if (tier === "3days") return "red";
+  if (tier === "1day" || tier === "3days") return "red";
   if (tier === "5days") return "orange";
   if (tier === "7days" || tier === "10days") return "yellow"; // 7days: retired option
   return "grey";
 }
 
 export function daysForTier(tier: string | null | undefined): number {
-  const m = /^(\d+)days$/.exec(tier ?? "");
+  const m = /^(\d+)days?$/.exec(tier ?? "");
   return m ? Number(m[1]) : 15;
 }
 

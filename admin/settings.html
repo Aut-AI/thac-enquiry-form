@@ -74,7 +74,7 @@ async function init() {
           <div class="card-title">Turnaround Options</div>
           <div class="field-hint" style="margin-bottom: 16px;">
             The surcharge is added on top of the base quote for faster turnaround. Untick <strong>Available</strong> to grey an option out on the public form
-            (new surveys and amendments) so customers can't pick it.
+            for new surveys so customers can't pick it. (The amend / complete a report form has its own options, below.)
           </div>
           <div id="surchargesTable"></div>
           <label style="display: block; margin: 20px 0 8px; font-weight: 600; color: #666; text-transform: uppercase; font-size: 12px;" for="deadlineNotice">
@@ -85,6 +85,18 @@ async function init() {
           <div class="field-hint">Shown under the turnaround options on the public form. Leave blank to show nothing.</div>
           <button class="btn btn-primary" onclick="saveSurcharges()" style="margin-top: 16px;">
             Save Turnaround Options
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Amend / Complete a Report: Turnaround</div>
+          <div class="field-hint" style="margin-bottom: 16px;">
+            For the amend or complete a report form you send to regular clients. The surcharge is added to the amendment or report cost.
+            Untick <strong>Available</strong> to grey an option out while you're busy.
+          </div>
+          <div id="requestOptionsTable"></div>
+          <button class="btn btn-primary" onclick="saveRequestOptions()" style="margin-top: 16px;">
+            Save Report Request Options
           </button>
         </div>
 
@@ -106,6 +118,7 @@ async function init() {
   await loadSettings();
   await loadSurveyTypes();
   await loadSurcharges();
+  await loadRequestOptions();
   await loadTravelAreas();
 }
 
@@ -243,7 +256,7 @@ async function saveSurcharges() {
   });
 
   if (updates.length && updates.every(u => !u.is_available) &&
-      !confirm('All turnaround options are switched off, so customers won\'t be able to get a quote or request an amendment until one is switched back on. Save anyway?')) {
+      !confirm('All turnaround options are switched off, so customers won\'t be able to get a survey quote until one is switched back on. Save anyway?')) {
     return;
   }
 
@@ -254,6 +267,63 @@ async function saveSurcharges() {
     ]);
     showToast('Turnaround options saved');
     await loadSurcharges();
+  } catch (e) {
+    showToast('Error saving: ' + e.message, 'error');
+  }
+}
+
+// ---- Report request (amend / complete a report) turnaround ----
+
+async function loadRequestOptions() {
+  try {
+    const rows = await dbGet('report_request_options', { 'select': 'tier,label,surcharge,is_available', 'order': 'sort_order.asc' }) || [];
+    const body = rows.map(o => `
+      <tr>
+        <td>${o.label}</td>
+        <td style="max-width:140px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span>£</span>
+            <input class="pricing-input" type="number" step="1" min="0" data-request-tier="${o.tier}" value="${o.surcharge}">
+          </div>
+        </td>
+        <td>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" data-request-available="${o.tier}" ${o.is_available !== false ? 'checked' : ''}>
+            <span>Available</span>
+          </label>
+        </td>
+      </tr>`).join('');
+    document.getElementById('requestOptionsTable').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Turnaround</th><th>Surcharge</th><th>On the form</th></tr></thead>
+        <tbody id="requestOptionsBody">${body}</tbody>
+      </table>`;
+  } catch (e) {
+    // Before the 20261102000 migration has run the table doesn't exist
+    document.getElementById('requestOptionsTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
+  }
+}
+
+async function saveRequestOptions() {
+  const updates = [];
+  document.querySelectorAll('#requestOptionsBody input[data-request-tier]').forEach(input => {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0) return;
+    const tier = input.dataset.requestTier;
+    const available = document.querySelector(`#requestOptionsBody input[data-request-available="${tier}"]`).checked;
+    updates.push({ tier, surcharge: val, is_available: available });
+  });
+
+  if (updates.length && updates.every(u => !u.is_available) &&
+      !confirm('All options are switched off, so clients won\'t be able to send an amend or complete a report request until one is switched back on. Save anyway?')) {
+    return;
+  }
+
+  try {
+    await Promise.all(updates.map(u => dbUpdate('report_request_options', `tier=eq.${u.tier}`,
+      { surcharge: u.surcharge, is_available: u.is_available, updated_at: new Date().toISOString() })));
+    showToast('Report request options saved');
+    await loadRequestOptions();
   } catch (e) {
     showToast('Error saving: ' + e.message, 'error');
   }

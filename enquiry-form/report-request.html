@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Amend or Complete a Report — Heaps Arboriculture</title>
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Quicksand:wght@400&display=swap" rel="stylesheet">
+<!--
+  Quick form Trevor emails to regular clients who need (A) an existing
+  report amended or (B) a report completed after the survey (his email of
+  26 Oct 2026). Not linked from the public quote form's survey flow.
+  Submits to the submit-report-request Edge Function, which books it
+  straight onto the CRM as an amendment job. Styling follows index.html.
+-->
+<style>
+  :root {
+    --green-dark: #1a3a2a;
+    --green-mid: #2d5a3d;
+    --green-light: #4a8c5c;
+    --green-pale: #e8f2ec;
+    --amber: #c8773a;
+    --amber-light: #f5e6d8;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --border: #d0ddd4;
+    --white: #ffffff;
+    --bg: #f7faf8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Quicksand', sans-serif;
+    background: var(--bg);
+    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('forest-canopy-light.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+  }
+
+  .form-shell { max-width: 640px; margin: 0 auto; }
+
+  .form-header {
+    text-align: center;
+    margin-bottom: 28px;
+    background: rgba(245, 242, 235, 0.90);
+    padding: 24px 20px;
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+
+  .form-header h1 {
+    font-family: 'Italiana', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--green-dark);
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  .form-header p { font-size: 14px; color: #000; line-height: 1.6; }
+
+  .phone-link { color: var(--green-mid); font-weight: 500; text-decoration: none; }
+
+  .form-card {
+    background: rgba(245, 242, 235, 0.95);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 36px 40px;
+    box-shadow: 0 8px 32px rgba(26,58,42,0.15);
+    backdrop-filter: blur(10px);
+  }
+
+  .intro p {
+    font-size: 14px;
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+
+  .price-box {
+    background: var(--green-pale);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .price-box strong { color: var(--green-dark); }
+
+  .section {
+    border-top: 1px solid var(--border);
+    margin-top: 28px;
+    padding-top: 24px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 16px;
+  }
+
+  .field-group { margin-bottom: 20px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green-dark);
+    margin-bottom: 7px;
+  }
+
+  label .required { color: var(--amber); margin-left: 2px; }
+  label .optional { color: var(--text-muted); font-weight: 400; }
+
+  input[type="text"],
+  input[type="email"],
+  textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: rgba(245, 242, 235, 0.7);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--green-light);
+    box-shadow: 0 0 0 3px rgba(74,140,92,0.12);
+  }
+
+  textarea { resize: vertical; min-height: 90px; }
+
+  .field-hint { font-size: 12px; color: #000; margin-top: 5px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+
+  /* A / B choice and urgency choice */
+  .choice-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .choice-cards.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(245, 242, 235, 0.7);
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+  }
+
+  .choice-card:hover { border-color: var(--green-light); background: var(--green-pale); }
+  .choice-card.selected { border-color: var(--green-mid); background: var(--green-pale); box-shadow: inset 0 0 0 1px var(--green-mid); }
+  .choice-card:disabled { opacity: 0.45; cursor: not-allowed; background: rgba(245, 242, 235, 0.7); border-color: var(--border); }
+
+  .choice-title { font-size: 14px; font-weight: 600; color: var(--green-dark); }
+  .choice-desc { font-size: 12.5px; line-height: 1.4; }
+  .choice-price { font-size: 13px; font-weight: 600; color: var(--green-mid); margin-top: 2px; }
+
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 400;
+    margin-bottom: 0;
+  }
+
+  .check-row input[type="checkbox"] {
+    margin-top: 2px;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    accent-color: var(--green-mid);
+    cursor: pointer;
+  }
+
+  .check-row span { font-size: 13.5px; color: var(--text); line-height: 1.4; }
+
+  .terms-link { color: var(--green-mid); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+  .summary {
+    display: none;
+    margin-top: 24px;
+    background: var(--amber-light);
+    border: 1.5px solid #e0b090;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    color: #5a3315;
+    line-height: 1.6;
+  }
+
+  .btn-submit {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    margin-top: 24px;
+    padding: 14px 24px;
+    border-radius: 8px;
+    border: none;
+    background: var(--green-mid);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover { background: var(--green-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(26,58,42,0.25); }
+  .btn-submit.loading { opacity: 0.7; pointer-events: none; }
+
+  .field-error { font-size: 12px; color: #c0392b; margin-top: 4px; display: none; }
+  input.error, textarea.error { border-color: #c0392b; }
+  .choice-cards.error .choice-card { border-color: #c0392b; }
+
+  .submit-error {
+    display: none;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #c0392b;
+    text-align: center;
+  }
+
+  /* Honeypot: hidden from people, bots fill it in */
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  /* Success */
+  .success-screen { display: none; text-align: center; padding: 20px 0; }
+
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--green-pale);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .success-icon svg {
+    width: 32px;
+    height: 32px;
+    stroke: var(--green-mid);
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .success-screen h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--green-dark);
+    margin-bottom: 10px;
+  }
+
+  .success-screen p {
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 420px;
+    margin: 0 auto 8px;
+  }
+
+  .due-date {
+    display: inline-block;
+    background: var(--green-pale);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 16px;
+    color: var(--green-mid);
+    font-weight: 600;
+    margin: 12px 0 16px;
+  }
+
+  @media (max-width: 560px) {
+    .form-card { padding: 24px 20px; }
+    .form-header h1 { font-size: 22px; }
+    .choice-cards, .choice-cards.three, .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="form-shell">
+
+  <div class="form-header">
+    <h1>Amend or Complete a Tree Report</h1>
+    <p>Questions? Email us using <a href="mailto:hello@heapsarboriculture.co.uk" class="phone-link">hello@heapsarboriculture.co.uk</a></p>
+  </div>
+
+  <div class="form-card">
+
+    <form id="requestForm" novalidate>
+
+      <div class="intro">
+        <p>Dear Sir / Madam,</p>
+        <p>You either need <strong>(A)</strong> an existing tree report amended because your plans have changed, or <strong>(B)</strong> you have had a tree survey carried out, have designed your scheme and now need the full tree report (arboricultural impact assessment, method statement and tree protection plan) for your planning application.</p>
+        <p>We used to carry out all such requests without delay, but due to the high number of projects we now handle, and the uncertainty of how many requests we're going to get and when, we now need to add this work to our database in order to prioritise it against our other, planned work.</p>
+
+        <div class="price-box">
+          <strong>(A) Amendments</strong> are charged at £100 + VAT per hour (£1.67 per minute) and, on average, take between 20 and 40 minutes. This depends on how complex the changes are, what format we're given plans in, and if they have been provided by different architects. There is a minimum charge of £25 + VAT.
+        </div>
+        <div class="price-box">
+          <strong>(B) Completing your report:</strong> you will either already have a quote (usually the remaining half of what you've already paid) or the standard cost for an AIA, AMS and TPP is £300 + VAT (£100 + VAT for each aspect).
+        </div>
+
+        <p style="margin-top:18px;">Therefore, to allow us to book this work in for you, please complete the following.</p>
+      </div>
+
+      <!-- What's needed -->
+      <div class="section">
+        <div class="section-title">Do you need us to:</div>
+        <div class="choice-cards" id="typeCards">
+          <button type="button" class="choice-card" data-value="amend">
+            <span class="choice-title">A. Amend an existing report</span>
+            <span class="choice-desc">Your plans have changed</span>
+          </button>
+          <button type="button" class="choice-card" data-value="complete">
+            <span class="choice-title">B. Complete a report</span>
+            <span class="choice-desc">AIA, method statement and tree protection plan</span>
+          </button>
+        </div>
+        <div class="field-error" id="typeError">Please choose A or B.</div>
+      </div>
+
+      <!-- Urgency -->
+      <div class="section">
+        <div class="section-title">How urgently is this needed?</div>
+        <div class="choice-cards three" id="urgencyCards">
+          <button type="button" class="choice-card" data-value="1day">
+            <span class="choice-title">Next working day</span>
+            <span class="choice-price">+ £150 + VAT</span>
+          </button>
+          <button type="button" class="choice-card" data-value="3days">
+            <span class="choice-title">Within 3 working days</span>
+            <span class="choice-price">+ £100 + VAT</span>
+          </button>
+          <button type="button" class="choice-card" data-value="5days">
+            <span class="choice-title">Within 5 working days</span>
+            <span class="choice-price">No extra charge</span>
+          </button>
+        </div>
+        <div class="field-hint" style="margin-top:8px;">Added to the cost as quoted or described above. Requests received after 3pm, or at a weekend or on a bank holiday, count from the next working day.</div>
+        <div class="field-error" id="urgencyError">Please choose how urgently you need this.</div>
+      </div>
+
+      <!-- Job details -->
+      <div class="section">
+        <div class="section-title">Please add these final details</div>
+
+        <div class="two-col">
+          <div class="field-group">
+            <label for="reportRef">Report reference <span class="required">*</span></label>
+            <input type="text" id="reportRef" placeholder="e.g. TH 1234" autocomplete="off">
+            <div class="field-error" id="reportRefError">Please enter the report reference.</div>
+          </div>
+          <div class="field-group">
+            <label for="site">Site <span class="required">*</span></label>
+            <input type="text" id="site" placeholder="e.g. 12 Plover Drive">
+            <div class="field-error" id="siteError">Please enter the site address.</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="description" id="descriptionLabel">A brief description of the changes or the final proposals <span class="required">*</span></label>
+          <textarea id="description" placeholder="e.g. Extension moved 2m further from T3, new drawing ref 1234-P02."></textarea>
+          <div class="field-error" id="descriptionError">Please add a brief description.</div>
+        </div>
+
+        <div class="two-col">
+          <div class="field-group">
+            <label for="contactName">Your name <span class="required">*</span></label>
+            <input type="text" id="contactName" autocomplete="name">
+            <div class="field-error" id="contactNameError">Please enter your name.</div>
+          </div>
+          <div class="field-group">
+            <label for="contactEmail">Your email address <span class="required">*</span></label>
+            <input type="email" id="contactEmail" autocomplete="email">
+            <div class="field-error" id="contactEmailError">Please enter a valid email address.</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field-group">
+            <label for="contactPhone">Your phone number <span class="required">*</span></label>
+            <input type="tel" id="contactPhone" autocomplete="tel">
+            <div class="field-error" id="contactPhoneError">Please enter a phone number.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoicing -->
+      <div class="section">
+        <div class="section-title">Invoicing details</div>
+
+        <div class="field-group">
+          <label class="check-row">
+            <input type="checkbox" id="payerIsMe" checked>
+            <span>Invoice me (the paying client is the person named above)</span>
+          </label>
+        </div>
+
+        <div class="two-col" id="payerFields" style="display:none;">
+          <div class="field-group">
+            <label for="billingName">Paying client's name <span class="required">*</span></label>
+            <input type="text" id="billingName">
+            <div class="field-error" id="billingNameError">Please enter the paying client's name.</div>
+          </div>
+          <div class="field-group">
+            <label for="billingEmail">Paying client's email address <span class="required">*</span></label>
+            <input type="email" id="billingEmail">
+            <div class="field-error" id="billingEmailError">Please enter a valid email address.</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="billingAddress">Paying client's postal address <span class="required">*</span></label>
+          <textarea id="billingAddress" style="min-height:76px;" autocomplete="street-address"></textarea>
+          <div class="field-error" id="billingAddressError">Please enter the postal address for the invoice.</div>
+        </div>
+
+        <div class="field-group">
+          <label for="reportName">If a different name is needed for the report, please add it here <span class="optional">(optional)</span></label>
+          <input type="text" id="reportName">
+        </div>
+
+        <div class="hp" aria-hidden="true">
+          <label for="website">Website</label>
+          <input type="text" id="website" tabindex="-1" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Terms -->
+      <div class="section">
+        <label class="check-row">
+          <input type="checkbox" id="tcAccepted">
+          <span>I accept the <a class="terms-link" id="termsLink" target="_blank" rel="noopener">terms and conditions</a> and would like this request added.</span>
+        </label>
+        <div class="field-error" id="tcError">Please accept the terms and conditions to continue.</div>
+      </div>
+
+      <div class="summary" id="summary"></div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">Accept terms and add request</button>
+      <div class="submit-error" id="submitError">Sorry, something went wrong and your request was not sent. Please try again, or email us using hello@heapsarboriculture.co.uk.</div>
+    </form>
+
+    <div class="success-screen" id="success">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <h2>Thank you</h2>
+      <p>Your request has been added to our database and will be carried out within your requested timescale.</p>
+      <div class="due-date" id="dueDate"></div>
+      <p>If you haven't already, please email your plans to <a href="mailto:hello@heapsarboriculture.co.uk" class="phone-link">hello@heapsarboriculture.co.uk</a>, quoting <strong id="successRef">your report reference</strong>. We've also sent you a confirmation email.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lemppaqgpntadeylzzwn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_yZaRUopPFonGWdUPr_k6dQ_QtvLW5nn';
+
+// Trevor's T&Cs (sent 2 Nov 2026), served alongside this page
+const TERMS_URL = 'thac-terms-and-conditions.pdf';
+
+// Urgency add-on per turnaround, £ excl. VAT, and whether Trevor has it
+// switched on. Loaded from report_request_options (edited in admin
+// Settings); these defaults match the migration's seed and are used if
+// that can't be read. The server checks both again on submit.
+const REQUEST_SURCHARGES = { '1day': 150, '3days': 100, '5days': 0 };
+const URGENCY_LABELS = { '1day': 'next working day', '3days': 'within 3 working days', '5days': 'within 5 working days' };
+
+function markUnavailable(tier) {
+  const card = document.querySelector(`#urgencyCards [data-value="${tier}"]`);
+  if (!card) return;
+  card.disabled = true;
+  card.querySelector('.choice-price').textContent = 'Not available at the moment';
+  if (deadlineTier === tier) {
+    card.classList.remove('selected');
+    deadlineTier = null;
+    updateSummary();
+  }
+}
+
+(async function loadOptions() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/report_request_options?select=tier,surcharge,is_available`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (!res.ok) return;
+    (await res.json()).forEach(o => {
+      const card = document.querySelector(`#urgencyCards [data-value="${o.tier}"]`);
+      if (!card) return;
+      REQUEST_SURCHARGES[o.tier] = Number(o.surcharge);
+      card.querySelector('.choice-price').textContent = Number(o.surcharge) ? `+ £${Number(o.surcharge)} + VAT` : 'No extra charge';
+      if (o.is_available === false) markUnavailable(o.tier);
+    });
+    updateSummary();
+  } catch (e) {
+    console.warn('Could not load turnaround options, using defaults:', e);
+  }
+})();
+
+let requestType = null; // 'amend' | 'complete'
+let deadlineTier = null; // '1day' | '3days' | '5days'
+
+const $ = id => document.getElementById(id);
+
+function setupChoice(containerId, onPick) {
+  const box = $(containerId);
+  box.querySelectorAll('.choice-card').forEach(card => {
+    card.addEventListener('click', () => {
+      box.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      box.classList.remove('error');
+      onPick(card.dataset.value);
+      updateSummary();
+    });
+  });
+}
+
+setupChoice('typeCards', v => {
+  requestType = v;
+  hideError('typeError');
+  $('descriptionLabel').firstChild.textContent = v === 'amend'
+    ? 'A brief description of the changes '
+    : 'A brief description of the final proposals ';
+});
+setupChoice('urgencyCards', v => {
+  deadlineTier = v;
+  $('urgencyError').textContent = 'Please choose how urgently you need this.';
+  hideError('urgencyError');
+});
+
+$('payerIsMe').addEventListener('change', e => {
+  $('payerFields').style.display = e.target.checked ? 'none' : 'grid';
+});
+
+$('termsLink').href = TERMS_URL;
+
+// What they're agreeing to, once both choices are made
+function updateSummary() {
+  const box = $('summary');
+  if (!requestType || !deadlineTier) { box.style.display = 'none'; return; }
+  const base = requestType === 'amend'
+    ? '£100 + VAT per hour (minimum £25 + VAT)'
+    : 'your existing quote, or £300 + VAT if you don\'t have one';
+  const extra = REQUEST_SURCHARGES[deadlineTier];
+  box.innerHTML = `<strong>You're booking:</strong> ${requestType === 'amend' ? 'an amendment' : 'completion of your report'}, `
+    + `${URGENCY_LABELS[deadlineTier]}.<br><strong>Cost:</strong> ${base}`
+    + (extra ? `, plus £${extra} + VAT for the faster turnaround.` : '.');
+  box.style.display = 'block';
+}
+
+function showError(errorId, fieldId) {
+  $(errorId).style.display = 'block';
+  if (fieldId) $(fieldId).classList.add('error');
+}
+
+function hideError(errorId, fieldId) {
+  $(errorId).style.display = 'none';
+  if (fieldId) $(fieldId).classList.remove('error');
+}
+
+// Clear a field's error as soon as it's filled in
+['reportRef', 'site', 'description', 'contactName', 'contactEmail', 'contactPhone', 'billingName', 'billingEmail', 'billingAddress'].forEach(id => {
+  $(id).addEventListener('input', () => { if ($(id).value.trim()) hideError(id + 'Error', id); });
+});
+$('tcAccepted').addEventListener('change', e => { if (e.target.checked) hideError('tcError'); });
+
+const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+
+function validate() {
+  let firstBad = null;
+  const fail = (errorId, fieldId, el) => { showError(errorId, fieldId); firstBad = firstBad || el || $(fieldId); };
+  const req = (id, ok = v => !!v) => {
+    const v = $(id).value.trim();
+    if (ok(v)) hideError(id + 'Error', id); else fail(id + 'Error', id);
+  };
+
+  if (!requestType) { $('typeCards').classList.add('error'); fail('typeError', null, $('typeCards')); }
+  if (!deadlineTier) { $('urgencyCards').classList.add('error'); fail('urgencyError', null, $('urgencyCards')); }
+  req('reportRef');
+  req('site');
+  req('description', v => v.length >= 5);
+  req('contactName');
+  req('contactEmail', isEmail);
+  req('contactPhone', v => v.replace(/\D/g, '').length >= 7);
+  if (!$('payerIsMe').checked) {
+    req('billingName');
+    req('billingEmail', isEmail);
+  }
+  req('billingAddress');
+  if (!$('tcAccepted').checked) fail('tcError', null, $('tcAccepted'));
+
+  if (firstBad) firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return !firstBad;
+}
+
+$('requestForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('submitError').style.display = 'none';
+  if (!validate()) return;
+
+  const payerIsMe = $('payerIsMe').checked;
+  const body = {
+    request_type: requestType,
+    deadline_tier: deadlineTier,
+    report_ref: $('reportRef').value.trim(),
+    site: $('site').value.trim(),
+    description: $('description').value.trim(),
+    contact_name: $('contactName').value.trim(),
+    contact_email: $('contactEmail').value.trim(),
+    contact_phone: $('contactPhone').value.trim(),
+    billing_name: payerIsMe ? $('contactName').value.trim() : $('billingName').value.trim(),
+    billing_email: payerIsMe ? $('contactEmail').value.trim() : $('billingEmail').value.trim(),
+    billing_address: $('billingAddress').value.trim(),
+    report_name: $('reportName').value.trim(),
+    tc_accepted: true,
+    website: $('website').value,
+  };
+
+  const btn = $('submitBtn');
+  btn.classList.add('loading');
+  btn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-report-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 409) {
+      // Trevor switched this option off since the page loaded
+      const data = await res.json().catch(() => ({}));
+      markUnavailable(body.deadline_tier);
+      btn.classList.remove('loading');
+      btn.textContent = 'Accept terms and add request';
+      $('urgencyError').textContent = data.message || 'That option is not available at the moment. Please choose another.';
+      showError('urgencyError');
+      $('urgencyCards').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const due = data.due_date
+      ? new Date(data.due_date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' })
+      : '';
+    $('dueDate').textContent = due ? `Due by ${due}` : '';
+    $('dueDate').style.display = due ? 'inline-block' : 'none';
+    if (data.reference) $('successRef').textContent = data.reference;
+    $('requestForm').style.display = 'none';
+    $('success').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error('Report request failed:', err);
+    btn.classList.remove('loading');
+    btn.textContent = 'Accept terms and add request';
+    $('submitError').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>

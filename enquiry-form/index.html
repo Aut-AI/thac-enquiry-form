@@ -587,18 +587,6 @@
     line-height: 1.5;
   }
 
-  /* Amendment notice */
-  .amendment-notice {
-    background: var(--amber-light);
-    border: 1.5px solid #e0b090;
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin-bottom: 20px;
-    font-size: 12.5px;
-    color: #7a4520;
-    line-height: 1.5;
-  }
-
   /* Navigation buttons */
   .form-nav {
     display: flex;
@@ -796,8 +784,8 @@
           <div class="branch-desc">I need a new tree survey or report</div>
         </div>
         <div class="branch-card" onclick="selectBranch('amendment', this)">
-          <div class="branch-title">Amendment</div>
-          <div class="branch-desc">I need changes to an existing report</div>
+          <div class="branch-title">Amend or Complete a Report</div>
+          <div class="branch-desc">I need an existing report amended, or my report completed after the survey</div>
         </div>
       </div>
 
@@ -890,60 +878,6 @@
       <div class="form-nav">
         <button class="btn btn-secondary" onclick="goTo('step-0')">← Back</button>
         <button class="btn btn-primary" onclick="goToStep2New()" id="step1NewNext" style="opacity:0.4;" disabled>Continue →</button>
-      </div>
-    </div>
-
-    <!-- STEP 1: Amendment -->
-    <div class="step-panel" id="step-1-amendment">
-      <div class="card-title">Amendment to Existing Work</div>
-      <div class="card-subtitle">Please provide your job reference and describe what needs to change.</div>
-
-      <div class="amendment-notice" style="display:flex;align-items:flex-start;gap:8px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="13.5" r="8"/><line x1="12" y1="13.5" x2="12" y2="9.3"/><line x1="9.7" y1="2" x2="14.3" y2="2"/><line x1="12" y1="2" x2="12" y2="4.3"/></svg>
-        <span>Amendments are charged at <strong>£100 + VAT per hour</strong> (minimum charge £25 + VAT). No automated quote is generated — Once instructed, we will make a start, record the time taken to make the necessary changes and charge accordingly.</span>
-      </div>
-
-      <div class="field-group">
-        <label>Original Job Reference <span class="required">*</span></label>
-        <input type="text" id="amendJobRef" placeholder="e.g. TH 5291" oninput="validateAmendRef()">
-        <div class="field-hint">This is on your original report or email from Trevor.</div>
-        <div class="field-error" id="amendJobRefError">Please enter your job reference number.</div>
-      </div>
-
-      <div class="field-group">
-        <label>Required Deadline <span class="required">*</span></label>
-        <div class="deadline-options" id="amendDeadlineOptions">
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('3days', this)">
-            <span class="deadline-option-label">Within 3 working days</span>
-            <span class="deadline-option-price">+£200</span>
-          </button>
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('5days', this)">
-            <span class="deadline-option-label">Within 5 working days</span>
-            <span class="deadline-option-price">+£150</span>
-          </button>
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('10days', this)">
-            <span class="deadline-option-label">Within 10 working days</span>
-            <span class="deadline-option-price">+£75</span>
-          </button>
-          <button type="button" class="deadline-option" onclick="selectAmendDeadline('15days', this)">
-            <span class="deadline-option-label">Within 15 working days or more</span>
-            <span class="deadline-option-price">+£0</span>
-          </button>
-        </div>
-        <input type="hidden" id="amendDeadline" value="">
-        <div class="deadline-notice" id="amendDeadlineNotice"></div>
-        <div class="field-error" id="amendDeadlineError">Please select a deadline.</div>
-      </div>
-
-      <div class="field-group">
-        <label>Scope of Amendment <span class="required">*</span></label>
-        <textarea id="amendScope" placeholder="Please describe what changes are required to the existing report..."></textarea>
-        <div class="field-error" id="amendScopeError">Please describe the amendment required.</div>
-      </div>
-
-      <div class="form-nav">
-        <button class="btn btn-secondary" onclick="goTo('step-0')">← Back</button>
-        <button class="btn btn-primary" onclick="goToAmendContact()">Continue →</button>
       </div>
     </div>
 
@@ -1121,37 +1055,6 @@
       </div>
     </div>
 
-    <!-- STEP 4: Contact Details (Amendment) -->
-    <div class="step-panel" id="step-4-amendment">
-      <div class="card-title">Your Contact Details</div>
-      <div class="card-subtitle">So we can get in touch to discuss your amendment.</div>
-
-      <div class="field-group">
-        <label>Full Name <span class="required">*</span></label>
-        <input type="text" id="amendName" placeholder="Your full name">
-        <div class="field-error" id="amendNameError">Please enter your name.</div>
-      </div>
-
-      <div class="field-group">
-        <label>Email Address <span class="required">*</span></label>
-        <input type="email" id="amendEmail" placeholder="you@example.com">
-        <div class="field-error" id="amendEmailError">Please enter a valid email address.</div>
-      </div>
-
-      <div class="field-group">
-        <label>Phone Number</label>
-        <input type="tel" id="amendPhone" placeholder="07700 000000">
-      </div>
-
-      <div class="form-nav">
-        <button class="btn btn-secondary" onclick="goTo('step-1-amendment')">← Back</button>
-        <button class="btn btn-submit" onclick="submitAmendment()" id="submitAmendBtn">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L20 6.5"/></svg>
-          Submit Amendment Request
-        </button>
-      </div>
-    </div>
-
     <!-- SUCCESS -->
     <div class="step-panel" id="step-success">
       <div class="success-screen">
@@ -1179,7 +1082,7 @@
 // ============================================================
 // STATE
 // ============================================================
-let branch = null; // 'new' | 'amendment'
+let branch = null; // 'new' | 'amendment' (amendment goes to report-request.html)
 let selectedSurveyType = null;
 let currentStep = 'step-0';
 
@@ -1342,12 +1245,11 @@ const SURCHARGES = {
 const UNAVAILABLE_TIERS = new Set();
 let deadlineNotice = '';
 
-// Greys out and disables switched-off turnaround options on both the new
-// survey quote step and the amendment step, and shows Trevor's message.
+// Greys out and disables switched-off turnaround options on the survey
+// quote step, and shows Trevor's message.
 function applyDeadlineAvailability() {
   const groups = [
     { container: 'priceOptions', notice: 'deadlineNotice', hidden: 'deadline' },
-    { container: 'amendDeadlineOptions', notice: 'amendDeadlineNotice', hidden: 'amendDeadline' },
   ];
   groups.forEach(g => {
     document.querySelectorAll(`#${g.container} button`).forEach(btn => {
@@ -1563,10 +1465,10 @@ function goTo(stepId) {
 function updateProgressBar(stepId) {
   const stepMap = {
     'step-0': 0,
-    'step-1-new': 1, 'step-1-amendment': 1,
+    'step-1-new': 1,
     'step-2-new': 2,
     'step-3-new': 3,
-    'step-4-new': 4, 'step-4-amendment': 4,
+    'step-4-new': 4,
     'step-success': 4
   };
 
@@ -1591,10 +1493,12 @@ function selectBranch(type, card) {
   btn.style.opacity = '1';
 }
 
+// Amendments (and completing a report after the survey) have their own
+// quick form, report-request.html (Trevor, 26 Oct 2026)
 function proceedFromBranch() {
   if (!branch) return;
   if (branch === 'new') goTo('step-0-gate-new');
-  else goTo('step-1-amendment');
+  else window.location.href = 'report-request.html';
 }
 
 // ============================================================
@@ -1619,13 +1523,6 @@ function selectDeadline(value, el) {
   document.querySelectorAll('#priceOptions .price-option').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
   hideError('deadlineError', 'deadline');
-}
-
-function selectAmendDeadline(value, el) {
-  document.getElementById('amendDeadline').value = value;
-  document.querySelectorAll('#amendDeadlineOptions .deadline-option').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  hideError('amendDeadlineError', 'amendDeadline');
 }
 
 function toggleOnBehalfOf() {
@@ -1724,31 +1621,6 @@ function proceedFromQuote() {
 }
 
 // ============================================================
-// AMENDMENT FLOW
-// ============================================================
-function validateAmendRef() {
-  const val = document.getElementById('amendJobRef').value.trim();
-  if (val) hideError('amendJobRefError', 'amendJobRef');
-}
-
-function goToAmendContact() {
-  const ref = document.getElementById('amendJobRef').value.trim();
-  const deadline = document.getElementById('amendDeadline').value;
-  const scope = document.getElementById('amendScope').value.trim();
-
-  let valid = true;
-  if (!ref) { showError('amendJobRefError', 'amendJobRef'); valid = false; }
-  else { hideError('amendJobRefError', 'amendJobRef'); }
-  if (!deadline) { showError('amendDeadlineError', 'amendDeadline'); valid = false; }
-  else { hideError('amendDeadlineError', 'amendDeadline'); }
-  if (!scope || scope.length < 10) { showError('amendScopeError', 'amendScope'); valid = false; }
-  else { hideError('amendScopeError', 'amendScope'); }
-
-  if (!valid) return;
-  goTo('step-4-amendment');
-}
-
-// ============================================================
 // SUBMISSIONS
 // ============================================================
 async function submitNewEnquiry() {
@@ -1818,35 +1690,6 @@ async function submitNewEnquiry() {
     // this can't hit a database that lacks them
     ...(appliedTravel ? { travel_cost: appliedTravel.cost, travel_note: appliedTravel.note || null } : {}),
     status: quoted_price ? 'quoted' : 'new',
-    submitted_at: new Date().toISOString()
-  };
-
-  await submitToSupabase(payload, email);
-}
-
-async function submitAmendment() {
-  const name = document.getElementById('amendName').value.trim();
-  const email = document.getElementById('amendEmail').value.trim();
-
-  let valid = true;
-  if (!name) { showError('amendNameError', 'amendName'); valid = false; }
-  else { hideError('amendNameError', 'amendName'); }
-  if (!email || !email.includes('@')) { showError('amendEmailError', 'amendEmail'); valid = false; }
-  else { hideError('amendEmailError', 'amendEmail'); }
-  if (!valid) return;
-
-  const btn = document.getElementById('submitAmendBtn');
-  btn.classList.add('btn-loading');
-  btn.textContent = 'Submitting...';
-
-  const payload = {
-    enquiry_type: 'amendment',
-    original_job_ref: document.getElementById('amendJobRef').value.trim().toUpperCase(),
-    amendment_scope: document.getElementById('amendScope').value.trim(),
-    deadline_tier: document.getElementById('amendDeadline').value,
-    contact_name: name,
-    contact_email: email,
-    contact_phone: document.getElementById('amendPhone').value.trim(),
     submitted_at: new Date().toISOString()
   };
 

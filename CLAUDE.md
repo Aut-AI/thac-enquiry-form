@@ -47,6 +47,8 @@ All admin pages follow the same pattern:
 
 Entirely self-contained single HTML file. State is held in module-level JS variables (`branch`, `selectedSurveyType`, `currentStep`). Navigation between steps uses `goTo(stepId)` which toggles `.active` on `.step-panel` elements. Submissions hit the Supabase REST API directly (no shared `supabase.js`). Pricing constants (`BASE_PRICES`, `SURCHARGES`) are defined inline.
 
+`enquiry-form/report-request.html` is a separate quick form Trevor emails to regular clients to amend or complete a report (his request of 26 Oct 2026). It posts to the `submit-report-request` Edge Function, which books it straight in as an accepted `amendment` job (fixed urgency add-ons: `1day` +£150, `3days` +£100, `5days` £0). The quote form's Amendment option now links there.
+
 ### Edge Functions (`admin/supabase/functions/`)
 
 Deno/TypeScript functions deployed to Supabase. All share `_shared/email-templates.ts` for HTML email layout and `sendEmail()` (which calls the Resend API). Each function is a database webhook triggered by an `INSERT` or `UPDATE` on a specific table.

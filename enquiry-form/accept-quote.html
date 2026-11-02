@@ -504,14 +504,9 @@ function showError(msg) {
   `;
 }
 
+// Trevor's T&Cs (sent 2 Nov 2026), replacing the placeholder summary
 function showTerms() {
-  alert('Standard Terms & Conditions for Tree Survey Services\n\n' +
-    '• The survey will be carried out in accordance with relevant British Standards\n' +
-    '• Payment is due 30 days from invoice date\n' +
-    '• Site access and safety requirements must be agreed before survey date\n' +
-    '• Any additional work identified during the survey will be quoted separately\n' +
-    '• The report is prepared based on information provided and site conditions on the survey date\n\n' +
-    'For full terms and conditions, please contact Heaps Arboriculture');
+  window.open('thac-terms-and-conditions.pdf', '_blank', 'noopener');
 }
 
 function updateAcceptanceTime() {

@@ -189,6 +189,7 @@ function getSurveyLabel(type) {
 // ============================================================
 
 const DEADLINE_LABELS = {
+  '1day':    'Next working day',
   '3days':   'Within 3 working days',
   '5days':   'Within 5 working days',
   '7days':   'Within 7 working days',
@@ -212,7 +213,7 @@ const URGENCY_TIERS = {
 };
 
 function urgencyFromTier(tier) {
-  if (tier === '3days') return 'red';
+  if (tier === '1day' || tier === '3days') return 'red';   // 1day: report request form only
   if (tier === '5days') return 'orange';
   if (tier === '7days' || tier === '10days') return 'yellow';   // 7days: retired option, still on old rows
   return 'grey';

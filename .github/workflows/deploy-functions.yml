@@ -43,6 +43,7 @@ jobs:
           supabase functions deploy notify-quote-declined --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy send-quote-email --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy submit-enquiry --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
+          supabase functions deploy submit-report-request --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy respond-to-quote --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy geocode-postcode --project-ref lemppaqgpntadeylzzwn --no-verify-jwt
           supabase functions deploy notify-new-surveyor-registered --project-ref lemppaqgpntadeylzzwn --no-verify-jwt

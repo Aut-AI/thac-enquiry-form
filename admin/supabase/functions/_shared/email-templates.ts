@@ -165,6 +165,7 @@ export const SURVEY_LABELS: Record<string, string> = {
 
 // ── Deadline tier labels ─────────────────────────────────────
 export const DEADLINE_LABELS: Record<string, string> = {
+  '1day':    'Next working day',
   '3days':   'Within 3 working days',
   '5days':   'Within 5 working days',
   '7days':   'Within 7 working days',
