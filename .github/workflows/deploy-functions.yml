@@ -56,5 +56,5 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         working-directory: admin
         run: |
-          supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} --project-ref lemppaqgpntadeylzzwn
-          supabase secrets set SB_THAC_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} --project-ref lemppaqgpntadeylzzwn
+          supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} --project-ref lemppaqgpntadeylzzwn --yes
+          supabase secrets set SB_THAC_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} --project-ref lemppaqgpntadeylzzwn --yes
