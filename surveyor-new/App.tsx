@@ -9,6 +9,7 @@ import { ActivityIndicator, View, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { supabase } from './src/lib/supabase';
+import { isRegistering } from './src/lib/registration';
 import { RootStackParamList, BottomTabParamList } from './src/types';
 
 import LoginScreen           from './src/screens/LoginScreen';
@@ -98,7 +99,7 @@ export default function App() {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
+      if (mounted && !isRegistering()) {
         setSession(session || null);
       }
     });

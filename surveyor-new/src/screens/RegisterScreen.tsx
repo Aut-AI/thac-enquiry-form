@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { isValidDate } from '../lib/date';
+import { setRegistering } from '../lib/registration';
 
 const styles = StyleSheet.create({
   container: {
@@ -174,6 +175,7 @@ export function RegisterScreen({ navigation }: any) {
     }
 
     setLoading(true);
+    setRegistering(true);
     try {
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -224,42 +226,28 @@ export function RegisterScreen({ navigation }: any) {
         throw new Error(`Registration failed: ${dbError.message}`);
       }
 
-      // If email confirmation is required, signUp() returns no session -- the
-      // user isn't logged in yet. Otherwise a session already exists and
-      // App.tsx's session/status effect will swap straight to
-      // PendingApprovalScreen on its own once this alert closes.
+      // If email confirmation is required, signUp() returns no session.
+      // Either way the new surveyor goes back to Login: they can't do
+      // anything until the office approves them (Nick, 7 Nov 2026).
       const hasSession = !!authData.session;
+      await supabase.auth.signOut();
 
+      const reviewNote = 'Your account will be reviewed shortly and you will receive an email informing you of the status.';
       Alert.alert(
-        'Registration Successful',
+        'Thank you for registering',
         hasSession
-          ? 'Your account is awaiting admin approval. You will receive an email once approved.'
-          : 'Please check your email to confirm your account. Your registration is also awaiting admin approval — you will receive an email once approved.',
-        [
-          {
-            text: 'OK',
-            onPress: async () => {
-              if (!hasSession) {
-                // Sign out first in case a stale session from another
-                // account is still active -- that would put App.tsx's
-                // Stack.Navigator in the "logged in but no matching
-                // surveyor" fallback branch, which has no Login screen in
-                // it. The setTimeout gives that session-clear a tick to
-                // flush and swap the navigator back to the Login+Register
-                // stack before we ask it to go to Login (a no-op if there
-                // was no stale session -- Login already exists and this
-                // just runs on the next tick instead).
-                await supabase.auth.signOut();
-                setTimeout(() => navigation.replace('Login'), 0);
-              }
-            },
-          },
-        ]
+          ? reviewNote
+          : `Please check your email to confirm your address. ${reviewNote}`,
+        [{ text: 'OK', onPress: () => navigation.replace('Login') }]
       );
     } catch (err: any) {
+      // Don't leave a half-registered session behind (e.g. the surveyor row
+      // failed to save). Signing in later goes to CompleteProfile instead.
+      await supabase.auth.signOut();
       setError(err.message || 'Registration failed');
       Alert.alert('Error', err.message || 'Registration failed');
     } finally {
+      setRegistering(false);
       setLoading(false);
       submittingRef.current = false;
     }
