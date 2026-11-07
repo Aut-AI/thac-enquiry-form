@@ -93,10 +93,14 @@ serve(async (req) => {
       const { error: anonError } = await admin
         .from("surveyors")
         .update({
+          // home_postcode is NOT NULL on prod (deletes failed with 23502 until
+          // 7 Nov 2026), so blank it rather than null it. An empty postcode
+          // makes geocode-postcode return early. email gets a unique dummy in
+          // case it is NOT NULL or unique too.
           full_name: `Deleted Surveyor #${idTag}`,
-          email: null,
+          email: `deleted-${surveyorId}@deleted.invalid`,
           phone: null,
-          home_postcode: null,
+          home_postcode: "",
           home_lat: null,
           home_lng: null,
           area_name: null,
