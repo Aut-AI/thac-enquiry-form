@@ -49,7 +49,7 @@
 }
 .map-stats {
   position: absolute;
-  top: 16px;
+  top: 76px;   /* below the 60px topbar; at 16px it sat half under it */
   right: 16px;
   background: white;
   border-radius: 10px;
@@ -65,6 +65,10 @@
 .map-stat { text-align: center; }
 .map-stat-value { font-size: 20px; font-weight: 700; color: var(--green-dark); }
 .map-stat-label { font-size: 11px; color: var(--text-muted); }
+.map-search { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px 3px 3px 10px; color: var(--text-muted); max-width: 100%; }
+.map-search input { border: 0; outline: 0; font-size: 13px; font-family: inherit; width: 210px; max-width: 46vw; color: var(--text); background: transparent; }
+.map-search:focus-within { border-color: var(--green-dark); box-shadow: 0 0 0 3px rgba(26,61,43,.12); }
 .map-no-key {
   display: flex;
   align-items: center;
@@ -101,6 +105,8 @@ const DOT_LABELS = {
   orange:   'Allocated',
 };
 
+let markerByJobId = {};      // job id -> its pin, for the search box
+let searchMarker = null;     // temporary pin for a searched postcode with no job on it
 let surveyorNameById = {};
 let allSurveyors = [];       // full records with home_lat/home_lng/radius_miles, fetched once
 let surveyorOverridesById = {}; // surveyor_id -> [{outcode, override_type, lat, lng}]
@@ -133,6 +139,11 @@ async function init() {
           <option value="">Coverage: Off</option>
           <option value="all">Coverage: All surveyors</option>
         </select>
+        <form class="map-search" onsubmit="event.preventDefault(); searchMap();" role="search">
+          ${icon('search', 15)}
+          <input type="search" id="mapSearch" placeholder="Find a TH number or postcode" aria-label="Find a job by TH number or postcode" autocomplete="off">
+          <button type="submit" class="btn btn-primary btn-sm">Find</button>
+        </form>
         <span style="font-size:13px;color:var(--text-muted)" id="mapStatus">Loading jobs…</span>
       </div>
       <div id="mapCanvas"></div>
@@ -215,7 +226,7 @@ async function fetchAndPlot() {
       'is_archived': 'not.eq.true',
       'dispatch_state': 'in.(red,orange)',
       'order': 'created_at.desc',
-      'limit': 200
+      'limit': 1000   // was 200: with ~150 live jobs that was close to silently dropping pins
     });
 
     if (Object.keys(surveyorNameById).length === 0) {
@@ -259,6 +270,7 @@ function plotJobs(jobs) {
   // Clear existing markers
   if (window._markers) window._markers.forEach(m => m.setMap(null));
   window._markers = [];
+  markerByJobId = {};
 
   const plotted   = jobs.filter(j => j.site_lat && j.site_lng);
   const noCoords  = jobs.filter(j => !j.site_lat || !j.site_lng);
@@ -323,6 +335,7 @@ function plotJobs(jobs) {
     });
 
     window._markers.push(marker);
+    markerByJobId[job.id] = marker;
     bounds.extend(pos);
   });
 
@@ -332,6 +345,101 @@ function plotJobs(jobs) {
     mapInstance.setCenter(bounds.getCenter());
     mapInstance.setZoom(13);
   }
+}
+
+// ------------------------------------------------------------
+// Search (Trevor's request, test G1, 11 Nov 2026): find a job on the map by
+// TH number or postcode. A full or partial postcode (e.g. "RG5") matches every
+// pin in it. If no pin matches, say where the job is instead (e.g. it is off
+// the map at Survey Done), or just show the postcode's location.
+// ------------------------------------------------------------
+const squash = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+function setMapStatus(text) { document.getElementById('mapStatus').textContent = text; }
+
+async function searchMap() {
+  if (!mapInstance) return;
+  const raw = document.getElementById('mapSearch').value.trim();
+  if (searchMarker) { searchMarker.setMap(null); searchMarker = null; }
+  infoWindow.close();
+  if (!raw) { plotJobs(mapJobs); return; }
+
+  const q = squash(raw);
+  const digits = raw.replace(/\D/g, '');
+  const looksLikeRef = /^(TH)?\s*\d{3,6}$/i.test(raw.trim());
+
+  let matches;
+  if (looksLikeRef) {
+    matches = mapJobs.filter(j => j.reference && j.reference.replace(/\D/g, '') === digits);
+  } else {
+    // A full postcode matches exactly; a partial one (outcode or sector) matches
+    // as a prefix, but only on a whole part, so "RG5" never matches "RG51".
+    const outcode = raw.trim().toUpperCase().split(/\s+/)[0];
+    const outcodeOnly = !/\s/.test(raw.trim()) && q.length <= 4;
+    matches = mapJobs.filter(j => {
+      const pc = squash(j.site_postcode);
+      if (!pc) return false;
+      if (pc === q) return true;
+      const jobOut = String(j.site_postcode).trim().toUpperCase().split(/\s+/)[0];
+      return outcodeOnly ? jobOut === outcode : pc.startsWith(q);
+    });
+  }
+
+  const shown = matches.filter(j => markerByJobId[j.id]);
+  if (shown.length === 1) {
+    const m = markerByJobId[shown[0].id];
+    mapInstance.setCenter(m.getPosition());
+    mapInstance.setZoom(14);
+    google.maps.event.trigger(m, 'click');
+    setMapStatus(`Found ${shown[0].reference || 'the job'}`);
+    return;
+  }
+  if (shown.length > 1) {
+    const b = new google.maps.LatLngBounds();
+    shown.forEach(j => b.extend(markerByJobId[j.id].getPosition()));
+    mapInstance.fitBounds(b, { padding: 80 });
+    setMapStatus(`${shown.length} jobs on the map match "${raw}"`);
+    return;
+  }
+  if (matches.length) { setMapStatus(`${matches[0].reference || 'That job'} is on the map but has no coordinates yet. Open it to fix the postcode.`); return; }
+
+  // Not on the map: if it's a TH number, say where the job is instead.
+  if (looksLikeRef) {
+    try {
+      const found = await dbGet('jobs', { select: 'id,reference,dispatch_state', reference: `ilike.*${digits}`, limit: 5 });
+      const job = (found || []).find(j => (j.reference || '').replace(/\D/g, '') === digits);
+      if (job) {
+        const stage = (typeof DISPATCH_META !== 'undefined' && DISPATCH_META[job.dispatch_state]?.label) || job.dispatch_state;
+        setMapStatus(`${job.reference} isn't on the map. Its stage is ${stage}. Only Unallocated and Allocated jobs show here.`);
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    setMapStatus(`No job found with the number ${raw}`);
+    return;
+  }
+
+  // A postcode with no job pins: show where it is.
+  const where = await lookupPlace(raw);
+  if (!where) { setMapStatus(`Couldn't find "${raw}". Check the TH number or postcode.`); return; }
+  mapInstance.setCenter(where);
+  mapInstance.setZoom(where.zoom);
+  searchMarker = new google.maps.Marker({ map: mapInstance, position: where, title: raw.toUpperCase() });
+  setMapStatus(`No jobs on the map at ${raw.toUpperCase()}. Showing where it is.`);
+}
+
+// Full postcode, then outcode, via the free postcodes.io service (also used by
+// the New job form). Google's Geocoding API is blocked by our key's referrer rule.
+async function lookupPlace(raw) {
+  const pc = raw.trim().toUpperCase();
+  try {
+    let r = await fetch('https://api.postcodes.io/postcodes/' + encodeURIComponent(pc));
+    let d = await r.json();
+    if (d?.status === 200 && d.result) return { lat: d.result.latitude, lng: d.result.longitude, zoom: 15 };
+    r = await fetch('https://api.postcodes.io/outcodes/' + encodeURIComponent(pc.split(/\s+/)[0]));
+    d = await r.json();
+    if (d?.status === 200 && d.result) return { lat: d.result.latitude, lng: d.result.longitude, zoom: 12 };
+  } catch (e) { /* offline or service down */ }
+  return null;
 }
 
 async function refreshMap() {

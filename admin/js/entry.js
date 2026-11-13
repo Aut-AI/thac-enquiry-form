@@ -68,7 +68,21 @@
       ${bodyHtml}
     </div>`;
     document.body.appendChild(o);
-    o.addEventListener('mousedown', (e) => { if (e.target === o) closeModal(); });
+    // Close on a click on the dark backdrop, but only one that starts and ends
+    // there. The backdrop scrolls, so its scrollbar belongs to it: pressing the
+    // scrollbar used to count as a backdrop press and closed the form mid-entry
+    // (Trevor's D2-D4 test notes, 11 Nov 2026). And once anything is typed, ask
+    // before throwing it away.
+    let dirty = false, pressedBackdrop = false;
+    o.addEventListener('input', () => { dirty = true; });
+    o.addEventListener('mousedown', (e) => {
+      pressedBackdrop = e.target === o && e.offsetX < o.clientWidth && e.offsetY < o.clientHeight;
+    });
+    o.addEventListener('click', (e) => {
+      const close = pressedBackdrop && e.target === o;
+      pressedBackdrop = false;
+      if (close && (!dirty || confirm('Close this form? What you have typed will be lost.'))) closeModal();
+    });
     return o;
   }
 

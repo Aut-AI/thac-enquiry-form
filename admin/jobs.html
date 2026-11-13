@@ -228,7 +228,7 @@ const STATUS_FILTERS = [
   ['yellow', 'Survey Done', 'standard'],
   ['data_received', 'Data Received', 'elevated'],
   ['awaiting_client', 'Awaiting Client', 'clock'],
-  ['green', 'Report Sent', 'complete'],
+  ['green', 'Report Sent', 'complete'],   // legacy, no longer set: tab only shows while old jobs still sit in it
   ['archived', 'Complete', 'archive'],
 ];
 const URGENCY_FILTERS = [['all', 'Any', null], ['red', 'Urgent', 'urgent'], ['orange', 'Elevated', 'elevated'], ['yellow', 'Standard', 'standard'], ['grey', 'Low', 'low']];
@@ -263,7 +263,7 @@ function renderFilterBar() {
   el.innerHTML = `
     <div class="fbar">
       <div class="seg" role="group" aria-label="Job status">
-        ${STATUS_FILTERS.map(([key, label, ic]) => `
+        ${STATUS_FILTERS.filter(([key]) => key !== 'green' || activeFilter === 'green' || statusCount('green') > 0).map(([key, label, ic]) => `
           <button type="button" class="${activeFilter === key ? 'on' : ''}" onclick="setFilter('${key}')"${key === 'all' ? '' : ` data-status="${key}"`}>
             ${ic ? (['urgent','elevated','standard','complete','low'].includes(ic) ? dot(ic) : icon(ic, 14)) : ''}${label}
             <span class="seg-n">${statusCount(key)}</span>

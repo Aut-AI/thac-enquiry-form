@@ -476,6 +476,7 @@ function renderSidebar(activePage) {
     // Icon-only mode shows no labels, so give each link a tooltip
     document.querySelectorAll('.sidebar .nav-item[data-page]').forEach(a => { a.title = a.textContent.trim(); });
     syncCollapseButton();
+    syncTipsButton();
     refreshSidebarUser();
   }, 0);
   try { document.documentElement.classList.toggle('sb-collapsed', localStorage.getItem('thac_sidebar') === 'collapsed'); } catch (e) { /* storage blocked */ }
@@ -527,6 +528,7 @@ function renderSidebar(activePage) {
         </a>
       </nav>
       <div class="sidebar-footer">
+        <button class="sidebar-collapse" id="sidebarTips" onclick="toggleStatusTips()" style="margin-bottom:2px;"></button>
         <button class="sidebar-collapse" id="sidebarCollapse" onclick="toggleSidebarCollapse()"></button>
         <div class="user-info">
           <div class="user-avatar" id="sidebarAvatar">${initials}</div>
@@ -650,12 +652,36 @@ function closeHelp() {
   document.getElementById('helpModal')?.remove();
 }
 
+// Trevor found the stage hover helpers distracting (test A4, 11 Nov 2026), so
+// they can be switched off from the sidebar. Remembered per browser; on by default.
+function statusTipsOn() {
+  try { return localStorage.getItem('thac_status_tips') !== 'off'; } catch (e) { return true; }
+}
+
+function syncTipsButton() {
+  const btn = document.getElementById('sidebarTips');
+  if (!btn) return;
+  const on = statusTipsOn();
+  btn.innerHTML = `${icon('infoCircle', 17)}<span class="sc-txt">Hover tips: ${on ? 'On' : 'Off'}</span>`;
+  btn.title = on ? 'Turn off the stage hover tips' : 'Turn on the stage hover tips';
+  btn.setAttribute('aria-label', btn.title);
+  btn.setAttribute('aria-pressed', String(on));
+}
+
+function toggleStatusTips() {
+  const on = !statusTipsOn();
+  try { localStorage.setItem('thac_status_tips', on ? 'on' : 'off'); } catch (e) { /* storage blocked */ }
+  document.getElementById('statusTip')?.style.setProperty('display', 'none');
+  syncTipsButton();
+  showToast(on ? 'Stage hover tips are on' : 'Stage hover tips are off. Turn them back on from the sidebar.');
+}
+
 (function () {
   if (typeof document === 'undefined') return;
   let tip = null, current = null;
   function show(el) {
     const h = STATUS_HELP[el.dataset.status];
-    if (!h) return;
+    if (!h || !statusTipsOn()) return;
     if (!tip) { tip = document.createElement('div'); tip.className = 'status-tip'; tip.setAttribute('role', 'tooltip'); tip.id = 'statusTip'; document.body.appendChild(tip); }
     current = el;
     tip.innerHTML = `<div class="st-h">${h.label}</div>

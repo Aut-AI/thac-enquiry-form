@@ -787,6 +787,9 @@ function renderJob() {
             <div class="hint" style="margin:8px 0 0;">${isStaged
               ? 'Part invoiced: invoice 1 when the tree data went out, invoice 2 for the balance when the report and invoice are sent.'
               : 'One invoice for the full job cost, recorded when the report and invoice are sent.'}</div>
+            <div class="hint" style="margin:6px 0 0;">${job.surveyor_pay_amount
+              ? 'Surveyor pay was worked out when the surveyor claimed the job, from their hourly rate and the number of trees at that time. It does not change if you change the fee or trees afterwards. To change it, click Edit above.'
+              : 'Surveyor pay is worked out when a surveyor claims the job, from their hourly rate and the number of trees. You can also set it by hand with Edit above.'}</div>
           </div>
           <div id="financialEdit" style="display:none;margin-top:4px;">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
