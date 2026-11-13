@@ -65,9 +65,9 @@ function icon(name, size = 16) {
   return `<svg class="icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
 
-// Flat fir-silhouette brand mark, replacing the 🌳 emoji logo.
+// Brand mark: the Heaps tree logo (the 🌳 emoji and later a flat fir icon before it).
 function brandMark(size = 20) {
-  return `<svg class="brand-mark" viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" stroke="none"><polygon points="12,2 6.2,11.5 17.8,11.5"/><polygon points="12,7 4.2,18.5 19.8,18.5"/><rect x="10.4" y="18.5" width="3.2" height="3.6" rx="0.5"/></svg>`;
+  return `<img class="brand-mark" src="img/logo-tree.png" alt="" width="${Math.round(size * 432 / 372)}" height="${size}">`;
 }
 
 // Small solid-colour dot for severity/urgency, replacing 🔴🟠🟡🟢⚫ — the

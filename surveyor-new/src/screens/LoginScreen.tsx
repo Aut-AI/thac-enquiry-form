@@ -21,6 +21,34 @@ export default function LoginScreen({ navigation }: any) {
     setLoading(false);
   }
 
+  // Emails a reset link. It opens the CRM's set-password page, which tells a
+  // surveyor to come back here and sign in once the new password is saved.
+  function forgotPassword() {
+    const addr = email.trim();
+    if (!addr) {
+      Alert.alert('Forgot password', 'Type your email address in the box above, then tap "Forgot password?" again.');
+      return;
+    }
+    Alert.alert('Reset your password', `We'll email a reset link to ${addr}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Send link',
+        onPress: async () => {
+          setLoading(true);
+          const { error } = await supabase.auth.resetPasswordForEmail(addr, { redirectTo: RESET_PASSWORD_URL });
+          setLoading(false);
+          if (error) {
+            Alert.alert('Could not send the link', `${error.message}\n\nPlease try again in a few minutes, or email trevor@heapsarboriculture.co.uk.`);
+            return;
+          }
+          // Same message whether or not the account exists, so the form
+          // can't be used to find out who has an account.
+          Alert.alert('Check your email', `If ${addr} has an account, a link to reset your password is on its way. Open it, choose a new password, then come back here and sign in.`);
+        },
+      },
+    ]);
+  }
+
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.card}>
@@ -46,6 +74,10 @@ export default function LoginScreen({ navigation }: any) {
           onChangeText={setPassword}
         />
 
+        <TouchableOpacity onPress={forgotPassword} disabled={loading} style={s.forgotWrap}>
+          <Text style={s.forgotLink}>Forgot password?</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={s.btn} onPress={signIn} disabled={loading}>
           {loading
             ? <ActivityIndicator color="#fff" />
@@ -63,6 +95,7 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const GREEN = '#1a3c2e';
+const RESET_PASSWORD_URL = 'https://thac-enquiry-form-production.up.railway.app/admin/set-password.html';
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f7f4', justifyContent: 'center', padding: 24 },
@@ -71,6 +104,8 @@ const s = StyleSheet.create({
   brand:     { fontSize: 13, fontWeight: '600', color: GREEN, textAlign: 'center', marginBottom: 4, letterSpacing: 0.3 },
   title:     { fontSize: 22, fontWeight: '700', color: GREEN, textAlign: 'center', marginBottom: 28 },
   input:     { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 14, color: '#111' },
+  forgotWrap: { alignSelf: 'flex-end', marginTop: -6, marginBottom: 14, paddingVertical: 4 },
+  forgotLink: { fontSize: 13, color: GREEN, fontWeight: '600' },
   btn:       { backgroundColor: GREEN, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 4 },
   btnText:   { color: '#fff', fontSize: 16, fontWeight: '700' },
   registerLink: { marginTop: 16, textAlign: 'center', fontSize: 14, color: GREEN, fontWeight: '600', textDecorationLine: 'underline' },
