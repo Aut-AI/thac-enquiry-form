@@ -17,6 +17,11 @@ export const REPLY_TO_ADDRESS = 'trevor@heapsarboriculture.co.uk';
 // done and this should stop.
 export const TESTING_CC: string | null = 'nick@aut-ai.com';
 
+// The tree logo (no text), the same image the CRM sidebar and the app use.
+// Hosted on the CRM site because email clients need an absolute https image;
+// it sits on a white tile because the line drawing is dark on transparent.
+export const LOGO_URL = 'https://thac-enquiry-form-production.up.railway.app/admin/img/logo-tree.png';
+
 // ── Base wrapper ────────────────────────────────────────────
 // Email clients don't render SVG, and Gmail's webmail in particular does
 // not support display:flex at all -- an earlier version of this file used
@@ -79,8 +84,17 @@ export function emailWrapper(content: string): string {
   <div class="bg">
     <div class="container">
       <div class="header">
-        <h1>🌳 Heaps Arboriculture</h1>
-        <p>CRM Notification System</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="vertical-align:middle;width:48px;">
+            <div style="background:#ffffff;border-radius:10px;width:48px;height:48px;text-align:center;line-height:0;">
+              <img src="${LOGO_URL}" width="40" height="34" alt="Heaps Arboriculture" style="display:inline-block;margin-top:7px;border:0;outline:none;text-decoration:none;">
+            </div>
+          </td>
+          <td style="vertical-align:middle;padding-left:14px;">
+            <h1>Heaps Arboriculture</h1>
+            <p>CRM Notification System</p>
+          </td>
+        </tr></table>
       </div>
       <div class="body">
         ${content}
