@@ -61,10 +61,14 @@ async function init() {
         <div class="card">
           <div class="card-title">Survey Type Hours</div>
           <div class="field-hint" style="margin-bottom: 16px;">
-            A quote's hours = Report Hours (flat, per survey type) + On-Site Hours × tree-count band (1–5).
-            Both multiply by the hourly rate above.
+            Mirrors the "Survey and Report costs Matrix" spreadsheet. A quote's hours = Report Hours (flat, once per job)
+            + On-Site Hours &times; tree-count band (1&ndash;5: 1&ndash;20 trees = 1, 21&ndash;40 = 2, ... 81&ndash;100 = 5).
+            Hours are multiplied by the hourly rate above. Travel is added separately (see Travel Cost Areas below).
           </div>
-          <div id="surveyTypesTable"></div>
+          <div class="card-subtitle" style="font-weight:600; margin:8px 0 6px;">1. On-site survey time (hours per 20-tree band)</div>
+          <div id="surveyTypesOnsite"></div>
+          <div class="card-subtitle" style="font-weight:600; margin:20px 0 6px;">2. Report writing time (flat hours)</div>
+          <div id="surveyTypesReport"></div>
           <button class="btn btn-primary" onclick="saveSurveyTypes()" style="margin-top: 16px;">
             Save Survey Type Hours
           </button>
@@ -163,37 +167,64 @@ async function loadSurveyTypes() {
     }) || [];
     renderSurveyTypesTable();
   } catch (e) {
-    document.getElementById('surveyTypesTable').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
+    document.getElementById('surveyTypesOnsite').innerHTML = `<p class="muted">Error loading: ${e.message}</p>`;
   }
 }
 
-function renderSurveyTypesTable() {
-  const rows = surveyTypesData.map(st => `
-    <tr>
-      <td>${st.label || st.survey_type}</td>
-      <td><input class="pricing-input" type="number" step="0.25" min="0" data-id="${st.id}" data-field="report_hours" value="${st.report_hours}"></td>
-      <td><input class="pricing-input" type="number" step="0.25" min="0" data-id="${st.id}" data-field="hours_per_band" value="${st.hours_per_band}"></td>
-    </tr>
-  `).join('');
+// Types not offered on the public form (BS Survey is the same job as Planning
+// Stage 1/2; Resistograph was dropped from the quote). Hidden here, rows kept in the DB.
+const HIDDEN_SURVEY_TYPES = ['bs_survey', 'resistograph'];
+// Order follows Trevor's matrix.
+const SURVEY_TYPE_ORDER = ['planning_stage1', 'planning_stage2', 'health_safety', 'insurer_mortgage', 'subsidence', 'nhbc', 'site_visit'];
+const SURVEY_TYPE_DISPLAY = {
+  planning_stage1: 'BS Survey \u2014 Stage 1 report',
+  planning_stage2: 'BS Survey \u2014 Stage 2 report',
+  health_safety: 'Tree Condition / Risk Survey',
+  insurer_mortgage: 'Insurance / Mortgage',
+  subsidence: 'Subsidence',
+  nhbc: 'Foundation Depths (NHBC)',
+  site_visit: 'Site Visit & Advice'
+};
 
-  document.getElementById('surveyTypesTable').innerHTML = `
+function renderSurveyTypesTable() {
+  const visible = surveyTypesData
+    .filter(st => !HIDDEN_SURVEY_TYPES.includes(st.survey_type))
+    .sort((a, b) => SURVEY_TYPE_ORDER.indexOf(a.survey_type) - SURVEY_TYPE_ORDER.indexOf(b.survey_type));
+  const name = st => SURVEY_TYPE_DISPLAY[st.survey_type] || st.label || st.survey_type;
+  const input = (ids, field, val) =>
+    `<input class="pricing-input" type="number" step="0.25" min="0" data-ids="${ids}" data-field="${field}" value="${val}">`;
+
+  // On-site: Stage 1 and Stage 2 are the same survey, so one row writes to both.
+  const stage = visible.filter(st => st.survey_type.startsWith('planning_stage'));
+  const others = visible.filter(st => !st.survey_type.startsWith('planning_stage'));
+  const onsiteRows = [];
+  if (stage.length) {
+    onsiteRows.push(`<tr><td>BS Survey (Stage 1 &amp; 2)</td><td>${input(stage.map(s => s.id).join(','), 'hours_per_band', stage[0].hours_per_band)}</td></tr>`);
+  }
+  others.forEach(st => onsiteRows.push(`<tr><td>${name(st)}</td><td>${input(st.id, 'hours_per_band', st.hours_per_band)}</td></tr>`));
+  const reportRows = visible.map(st => `<tr><td>${name(st)}</td><td>${input(st.id, 'report_hours', st.report_hours)}</td></tr>`);
+
+  const table = (head, rows, body) => `
     <div class="pricing-table-wrapper">
       <table class="data-table">
-        <thead><tr><th>Survey Type</th><th>Report Hours</th><th>On-Site Hours / Band</th></tr></thead>
-        <tbody id="surveyTypesBody">${rows}</tbody>
+        <thead><tr><th>Survey Type</th><th>${head}</th></tr></thead>
+        <tbody id="${body}">${rows.join('')}</tbody>
       </table>
     </div>`;
+  document.getElementById('surveyTypesOnsite').innerHTML = table('Hours / band', onsiteRows, 'surveyTypesOnsiteBody');
+  document.getElementById('surveyTypesReport').innerHTML = table('Report hours', reportRows, 'surveyTypesReportBody');
 }
 
 async function saveSurveyTypes() {
-  const inputs = document.querySelectorAll('#surveyTypesBody input');
+  const inputs = document.querySelectorAll('#surveyTypesOnsiteBody input, #surveyTypesReportBody input');
   const byId = {};
   inputs.forEach(input => {
-    const id = input.dataset.id;
     const val = parseFloat(input.value);
     if (isNaN(val) || val < 0) return;
-    byId[id] = byId[id] || {};
-    byId[id][input.dataset.field] = val;
+    input.dataset.ids.split(',').forEach(id => {
+      byId[id] = byId[id] || {};
+      byId[id][input.dataset.field] = val;
+    });
   });
 
   try {
