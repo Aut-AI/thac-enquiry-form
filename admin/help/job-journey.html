@@ -133,7 +133,7 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
         <i><span class="mini d-waiting"></span>Awaiting client</i> Tree data sent, waiting on the client (part invoiced or not invoiced). Finishes as Job complete when they come back.
       </div>
       <div class="branch">
-        <i><span class="mini d-pending"></span>Off the map</i> Awaiting go-ahead (quote not accepted yet) and Waiting for plans (Stage 2) jobs join at Unallocated.
+        <i><span class="mini d-pending"></span>Off the map</i> Pending (quote not accepted yet) and Awaiting plans (Stage 2) jobs join at Unallocated.
       </div>
     </div>
   </section>
@@ -145,7 +145,7 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
       <div class="box">
         <h3>A customer accepts a quote on the website</h3>
         <ol class="steps">
-          <li>The customer fills in the enquiry form. The enquiry and its job are created together. The job waits off the map as <b>Awaiting go-ahead</b>.</li>
+          <li>The customer fills in the enquiry form. The enquiry and its job are created together. The job waits off the map as <b>Pending</b>.</li>
           <li>You send the quote from the CRM. The customer gets the price by email.</li>
           <li>The customer accepts with one click. The job goes <b>straight onto the map</b> as Unallocated. They then fill in their full details, and the job shows <b>Details Received</b>.</li>
           <li>If they decline instead, the job is archived and you get an email with their reason.</li>
@@ -158,7 +158,7 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
           <li>Use <b>New job</b> on the Jobs or Clients page, or <b>Add job</b> on a customer's page.</li>
           <li>Pick an existing customer or add a new one in the same form. Customers are matched by email, so nobody is added twice.</li>
           <li>Choose the survey type, site postcode and deadline. The urgency and SLA date are worked out for you.</li>
-          <li>It starts on the map as Unallocated, or as Waiting for plans if you're still waiting on drawings.</li>
+          <li>It starts on the map as Unallocated, or as Awaiting plans (still on the map) if you're waiting on drawings.</li>
         </ol>
         <span class="mail">to you: "New job on map, database to create".</span>
       </div>
@@ -185,7 +185,7 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
       <p>Who does what at every stage, and what happens on its own.</p></div>
 
     <article class="stage" id="pending">
-      <div class="stage-id"><span class="tag"><span class="dot d-pending"></span>Awaiting go-ahead</span>
+      <div class="stage-id"><span class="tag"><span class="dot d-pending"></span>Pending</span>
         <small>Off the map. A website quote not yet accepted, or a job you took off the map.</small></div>
       <div class="stage-body">
         <div class="col"><h4>Typically</h4><p>The customer hasn't accepted the quote yet. Amendment requests also wait here, since they need no site visit.</p></div>
@@ -195,12 +195,12 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
     </article>
 
     <article class="stage" id="waiting">
-      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Waiting for plans</span>
-        <small>Off the map until the architect's revised plans arrive. The SLA clock isn't running.</small></div>
+      <div class="stage-id"><span class="tag"><span class="dot d-waiting"></span>Awaiting plans</span>
+        <small>On the map (purple pin) while the plans are still to come. Surveyors can claim it, the SLA clock is running, and it is flagged in red on your dashboard.</small></div>
       <div class="stage-body">
-        <div class="col"><h4>Typically</h4><p>A Stage 2 BS5837 job (AIA, AMS, TPP), made from the Stage 1 job with <span class="btn">Create Stage 2 Job</span>, or a job you added as Waiting for plans.</p></div>
-        <div class="col"><h4>Moves on when</h4><p>Plans arrive and you press <span class="btn">Plans Received, Activate Job</span>.</p></div>
-        <div class="col"><h4>What happens</h4><ul><li>The SLA clock starts from today.</li><li>The job goes straight onto the map as Unallocated.</li></ul></div>
+        <div class="col"><h4>Typically</h4><p>A Stage 2 BS5837 job (AIA, AMS, TPP), made from the Stage 1 job with <span class="btn">Create Stage 2 Job</span>, or a job you added as On the map, awaiting plans.</p></div>
+        <div class="col"><h4>Moves on when</h4><p>Plans arrive and you press <span class="btn">Plans Received</span>. The flag goes; the job stays where it is.</p></div>
+        <div class="col"><h4>What happens</h4><ul><li>The SLA clock starts as soon as the job is on the map.</li><li>The dashboard lists it in red under Plans needed until you press Plans Received.</li></ul></div>
       </div>
     </article>
 
@@ -211,7 +211,7 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
         <div class="col"><h4>Office does</h4><ul><li>Create the database (urgent jobs first).</li><li>Draft the report if there's time.</li></ul></div>
         <div class="col"><h4>Moves on when</h4><ul><li>A surveyor taps Claim in the app and accepts the NDA. If they click it, they've got it. There's no approval, or</li><li>you <span class="btn">Allocate to Surveyor</span> and they accept.</li></ul></div>
         <div class="col"><h4>What happens</h4><p>The pin turns green and leaves everyone else's map.</p><span class="mail">to you: "Job allocated, create the database now" (or "send the database" if it's ready).</span></div>
-        <p class="back"><b>Going back:</b> <span class="btn">Remove from Map</span> takes the job off the map as Awaiting go-ahead.</p>
+        <p class="back"><b>Going back:</b> <span class="btn">Remove from Map</span> takes the job off the map as Pending.</p>
       </div>
     </article>
 
@@ -273,8 +273,8 @@ a:focus-visible, .stop:focus-visible { outline: 2px solid var(--brand-2); outlin
     <div class="tbl-wrap"><table>
       <thead><tr><th>Stage</th><th>Surveyor app: Available</th><th>Surveyor app: My Jobs</th><th>Your live map</th></tr></thead>
       <tbody>
-        <tr><td><span class="mini d-pending"></span> Awaiting go-ahead</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-        <tr><td><span class="mini d-waiting"></span> Waiting for plans</td><td class="no">No</td><td class="yes">Yes, if a surveyor is assigned</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-pending"></span> Pending</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td><span class="mini d-waiting"></span> Awaiting plans</td><td class="no">No</td><td class="yes">Yes, on the map</td><td class="no">No</td></tr>
         <tr><td><span class="mini d-red"></span> Unallocated</td><td class="yes">Yes, within each surveyor's area (red pin)</td><td class="no">No</td><td class="yes">Yes, red pin</td></tr>
         <tr><td><span class="mini d-green"></span> Allocated</td><td class="no">No</td><td class="yes">Yes, green pin</td><td class="yes">Yes, green pin</td></tr>
         <tr><td><span class="mini d-yellow"></span> Survey done</td><td class="no">No</td><td class="yes">Yes, in the list (to tap Data Sent)</td><td class="no">No</td></tr>

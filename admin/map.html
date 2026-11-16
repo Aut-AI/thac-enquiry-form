@@ -97,13 +97,17 @@ let mapJobs     = [];
 // takes it, green once allocated. The pin goes when the survey is done.
 const DOT_COLORS = {
   red:      '#dc2626',
+  plans:    '#7c3aed',   // unallocated, plans still to come
   orange:   '#16a34a',
 };
 
 const DOT_LABELS = {
   red:      'Unallocated',
+  plans:    'Unallocated, awaiting plans',
   orange:   'Allocated',
 };
+// A map job still waiting on plans gets its own colour while unallocated.
+const pinState = job => (job.dispatch_state === 'red' && job.plans_outstanding) ? 'plans' : job.dispatch_state;
 
 let markerByJobId = {};      // job id -> its pin, for the search box
 let searchMarker = null;     // temporary pin for a searched postcode with no job on it
@@ -222,7 +226,7 @@ async function fetchAndPlot() {
   document.getElementById('mapStatus').textContent = 'Loading jobs…';
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount,surveyor_id',
+      'select': 'id,reference,survey_type,job_type,dispatch_state,urgency_state,site_postcode,site_lat,site_lng,agreed_amount,surveyor_id,plans_outstanding',
       'is_archived': 'not.eq.true',
       'dispatch_state': 'in.(red,orange)',
       'order': 'created_at.desc',
@@ -288,7 +292,7 @@ function plotJobs(jobs) {
 
   plotted.forEach(job => {
     const pos   = { lat: Number(job.site_lat), lng: Number(job.site_lng) };
-    const color = DOT_COLORS[job.dispatch_state] || '#6b7280';
+    const color = DOT_COLORS[pinState(job)] || '#6b7280';
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
       <circle cx="11" cy="11" r="9" fill="${color}" stroke="white" stroke-width="2.5"/>
@@ -313,7 +317,7 @@ function plotJobs(jobs) {
     });
 
     marker.addListener('click', () => {
-      const dispatchLabel = DOT_LABELS[job.dispatch_state] || job.dispatch_state || '—';
+      const dispatchLabel = DOT_LABELS[pinState(job)] || job.dispatch_state || '—';
       infoWindow.setContent(`
         <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:210px;">
           <div style="font-weight:700;font-size:15px;color:#1a3d2b;margin-bottom:2px;">${job.reference || '—'}</div>

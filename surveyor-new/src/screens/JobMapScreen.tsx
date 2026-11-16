@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
+import { loadPayContext, payFor } from '../lib/pay';
 import { fetchServiceOutcodes, extractOutcode } from '../lib/outcode';
 import { Job, RootStackParamList } from '../types';
 
@@ -71,6 +72,7 @@ export default function JobMapScreen() {
 
     const surveyorId = surveyorData?.id;
     const serviceOutcodes = surveyorId ? await fetchServiceOutcodes(surveyorId) : new Set<string>();
+    const payCtx = await loadPayContext(surveyorId || null);
 
     const JOB_FIELDS = 'id,reference,survey_type,site_postcode,site_lat,site_lng,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,enquiry_id,enquiries(tree_count_band)';
 
@@ -114,6 +116,7 @@ export default function JobMapScreen() {
       const jobsWithTreeCount = combined.map((job: any) => ({
         ...job,
         tree_count_band: job.enquiries?.tree_count_band || null,
+        surveyor_pay_amount: payFor(job, job.enquiries?.tree_count_band, payCtx),
       }));
       setJobs(jobsWithTreeCount);
     }

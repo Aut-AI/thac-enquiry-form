@@ -788,7 +788,7 @@ function renderJob() {
               ? 'Part invoiced: invoice 1 when the tree data went out, invoice 2 for the balance when the report and invoice are sent.'
               : 'One invoice for the full job cost, recorded when the report and invoice are sent.'}</div>
             <div class="hint" style="margin:6px 0 0;">${job.surveyor_pay_amount
-              ? 'Surveyor pay was worked out when the surveyor claimed the job, from their hourly rate and the number of trees at that time. It does not change if you change the fee or trees afterwards. To change it, click Edit above.'
+              ? 'Surveyor pay was worked out when the surveyor claimed the job, from their hourly rate and the number of trees at that time. It never locks, and it is independent of the client price: click Edit, then change either figure, or use Fill figures if the tree count changed.'
               : 'Surveyor pay is worked out when a surveyor claims the job, from their hourly rate and the number of trees. You can also set it by hand with Edit above.'}</div>
           </div>
           <div id="financialEdit" style="display:none;margin-top:4px;">
@@ -805,6 +805,19 @@ function renderJob() {
                 <label>Surveyor pay (£)</label>
                 <input type="number" class="form-control" id="finSurveyor" step="0.01" min="0" value="${job.surveyor_pay_amount || ''}">
               </div>
+            </div>
+            <div style="background:#f5f8f6;border:1px solid #dfe7e2;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+              <div style="font-size:12.5px;font-weight:600;margin-bottom:6px;">Tree count changed? Fill the figures from the tree band</div>
+              <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;">
+                <select class="form-control" id="finBand" style="width:auto;">
+                  ${[['1', '1-20 trees'], ['2', '21-40 trees'], ['3', '41-60 trees'], ['4', '61-80 trees'], ['5', '81-100 trees']].map(([v, l]) =>
+                    `<option value="${v}" ${(({ '1-20': '1', '21-40': '2', '41-60': '3', '61-80': '4', '81-100': '5' })[enquiry?.tree_count_band] === v) ? 'selected' : ''}>${l}</option>`).join('')}
+                </select>
+                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="finDoPrice" checked> Client price</label>
+                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="finDoPay" checked> Surveyor pay</label>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="fillFromBand()">Fill figures</button>
+              </div>
+              <div class="hint" style="margin:6px 0 0;">Only fills the boxes above; nothing changes until you press Save. Price and pay are independent: tick just one, or type your own figure in either.</div>
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-secondary btn-sm" onclick="toggleFinancialEdit()">Cancel</button>
@@ -1092,7 +1105,22 @@ function renderAllocationStatus() {
     : `${icon('alarm', 13)}Allocation expired`;
 
   return `<div class="chip-row warn">${status}
-    <button class="btn btn-secondary btn-sm" onclick="openAllocateModal()">Change</button></div>`;
+    <button class="btn btn-secondary btn-sm" onclick="openAllocateModal()">Change</button>
+    ${job.surveyor_id ? '' : '<button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="takeBackAllocation()">Take Back</button>'}</div>`;
+}
+
+// Put an allocated-but-not-accepted job back on the map for everyone.
+async function takeBackAllocation() {
+  if (!confirm('Take this job back from the surveyor? It goes back to everyone on the map.')) return;
+  try {
+    const updates = { allocated_surveyor_id: null, allocated_at: null, allocation_rejected_at: null, unaccepted_alert_sent_at: null };
+    await dbUpdate('jobs', `id=eq.${jobId}`, updates);
+    Object.assign(job, updates);
+    showToast('Job taken back');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 function renderNDAStatus() {
@@ -1172,6 +1200,7 @@ async function submitAllocate() {
       allocated_at: new Date().toISOString(),
       allocation_timeout_hours: timeoutHours,
       allocation_rejected_at: null,
+      unaccepted_alert_sent_at: null,
     };
 
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
@@ -1540,28 +1569,51 @@ function renderTwoStageActions() {
         <div class="card-title">Two-Stage Job</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
           Stage 1 complete. Create the Stage 2 job when the architect sends revised plans.
-          It will sit in <strong>Waiting for Plans</strong> until you activate it.
+          It goes straight onto the map as <strong>Awaiting Plans</strong>, with the SLA clock running.
         </p>
         <button class="btn btn-primary w-100" style="justify-content:center;" onclick="showCreateStage2Modal()">
           ${icon('plus', 14)}Create Stage 2 Job
         </button>
       </div>`;
   }
-  // Waiting for plans (a Stage 2 job, or one added with New job): activate when they arrive
+  // Plans outstanding (a Stage 2 job, or one added with New job): the job is already on the map
+  if (job.plans_outstanding && !job.is_archived && ['red', 'orange'].includes(job.dispatch_state)) {
+    return `
+      <div class="card" style="border:1px solid #fca5a5;">
+        <div class="card-title" style="color:#b91c1c;">${job.parent_job_id ? 'Stage 2 — ' : ''}Awaiting Plans</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+          This job is on the map and surveyors can claim it, but the plans have not arrived.
+          Chase the client, then press the button when you have them.
+        </p>
+        <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="plansReceived()">
+          ${icon('checkCircle', 14)}Plans Received
+        </button>
+      </div>`;
+  }
+  // Legacy: jobs still sitting in the old Waiting for Plans stage
   if (job.dispatch_state === 'waiting_for_plans') {
     return `
       <div class="card">
-        <div class="card-title">${job.parent_job_id ? 'Stage 2 — ' : ''}Waiting for Plans</div>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
-          Plans received from architect? Activate this job to start the SLA timer
-          and put it straight onto the map.
-        </p>
+        <div class="card-title">Awaiting Plans (old stage)</div>
         <button class="btn btn-primary w-100" style="justify-content:center;background:var(--green-dark);" onclick="activateStage2()">
-          ${icon('checkCircle', 14)}Plans Received — Activate Job
+          ${icon('checkCircle', 14)}Plans Received — Put on Map
         </button>
       </div>`;
   }
   return '';
+}
+
+async function plansReceived() {
+  try {
+    const plans_received_at = new Date().toISOString();
+    await dbUpdate('jobs', `id=eq.${jobId}`, { plans_outstanding: false, plans_received_at });
+    job.plans_outstanding = false;
+    job.plans_received_at = plans_received_at;
+    showToast('Plans received');
+    renderJob();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 async function activateStage2() {
@@ -1846,6 +1898,44 @@ function toggleFinancialEdit() {
   btn.textContent = isEditing ? 'Edit' : 'Cancel';
 }
 
+// Same maths as the public quote (report hours + on-site hours x band, at the
+// hourly rate, plus travel and urgency fee) and as claim_job (surveyor's own
+// hourly rate x (1 + on-site hours x band)). Fills the boxes only.
+async function fillFromBand() {
+  try {
+    const band = Number(document.getElementById('finBand').value);
+    const [st, ps, sv] = await Promise.all([
+      dbGet('survey_types', { 'survey_type': `eq.${job.survey_type}`, 'select': 'report_hours,hours_per_band', 'limit': 1 }),
+      dbGet('pricing_settings', { 'select': 'thac_hourly_rate', 'limit': 1 }),
+      (job.surveyor_id || job.allocated_surveyor_id)
+        ? dbGet('surveyors', { 'id': `eq.${job.surveyor_id || job.allocated_surveyor_id}`, 'select': 'hourly_rate', 'limit': 1 }) : null,
+    ]);
+    if (!st?.length) throw new Error('No hours set up for this survey type');
+    const perBand = Number(st[0].hours_per_band) || 0;
+    const reportHours = Number(st[0].report_hours) || 0;
+    const msgs = [];
+    if (document.getElementById('finDoPrice').checked) {
+      const rate = Number(ps?.[0]?.thac_hourly_rate) || 100;
+      const surcharge = parseFloat(document.getElementById('finSurcharge').value) || 0;
+      const travel = Number(enquiry?.travel_cost) || 0;
+      document.getElementById('finAgreed').value = Math.round((reportHours + perBand * band) * rate + travel + surcharge);
+      msgs.push('price');
+    }
+    if (document.getElementById('finDoPay').checked) {
+      const payRate = Number(sv?.[0]?.hourly_rate);
+      if (!payRate) {
+        showToast('No surveyor on the job yet, so pay is unchanged', 'error');
+      } else {
+        document.getElementById('finSurveyor').value = Math.round((1 + perBand * band) * payRate * 100) / 100;
+        msgs.push('pay');
+      }
+    }
+    if (msgs.length) showToast('Filled ' + msgs.join(' and ') + '. Press Save to keep.');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
 async function saveFinancials() {
   const agreed_amount       = parseFloat(document.getElementById('finAgreed').value)    || null;
   const urgency_surcharge   = parseFloat(document.getElementById('finSurcharge').value) || null;
@@ -2043,7 +2133,9 @@ async function createStage2Job() {
       parking_details: job.parking_details,
       parking_lat: job.parking_lat,
       parking_lng: job.parking_lng,
-      dispatch_state: 'waiting_for_plans',
+      dispatch_state: 'red',
+      plans_outstanding: true,
+      sla_deadline: addWorkingDays(new Date(), (URGENCY_TIERS[urgency_state] || {}).days || 15),
       urgency_state,
       deadline_tier: deadline,
       billing_mode: job.billing_mode,
@@ -2063,7 +2155,7 @@ async function createStage2Job() {
 
     const stage2Id = stage2Data[0].id;
     document.getElementById('stage2Modal').remove();
-    showToast('Stage 2 job created — waiting for plans');
+    showToast('Stage 2 job created: on the map, awaiting plans');
     setTimeout(() => {
       window.location.href = `job-detail.html?id=${stage2Id}`;
     }, 1000);

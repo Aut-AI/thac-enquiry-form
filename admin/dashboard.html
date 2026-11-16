@@ -90,7 +90,11 @@ async function init() {
               <div class="stat-row" data-status="awaiting_client" tabindex="0" onclick="window.location.href='jobs.html?dispatch=awaiting_client'">
                 <span class="stat-row-label">${icon('clock', 12)}Awaiting client</span><span class="stat-row-count" id="statAwaitingClient">—</span></div>
               <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=pending_approval'" data-status="pending_approval" tabindex="0">
-                <span class="stat-row-label">${icon('clock', 12)}Awaiting go-ahead / plans</span><span class="stat-row-count" id="statOffMap">—</span></div>
+                <span class="stat-row-label">${icon('clock', 12)}Pending</span><span class="stat-row-count" id="statOffMap">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=plans'" data-status="plans" tabindex="0">
+                <span class="stat-row-label">${icon('alertTriangle', 12)}Awaiting plans</span><span class="stat-row-count" id="statPlans">—</span></div>
+              <div class="stat-row" onclick="window.location.href='jobs.html?dispatch=unaccepted'" data-status="unaccepted" tabindex="0">
+                <span class="stat-row-label">${icon('alarm', 12)}Allocated, not accepted</span><span class="stat-row-count" id="statUnaccepted">—</span></div>
             </div>
           </div>
           <div class="stat-card multi">
@@ -155,7 +159,7 @@ async function loadStats() {
   const set = (id, n) => { document.getElementById(id).textContent = n; };
   try {
     const jobs = ((await dbGet('jobs', {
-      'select': 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,axi_prepared,database_plan,report_drafted',
+      'select': 'id,urgency_state,dispatch_state,surveyor_id,sla_deadline,axi_prepared,database_plan,report_drafted,plans_outstanding,allocated_surveyor_id,allocation_rejected_at',
       'is_archived': 'not.eq.true', 'limit': 5000,
     })) || []).filter(j => j.dispatch_state !== 'archived');
     const n = fn => jobs.filter(fn).length;
@@ -170,11 +174,13 @@ async function loadStats() {
     set('statSurveyDone',     n(j => j.dispatch_state === 'yellow'));
     set('statDataReceived',   n(j => j.dispatch_state === 'data_received'));
     set('statAwaitingClient', n(j => j.dispatch_state === 'awaiting_client'));
-    set('statOffMap',         n(j => ['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state)));
+    set('statOffMap',         n(j => j.dispatch_state === 'pending_approval'));
+    set('statPlans',          n(j => j.plans_outstanding && ['red', 'orange'].includes(j.dispatch_state)));
+    set('statUnaccepted',     n(j => j.allocated_surveyor_id && !j.surveyor_id && !j.allocation_rejected_at));
 
     // Office to-dos only count once the job is live: a quote not yet accepted
     // or a Stage 2 still waiting for plans needs no database yet.
-    const live = j => !['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state);
+    const live = j => !['pending_approval', 'waiting_for_plans'].includes(j.dispatch_state);   // waiting_for_plans: legacy stage
     set('statDbWaiting',  n(j => j.dispatch_state === 'orange' && !j.axi_prepared));
     set('statDbTodo',     n(j => live(j) && !j.axi_prepared));
     set('statDbJpeg',     n(j => live(j) && j.axi_prepared && j.database_plan === 'jpeg'));
@@ -263,7 +269,7 @@ function slaCountdown(dateStr) {
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name,plans_outstanding',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
       'limit': 500
@@ -367,7 +373,16 @@ function renderUrgencyTable() {
       </tr>
     `).join('');
 
+    // Jobs awaiting plans are flagged at the top, in red, until the plans arrive.
+    const needPlans = dashJobs.filter(j => j.plans_outstanding && ['red', 'orange'].includes(j.dispatch_state));
+    const plansBanner = needPlans.length ? `
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+        <div style="font-weight:700;color:#b91c1c;margin-bottom:6px;display:flex;align-items:center;gap:8px;">${icon('alertTriangle', 15)}Plans needed (${needPlans.length}): chase the client / sort the database</div>
+        ${needPlans.map(j => `<a href="job-detail.html?id=${j.id}" style="display:inline-block;margin:2px 10px 2px 0;color:#b91c1c;font-weight:600;">${j.reference || '—'} · ${j.site_postcode || ''}${j.dispatch_state === 'orange' ? ' (surveyor assigned)' : ''}</a>`).join('')}
+      </div>` : '';
+
     document.getElementById('urgencyDashboard').innerHTML = `
+      ${plansBanner}
       ${sortHint(sort)}
       <table class="data-table compact urgency-tinted">
         <thead>

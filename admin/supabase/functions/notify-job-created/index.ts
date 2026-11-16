@@ -6,8 +6,8 @@
 //
 // Website jobs are created when the enquiry comes in, but wait as Awaiting
 // Go-ahead until the quote is accepted. Those are covered by the new-enquiry
-// and quote-accepted emails, so they (and Stage 2 jobs waiting for plans)
-// are skipped here.
+// and quote-accepted emails, so they are skipped here. Jobs awaiting plans
+// are on the map too and are flagged in the email.
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -40,6 +40,7 @@ serve(async (req) => {
         detailRow('Site Postcode', record.site_postcode || '—'),
         detailRow('Urgency', urgencyStateBadge(record.urgency_state)),
         detailRow('SLA Deadline', slaDate),
+        record.plans_outstanding ? detailRow('Plans', '<strong style="color:#c0392b;">Still to come: chase the client</strong>') : '',
         detailRow('Agreed Amount', `£${record.agreed_amount?.toFixed(2) ?? record.quoted_amount?.toFixed(2) ?? '—'}`),
         detailRow('Created', new Date(record.created_at).toLocaleString('en-GB')),
       ].join(''))}

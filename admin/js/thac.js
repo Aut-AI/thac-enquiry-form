@@ -259,8 +259,8 @@ function urgencyBadge(deadlineTier) {
 // original colour codes, kept so app builds already on phones keep working:
 // orange is "Allocated" (a green pin on the map), yellow is "Survey done".
 const DISPATCH_META = {
-  pending_approval:  { label: 'Awaiting Go-ahead',  cls: 'badge-low',      glyph: 'clock' },
-  waiting_for_plans: { label: 'Waiting for Plans',  cls: 'badge-low',      glyph: 'clock' },
+  pending_approval:  { label: 'Pending',  cls: 'badge-low',      glyph: 'clock' },
+  waiting_for_plans: { label: 'Awaiting Plans',  cls: 'badge-low',      glyph: 'clock' },
   red:               { label: 'Unallocated',        cls: 'badge-urgent',   tone: 'urgent' },
   orange:            { label: 'Allocated',          cls: 'badge-accepted', tone: 'complete' },
   yellow:            { label: 'Survey Done',        cls: 'badge-standard', tone: 'standard' },
@@ -283,8 +283,10 @@ function jobStageLabel(job, long = false) {
   if (!job) return '—';
   const s = job.dispatch_state;
   if (s === 'awaiting_client') {
-    return 'Awaiting Client · ' + (job.invoice1_date ? 'Part Invoiced' : 'Not Invoiced');
+    return job.invoice1_date ? 'Part Complete' : 'Awaiting Client · Not Invoiced';
   }
+  if (s === 'red' && job.plans_outstanding) return 'Unallocated · Awaiting Plans';
+  if (s === 'orange' && job.plans_outstanding) return 'Allocated · Awaiting Plans';
   if (s === 'archived') return job.report_finalised ? 'Job Complete' : 'Archived';
   return (long && DISPATCH_LONG[s]) || getDispatchMeta(s).label;
 }
@@ -314,12 +316,12 @@ function dispatchGlyph(state) {
 // helper on any element carrying data-status (badges, filter tabs, dashboard rows).
 // Keep in step with help/job-journey.html.
 const STATUS_HELP = {
-  pending_approval: { label: 'Awaiting go-ahead',
+  pending_approval: { label: 'Pending',
     before: 'A website quote was sent but the customer has not accepted it yet, or the job was taken off the map.',
     next: 'When the customer accepts the quote the job goes straight onto the map as Unallocated. Put it on the map yourself with Put on Map.' },
-  waiting_for_plans: { label: 'Waiting for plans',
-    before: 'A Stage 2 job was created, or the job was started while waiting on drawings. The SLA clock is not running.',
-    next: 'When the plans arrive, press Plans Received, Activate Job. The SLA starts and the job goes on the map as Unallocated.' },
+  waiting_for_plans: { label: 'Awaiting plans',
+    before: 'Old stage, no longer used. Jobs awaiting plans are now on the map with an Awaiting Plans flag.',
+    next: 'Press Plans Received on the job page.' },
   red: { label: 'Unallocated (red pin)',
     before: 'The customer accepted the quote, or you added the job. It went straight onto the map.',
     next: 'Create the database (urgent jobs first), noting digital plan or JPEG, and draft the report. A surveyor in range claims it in the app, or you allocate it.' },
@@ -335,6 +337,12 @@ const STATUS_HELP = {
   awaiting_client: { label: 'Awaiting further info from client',
     before: 'You sent the tree data and are waiting on the client (for example their plans). Shown as part invoiced or not invoiced.',
     next: 'When the client comes back, finish the report and press Report & Invoice Sent. The job is then complete.' },
+  plans: { label: 'Awaiting plans',
+    before: 'The job is on the map, but the plans have not arrived yet. Surveyors can still claim it. The SLA clock is running.',
+    next: 'Chase the client for the plans, then press Plans Received on the job page.' },
+  unaccepted: { label: 'Allocated, not accepted',
+    before: 'You allocated the job to a surveyor but they have not accepted it (and the NDA) in the app yet.',
+    next: 'Chase the surveyor, or open the job and Take Back to put it back on the map. You are emailed if it sits for 2 days.' },
   green: { label: 'Report sent',
     before: 'An older job whose report was marked sent before invoicing and reporting became one step.',
     next: 'Record the invoice. It archives itself once fully invoiced.' },

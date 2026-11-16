@@ -181,6 +181,7 @@ export function RegisterScreen({ navigation }: any) {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: { data: { full_name: fullName } },   // so the CRM user list shows a name
       });
 
       if (authError) throw authError;
@@ -232,7 +233,7 @@ export function RegisterScreen({ navigation }: any) {
       const hasSession = !!authData.session;
       await supabase.auth.signOut();
 
-      const reviewNote = 'Your account will be reviewed shortly and you will receive an email informing you of the status.';
+      const reviewNote = 'Sign in to complete your profile (insurance, DBS and certificates). Once you submit it, your account will be reviewed and you will receive an email with the outcome.';
       Alert.alert(
         'Thank you for registering',
         hasSession

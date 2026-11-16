@@ -27,6 +27,10 @@ export interface Surveyor {
   dbs_number: string | null;
   dbs_expiry_date: string | null;
   dbs_certificate_path: string | null;
+  pi_cover_amount: number | null;
+  pl_cover_amount: number | null;
+  qualifications: string | null;
+  profile_submitted_at: string | null;
 }
 
 export interface Job {
@@ -61,6 +65,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   PendingApproval: undefined;
+  SubmitProfile: undefined;
   CompleteProfile: undefined;
   Main: undefined;
   JobDetail: { jobId: string };

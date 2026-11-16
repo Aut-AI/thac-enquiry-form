@@ -16,6 +16,7 @@ import LoginScreen           from './src/screens/LoginScreen';
 import { RegisterScreen }   from './src/screens/RegisterScreen';
 import { PendingApprovalScreen } from './src/screens/PendingApprovalScreen';
 import { CompleteProfileScreen } from './src/screens/CompleteProfileScreen';
+import { SubmitProfileScreen } from './src/screens/SubmitProfileScreen';
 import JobListScreen        from './src/screens/JobListScreen';
 import JobDetailScreen      from './src/screens/JobDetailScreen';
 import JobMapScreen         from './src/screens/JobMapScreen';
@@ -59,7 +60,7 @@ export default function App() {
   // null means "not checked yet for the current session" (still fetching);
   // 'none' means "checked, no surveyors row found" -- these used to share
   // the same null value, which is what caused the CompleteProfile flash.
-  const [surveyorStatus, setSurveyorStatus] = useState<'pending' | 'active' | 'none' | null>(null);
+  const [surveyorStatus, setSurveyorStatus] = useState<'pending' | 'incomplete' | 'active' | 'none' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function App() {
       try {
         const { data, error } = await supabase
           .from('surveyors')
-          .select('status')
+          .select('status,profile_submitted_at')
           .eq('user_id', session.user.id)
           .single();
 
@@ -137,7 +138,8 @@ export default function App() {
           return;
         }
 
-        setSurveyorStatus(data?.status as 'pending' | 'active');
+        // A new registration stays 'incomplete' until the profile is submitted.
+        setSurveyorStatus(data?.status === 'pending' && !data?.profile_submitted_at ? 'incomplete' : (data?.status as 'pending' | 'active'));
       } catch (err) {
         console.error('Error fetching surveyor status:', err);
         setSurveyorStatus('none');
@@ -176,6 +178,10 @@ export default function App() {
               <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
             </>
+          : surveyorStatus === 'incomplete'
+          ? <Stack.Screen name="SubmitProfile" options={{ headerShown: false }}>
+              {() => <SubmitProfileScreen session={session} onSubmitted={() => setSurveyorStatus('pending')} />}
+            </Stack.Screen>
           : surveyorStatus === 'pending'
           ? <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} options={{ headerShown: false }} />
           : surveyorStatus === 'active'
@@ -193,7 +199,7 @@ export default function App() {
           // authenticated, discarding whatever the user just typed. Collect
           // the profile directly against the existing session instead.
           : <Stack.Screen name="CompleteProfile" options={{ headerShown: false }}>
-              {() => <CompleteProfileScreen session={session} onComplete={() => setSurveyorStatus('pending')} />}
+              {() => <CompleteProfileScreen session={session} onComplete={() => setSurveyorStatus('incomplete')} />}
             </Stack.Screen>
         }
       </Stack.Navigator>

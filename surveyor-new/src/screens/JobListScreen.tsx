@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import { fetchServiceOutcodes, extractOutcode } from '../lib/outcode';
 import { Job, RootStackParamList } from '../types';
+import { loadPayContext, payFor, PayContext } from '../lib/pay';
 import StatusDot from '../components/StatusDot';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -47,6 +48,7 @@ export default function JobListScreen() {
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState<Filter>('available');
   const [surveyorId, setSurveyorId] = useState<string | null>(null);
+  const [payCtx, setPayCtx] = useState<PayContext | null>(null);
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useFocusEffect(useCallback(() => {
@@ -66,10 +68,11 @@ export default function JobListScreen() {
 
     const sid = surveyorData?.id || null;
     setSurveyorId(sid);
+    setPayCtx(await loadPayContext(sid));
 
     let query = supabase
       .from('jobs')
-      .select('id,reference,survey_type,site_postcode,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,claimed_at')
+      .select('id,reference,survey_type,site_postcode,urgency_state,dispatch_state,sla_deadline,surveyor_pay_amount,claimed_at,enquiries(tree_count_band)')
       .order('sla_deadline', { ascending: true });
 
     if (filter === 'available') {
@@ -94,7 +97,7 @@ export default function JobListScreen() {
         });
       }
 
-      setJobs(filtered);
+      setJobs(filtered as any);
     }
     setLoading(false);
   }
@@ -105,17 +108,18 @@ export default function JobListScreen() {
       ? Math.ceil((new Date(job.sla_deadline).getTime() - Date.now()) / 86400000)
       : null;
 
+    const band = (job as any).enquiries?.tree_count_band as string | undefined;
+    const pay = payCtx ? payFor(job, band, payCtx) : (job.surveyor_pay_amount ?? null);
+
     return (
       <TouchableOpacity style={s.card} onPress={() => nav.navigate('JobDetail', { jobId: job.id })}>
         <View style={[s.urgencyBar, { backgroundColor: urgencyColor }]} />
         <View style={s.cardBody}>
           <View style={s.cardHeader}>
             <Text style={s.ref}>{job.reference || 'No ref'}</Text>
-            {job.surveyor_pay_amount
-              ? <Text style={s.pay}>£{job.surveyor_pay_amount.toFixed(0)}</Text>
-              : null}
+            {pay != null ? <Text style={s.pay}>£{pay.toFixed(0)}</Text> : null}
           </View>
-          <Text style={s.type}>{SURVEY_LABELS[job.survey_type] || job.survey_type}</Text>
+          <Text style={s.type}>{SURVEY_LABELS[job.survey_type] || job.survey_type}{band ? ` · ${band} trees` : ''}</Text>
           <Text style={s.postcode}>{job.site_postcode || '—'}</Text>
           {filter === 'mine' && MINE_NEXT_STEP[job.dispatch_state] ? (
             <Text style={s.nextStep}>{MINE_NEXT_STEP[job.dispatch_state]}</Text>

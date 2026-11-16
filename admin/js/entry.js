@@ -318,7 +318,7 @@
         <div class="form-group"><label>Start as</label>
           <select class="form-control" id="nj_dispatch">
             <option value="red">On the map (Unallocated)</option>
-            <option value="waiting_for_plans">Waiting for plans (off the map)</option>
+            <option value="plans">On the map, awaiting plans</option>
           </select></div>
         <div class="form-group full"><label>Notes</label>
           <textarea class="form-control" id="nj_notes" rows="3" placeholder="Internal notes"></textarea></div>
@@ -393,7 +393,9 @@
           if (r.existing) reusedNote = ` (used the existing customer ${clientName(r.client)})`;
         }
         const geo = await lookupPostcode(pc);
-        const dispatch_state = val('nj_dispatch') || 'red';
+        const startAs = val('nj_dispatch') || 'red';
+        const plans_outstanding = startAs === 'plans';
+        const dispatch_state = 'red';
         const urgency_state = urgencyFromTier(deadline);
         const days = (URGENCY_TIERS[urgency_state] || {}).days;
         const amount = val('nj_amount');
@@ -409,9 +411,9 @@
           dispatch_state,
           urgency_state,
           deadline_tier: deadline,
-          // The SLA clock starts at once, unless the job is waiting for plans
-          // (it starts when the job is activated, as for Stage 2).
-          sla_deadline: dispatch_state === 'waiting_for_plans' || !days ? null : addWorkingDays(new Date(), days),
+          plans_outstanding,
+          // The SLA clock starts as soon as the job is on the map, plans or not (Trevor, 16 Nov).
+          sla_deadline: !days ? null : addWorkingDays(new Date(), days),
           urgency_surcharge: SURCHARGE[deadline] ?? 0,
           billing_mode: 'single',
           arranging_client_id: clientId,

@@ -59,7 +59,7 @@ async function init() {
 async function loadSurveyors() {
   try {
     const surveyors = await dbGet('surveyors', {
-      'select': 'id,user_id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,status,created_at',
+      'select': 'id,user_id,full_name,email,phone,hourly_rate,home_postcode,radius_miles,pi_expiry_date,pl_expiry_date,dbs_expiry_date,is_active,status,created_at,profile_submitted_at',
       'order': 'full_name.asc'
     });
 
@@ -272,7 +272,7 @@ async function getAreaFromPostcodeAPI(postcode) {
 async function renderTable() {
   let filtered = [...allSurveyors];
 
-  if (activeFilter === 'pending')  filtered = filtered.filter(s => s.status === 'pending');
+  if (activeFilter === 'pending')  filtered = filtered.filter(s => s.status === 'pending' && s.profile_submitted_at);
   if (activeFilter === 'active')   filtered = filtered.filter(s => s.status === 'active');
   if (activeFilter === 'paused')   filtered = filtered.filter(s => s.status === 'paused');
   if (activeFilter === 'archived') filtered = filtered.filter(s => s.status === 'archived');
@@ -318,7 +318,9 @@ async function renderTable() {
     const pl  = expiryStatus(s.pl_expiry_date);
     const dbs = expiryStatus(s.dbs_expiry_date);
     let statusBadge;
-    if (s.status === 'pending') {
+    if (s.status === 'pending' && !s.profile_submitted_at) {
+      statusBadge = `<span class="badge badge-low">${icon('pencil', 12)}Profile incomplete</span>`;
+    } else if (s.status === 'pending') {
       statusBadge = `<span class="badge badge-elevated">${icon('clock', 12)}Pending</span>`;
     } else if (s.status === 'active') {
       statusBadge = `<span class="badge badge-accepted">${icon('checkCircle', 12)}Active</span>`;

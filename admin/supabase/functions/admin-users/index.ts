@@ -86,13 +86,21 @@ serve(async (req) => {
       if (appUsersError) throw appUsersError;
       const appUserById = new Map((appUsers ?? []).map((u) => [u.id, u]));
 
+      // Surveyors register in the app with just an email and password: their
+      // name is only saved on the surveyors row, not in public.users or the
+      // auth metadata, so the list showed a dash for them (Trevor, 16 Nov).
+      const { data: surveyorRows } = await admin.from("surveyors").select("user_id, full_name");
+      const surveyorNameByUserId = new Map(
+        (surveyorRows ?? []).filter((r) => r.user_id && r.full_name).map((r) => [r.user_id, r.full_name]),
+      );
+
       const users = authData.users
         .map((u) => {
           const appUser = appUserById.get(u.id);
           return {
             id: u.id,
             email: u.email,
-            full_name: appUser?.full_name ?? (u.user_metadata as Record<string, unknown> | null)?.full_name ?? null,
+            full_name: appUser?.full_name || (u.user_metadata as Record<string, unknown> | null)?.full_name || surveyorNameByUserId.get(u.id) || null,
             role: appUser?.role ?? null,
             crm_active: appUser?.is_active ?? null,
             created_at: u.created_at,
