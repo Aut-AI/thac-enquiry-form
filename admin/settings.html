@@ -53,6 +53,17 @@ async function init() {
             <div class="field-hint">Used to calculate customer quotes in the public enquiry form. Each surveyor's individual hourly rate is set on their profile.</div>
           </div>
 
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #666; text-transform: uppercase; font-size: 12px;">
+              First Pick Window
+            </label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="number" id="firstPickHours" step="0.25" min="0" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
+              <span style="font-size: 14px; color: #666;">hours</span>
+            </div>
+            <div class="field-hint">When a job becomes available, surveyors marked "First pick" on their profile get it to themselves for this long, then it opens to everyone in coverage. Next-working-day jobs are never held back. Set to 0 to switch first pick off.</div>
+          </div>
+
           <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 12px;">
             Save Settings
           </button>
@@ -133,6 +144,7 @@ async function loadSettings() {
     const data = await dbGet('pricing_settings', { limit: 1 });
     if (data?.[0]) {
       document.getElementById('thacRate').value = data[0].thac_hourly_rate || 100;
+      document.getElementById('firstPickHours').value = data[0].first_pick_hours ?? 1;
     }
   } catch (e) {
     showToast('Error loading settings: ' + e.message, 'error');
@@ -148,8 +160,14 @@ async function saveSettings() {
   }
 
   try {
+    const fpHours = parseFloat(document.getElementById('firstPickHours').value);
+    if (isNaN(fpHours) || fpHours < 0) {
+      showToast('First pick window must be 0 or more hours', 'error');
+      return;
+    }
     await dbUpdate('pricing_settings', 'id=eq.1', {
-      thac_hourly_rate: thacRate
+      thac_hourly_rate: thacRate,
+      first_pick_hours: fpHours
     });
     showToast('Settings saved');
   } catch (e) {
