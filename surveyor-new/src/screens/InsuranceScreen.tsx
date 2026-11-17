@@ -27,6 +27,8 @@ export default function InsuranceScreen() {
   const [editPiExpiry, setEditPiExpiry] = useState('');
   const [editPlExpiry, setEditPlExpiry] = useState('');
   const [editDbsExpiry, setEditDbsExpiry] = useState('');
+  const [editPiCover, setEditPiCover] = useState('');
+  const [editPlCover, setEditPlCover] = useState('');
   const [savingInsurance, setSavingInsurance] = useState(false);
 
   useEffect(() => {
@@ -34,6 +36,8 @@ export default function InsuranceScreen() {
       setEditPiExpiry(surveyor.pi_expiry_date || '');
       setEditPlExpiry(surveyor.pl_expiry_date || '');
       setEditDbsExpiry(surveyor.dbs_expiry_date || '');
+      setEditPiCover(surveyor.pi_cover_amount != null ? String(surveyor.pi_cover_amount) : '');
+      setEditPlCover(surveyor.pl_cover_amount != null ? String(surveyor.pl_cover_amount) : '');
     }
   }, [surveyor]);
 
@@ -80,6 +84,13 @@ export default function InsuranceScreen() {
       }
     }
 
+    const piCover = editPiCover.trim() ? Number(editPiCover.replace(/[£,\s]/g, '')) : null;
+    const plCover = editPlCover.trim() ? Number(editPlCover.replace(/[£,\s]/g, '')) : null;
+    if ((piCover !== null && !(piCover > 0)) || (plCover !== null && !(plCover > 0))) {
+      Alert.alert('Error', 'Cover amounts must be a number, for example 1000000');
+      return;
+    }
+
     setSavingInsurance(true);
 
     try {
@@ -89,11 +100,13 @@ export default function InsuranceScreen() {
           pi_expiry_date: editPiExpiry || null,
           pl_expiry_date: editPlExpiry || null,
           dbs_expiry_date: editDbsExpiry || null,
+          pi_cover_amount: piCover,
+          pl_cover_amount: plCover,
         })
         .eq('id', surveyor.id);
 
       if (error) throw error;
-      Alert.alert('Saved', 'Insurance expiry dates have been updated.');
+      Alert.alert('Saved', 'Insurance details have been updated.');
       await reload();
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -134,6 +147,30 @@ export default function InsuranceScreen() {
             />
           </View>
           <View style={styles.editItem}>
+            <Text style={s.label}>PI Cover Amount (£)</Text>
+            <TextInput
+              style={s.input}
+              placeholder="e.g. 1000000"
+              value={editPiCover}
+              onChangeText={setEditPiCover}
+              keyboardType="numeric"
+              editable={!savingInsurance}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={styles.editItem}>
+            <Text style={s.label}>PL Cover Amount (£)</Text>
+            <TextInput
+              style={s.input}
+              placeholder="e.g. 5000000"
+              value={editPlCover}
+              onChangeText={setEditPlCover}
+              keyboardType="numeric"
+              editable={!savingInsurance}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={styles.editItem}>
             <Text style={s.label}>DBS Expiry Date (YYYY-MM-DD)</Text>
             <TextInput
               style={s.input}
@@ -149,7 +186,7 @@ export default function InsuranceScreen() {
             onPress={saveInsuranceDates}
             disabled={savingInsurance}
           >
-            <Text style={s.saveBtnText}>{savingInsurance ? 'Saving...' : 'Save Dates'}</Text>
+            <Text style={s.saveBtnText}>{savingInsurance ? 'Saving...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 
