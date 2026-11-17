@@ -1,6 +1,8 @@
 import 'react-native-url-polyfill/auto';
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
+import { registerForPush } from './src/lib/push';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +28,7 @@ import InsuranceScreen      from './src/screens/InsuranceScreen';
 import AvailabilityScreen   from './src/screens/AvailabilityScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const navRef = createNavigationContainerRef<RootStackParamList>();
 const Tab   = createBottomTabNavigator<BottomTabParamList>();
 
 const GREEN = '#1a3c2e';
@@ -149,6 +152,18 @@ export default function App() {
     fetchSurveyorStatus();
   }, [session]);
 
+  // Once approved: register for push alerts, and open the job when a
+  // notification is tapped.
+  useEffect(() => {
+    if (surveyorStatus !== 'active' || !session) return;
+    registerForPush(session.user.id);
+    const sub = Notifications.addNotificationResponseReceivedListener(resp => {
+      const jobId = (resp.notification.request.content.data as any)?.jobId;
+      if (jobId && navRef.isReady()) navRef.navigate('JobDetail', { jobId });
+    });
+    return () => sub.remove();
+  }, [surveyorStatus, session]);
+
   // While a session exists but its surveyor status hasn't been fetched yet
   // (right after login, or on launch with a restored session), surveyorStatus
   // is still null -- the same value it holds when there's genuinely no
@@ -165,7 +180,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <NavigationContainer>
+    <NavigationContainer ref={navRef}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: GREEN },

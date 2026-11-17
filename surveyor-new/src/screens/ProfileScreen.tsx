@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { unregisterPush } from '../lib/push';
 import { supabase } from '../lib/supabase';
 import { useSurveyorProfile } from '../lib/useSurveyorProfile';
 import { RootStackParamList, Surveyor } from '../types';
@@ -52,7 +53,7 @@ export default function ProfileScreen() {
   async function signOut() {
     Alert.alert('Sign Out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => supabase.auth.signOut() },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => { await unregisterPush(); await supabase.auth.signOut(); } },
     ]);
   }
 

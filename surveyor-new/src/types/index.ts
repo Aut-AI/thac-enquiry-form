@@ -30,6 +30,7 @@ export interface Surveyor {
   pi_cover_amount: number | null;
   pl_cover_amount: number | null;
   qualifications: string | null;
+  expo_push_token?: string | null;
   profile_submitted_at: string | null;
 }
 

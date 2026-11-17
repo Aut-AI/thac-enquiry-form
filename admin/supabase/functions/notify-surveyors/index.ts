@@ -31,6 +31,19 @@ async function patch(path: string, body: unknown) {
   await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method: 'PATCH', headers, body: JSON.stringify(body) });
 }
 
+// Expo push (free). Best effort: never let a push failure stop the emails.
+async function push(token: string | null | undefined, title: string, body: string, data: Record<string, unknown>) {
+  if (!token || !/^Expo(nent)?PushToken\[/.test(token)) return;
+  try {
+    const r = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ to: token, title, body, data, sound: 'default', channelId: 'default', priority: 'high' }),
+    });
+    if (!r.ok) console.error('push failed', await r.text());
+  } catch (e) { console.error('push error', e); }
+}
+
 function jobBlock(j: any): string {
   const deadline = j.sla_deadline
     ? new Date(j.sla_deadline).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -51,7 +64,7 @@ serve(async () => {
     const settings = (await get('pricing_settings?select=first_pick_hours&limit=1'))[0];
     const windowHours = Number(settings?.first_pick_hours ?? 0);
     const surveyors: any[] = await get(
-      'surveyors?select=id,full_name,email,first_pick,home_lat,home_lng,radius_miles&is_active=eq.true&is_paused=eq.false&email=not.is.null');
+      'surveyors?select=id,full_name,email,first_pick,expo_push_token,home_lat,home_lng,radius_miles&is_active=eq.true&is_paused=eq.false&email=not.is.null');
     const jobs: any[] = await get(
       'jobs?select=id,reference,survey_type,site_postcode,site_lat,site_lng,sla_deadline,deadline_tier,red_at,first_pick_alerted_at,surveyors_alerted_at' +
       '&dispatch_state=eq.red&surveyor_id=is.null&allocated_surveyor_id=is.null&is_archived=not.eq.true' +
@@ -82,6 +95,10 @@ serve(async () => {
           <p>Open the Heaps Arboriculture app and look under Available Jobs to see the details and the pay. It is first come, first served.</p>
         `);
         try { await sendEmail(s.email, `New job available — ${SURVEY_LABELS[j.survey_type] || j.survey_type || 'Survey'}, ${j.site_postcode || ''}`.trim(), html); availableSent++; } catch (e) { console.error('email failed', s.email, e); }
+        await push(s.expo_push_token,
+          early ? 'First pick: new job near you' : 'New job near you',
+          `${SURVEY_LABELS[j.survey_type] || j.survey_type || 'Survey'} · ${j.site_postcode || ''}`.trim(),
+          { jobId: j.id });
       }
       await patch(`jobs?id=eq.${j.id}`, inWindow ? { first_pick_alerted_at: nowIso } : { surveyors_alerted_at: nowIso });
     }
@@ -103,6 +120,9 @@ serve(async () => {
         <p>Please open the Heaps Arboriculture app and accept it within ${hrs} hours, or hand it back if you can't take it.</p>
       `);
       try { await sendEmail(s.email, `Job allocated to you — ${j.site_postcode || SURVEY_LABELS[j.survey_type] || ''}`.trim(), html); allocatedSent++; } catch (e) { console.error('email failed', s.email, e); continue; }
+      await push(s.expo_push_token, 'Job allocated to you',
+        `${SURVEY_LABELS[j.survey_type] || j.survey_type || 'Survey'} · ${j.site_postcode || ''} — please accept in the app`.trim(),
+        { jobId: j.id });
       await patch(`jobs?id=eq.${j.id}`, { allocation_alerted_at: nowIso });
     }
 

@@ -43,6 +43,13 @@
         {
           "locationWhenInUsePermission": "Heaps Arboriculture Surveyors uses your location to show your position on the job map and when confirming parking details on site."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1a3c2e",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "extra": {
