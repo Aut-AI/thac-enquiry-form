@@ -515,6 +515,9 @@ function renderSidebar(activePage) {
         <a href="map.html" class="nav-item ${activePage === 'map' ? 'active' : ''}" data-page="map">
           <span class="nav-icon">${icon('map', 16)}</span> Live Map
         </a>
+        <a href="reports.html" class="nav-item ${activePage === 'reports' ? 'active' : ''}" data-page="reports">
+          <span class="nav-icon">${icon('chartBar', 16)}</span> Reports
+        </a>
         <a href="clients.html" class="nav-item ${activePage === 'clients' ? 'active' : ''}" data-page="clients">
           <span class="nav-icon">${icon('users', 16)}</span> Clients
         </a>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — Reports</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  .rp-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .seg { display:inline-flex; background:#fff; border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; flex-wrap:wrap; }
+  .seg button { border:0; background:transparent; font:inherit; font-size:13px; font-weight:500; color:var(--text-muted); padding:7px 12px; border-radius:7px; cursor:pointer; transition:all .15s; }
+  .seg button:hover { color:var(--green-dark); }
+  .seg button.on { background:var(--green-dark); color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+  .rp-tabs { display:flex; gap:4px; overflow-x:auto; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  .rp-tabs button { border:0; background:none; font:inherit; font-size:14px; font-weight:600; color:var(--text-muted); padding:11px 16px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  .rp-tabs button:hover { color:var(--green-dark); }
+  .rp-tabs button.on { color:var(--green-dark); border-bottom-color:var(--green-light); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:20px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; }
+  .kpi::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--kc, var(--green-light)); }
+  .kpi-l { font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+  .kpi-v { font-size:28px; font-weight:700; color:var(--green-dark); margin:6px 0 2px; letter-spacing:-.02em; line-height:1.1; }
+  .kpi-s { font-size:12px; color:var(--text-muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .kpis.k4 { grid-template-columns:repeat(4,minmax(0,1fr)); } @media (max-width:900px){ .kpis.k4 { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .delta { font-weight:700; font-size:11.5px; padding:2px 7px; border-radius:20px; }
+  .delta.up { background:#e3f4e8; color:#1c7a3b; } .delta.down { background:#fde8e8; color:#b3261e; } .delta.flat { background:#eef0ee; color:#666; }
+  .grid { display:grid; gap:16px; margin-bottom:16px; }
+  .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); } .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); } .g21 { grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+  @media (max-width:1100px){ .g3,.g21{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:760px){ .g2,.g3,.g21{ grid-template-columns:minmax(0,1fr); } .kpi-v{font-size:24px;} }
+  .cc { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 18px 12px; min-width:0; }
+  .cc h3 { margin:0; font-size:14.5px; font-weight:700; color:var(--green-dark); }
+  .cc .sub { font-size:12px; color:var(--text-muted); margin:2px 0 10px; }
+  .chart svg { display:block; width:100%; height:auto; overflow:visible; }
+  .chart text { font-family:'DM Sans',sans-serif; }
+  .axis text { font-size:11px; fill:#6b7a70; } .axis line,.axis path { stroke:#dfe7e1; }
+  .grid-line line { stroke:#eef2ef; } .grid-line path { display:none; }
+  .empty { color:var(--text-muted); font-size:13px; padding:34px 0; text-align:center; }
+  #tt { position:fixed; z-index:9999; pointer-events:none; background:rgba(26,58,42,.96); color:#fff; font-size:12px; line-height:1.45; padding:8px 11px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.25); opacity:0; transition:opacity .08s; max-width:260px; }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--text-muted); margin-top:6px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  table.rt { width:100%; border-collapse:collapse; font-size:13px; }
+  table.rt th { text-align:left; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted); font-weight:700; padding:8px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.rt td { padding:9px 8px; border-bottom:1px solid #eef2ef; }
+  table.rt td.n, table.rt th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  table.rt tr:hover td { background:#f7faf8; }
+  .bar-cell { height:6px; background:#e8f2ec; border-radius:6px; overflow:hidden; min-width:60px; } .bar-cell i { display:block; height:100%; background:var(--green-light); }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:#eef0ee; color:#555; }
+  .pill.red { background:#fde8e8; color:#b3261e; } .pill.amber { background:#f5e6d8; color:#9a5a22; } .pill.green { background:#e3f4e8; color:#1c7a3b; }
+  .demo-banner { background:#fff6e0; border:1px solid #ecd9a0; color:#7a5b00; border-radius:10px; padding:9px 14px; font-size:13px; margin-bottom:14px; }
+  .loading-big { padding:80px 0; text-align:center; color:var(--text-muted); }
+  .tool { font:inherit; font-size:13px; font-weight:600; padding:8px 14px; border-radius:9px; border:1px solid var(--border); background:#fff; color:var(--green-dark); cursor:pointer; }
+  .tool:hover { background:var(--green-pale); }
+  @media print { .sidebar, .topbar, .rp-bar, .rp-tabs { display:none !important; } .main-content { margin:0 !important; } }
+</style>
+</head>
+<body>
+<div class="app-layout" id="app"></div>
+<div id="tt"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+// =====================================================================
+// CONSTANTS + HELPERS
+// =====================================================================
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const DUR = new URLSearchParams(location.search).get('still') ? 0 : 1; // ?still=1 turns animations off (for screenshots)
+const PAL = ['#2d5a3d', '#4a8c5c', '#c8773a', '#2563eb', '#b8960a', '#7c3aed', '#0e7490', '#be185d', '#64748b', '#84a98c'];
+const C = { green: '#2d5a3d', light: '#4a8c5c', pale: '#cfe3d5', amber: '#c8773a', red: '#c0392b', blue: '#2563eb', grey: '#94a3b8' };
+const STAGES = [
+  ['pending_approval', 'Pending', '#94a3b8'], ['waiting_for_plans', 'Awaiting plans', '#7c3aed'],
+  ['red', 'Unallocated', '#c0392b'], ['orange', 'Allocated', '#c8773a'],
+  ['yellow', 'Survey done', '#b8960a'], ['data_received', 'Data received', '#2563eb'],
+  ['awaiting_client', 'Awaiting client', '#0e7490'],
+];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const GBP = n => '£' + Math.round(n).toLocaleString('en-GB');
+const GBPk = n => Math.abs(n) >= 1000 ? '£' + (n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '£' + Math.round(n);
+const pct = n => (Number.isFinite(n) ? Math.round(n * 100) + '%' : '—');
+const d1 = n => (Number.isFinite(n) ? (Math.round(n * 10) / 10).toString() : '—');
+const parseD = s => { if (!s) return null; const d = new Date(s); return isNaN(d) ? null : d; };
+const dayDiff = (a, b) => (a && b) ? (b - a) / 86400000 : NaN;
+const mKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+const mLabel = k => { const [y, m] = k.split('-'); return MONTHS[+m - 1] + " '" + y.slice(2); };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const typeLabel = k => (typeof SURVEY_TYPE_LABELS !== 'undefined' && SURVEY_TYPE_LABELS[k]) ? SURVEY_TYPE_LABELS[k].replace(/ \(.*\)$/, '') : (k || 'Other');
+const median = a => { const s = a.filter(Number.isFinite).sort((x, y) => x - y); if (!s.length) return NaN; const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const mean = a => { const s = a.filter(Number.isFinite); return s.length ? s.reduce((x, y) => x + y, 0) / s.length : NaN; };
+const sum = (a, f) => a.reduce((t, x) => t + (f ? f(x) : x), 0);
+
+function monthsBetween(start, end) {
+  const out = []; const d = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (d <= end) { out.push(mKey(d)); d.setMonth(d.getMonth() + 1); }
+  return out;
+}
+
+const tt = document.getElementById('tt');
+function tip(html, ev) { tt.innerHTML = html; tt.style.opacity = 1; moveTip(ev); }
+function moveTip(ev) { const w = tt.offsetWidth; let x = ev.clientX + 14; if (x + w > innerWidth - 8) x = ev.clientX - w - 14; tt.style.left = x + 'px'; tt.style.top = (ev.clientY + 14) + 'px'; }
+function hideTip() { tt.style.opacity = 0; }
+function hover(sel, htmlFn) { sel.on('mouseenter mousemove', (ev, d) => tip(htmlFn(d), ev)).on('mouseleave', hideTip); }
+
+function box(el, h, m = {}) {
+  const w = Math.max(280, el.clientWidth || 600);
+  const margin = { top: 8, right: 12, bottom: 26, left: 44, ...m };
+  d3.select(el).selectAll('*').remove();
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${w} ${h}`);
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+  return { svg, g, w, h, iw: w - margin.left - margin.right, ih: h - margin.top - margin.bottom, margin };
+}
+function empty(el, msg = 'No data for this period yet') { el.innerHTML = `<div class="empty">${msg}</div>`; }
+function legend(items) { return `<div class="legend">${items.map(([n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}</div>`; }
+
+// ---- chart: horizontal bars --------------------------------------------------
+function hbars(el, data, { fmt = GBP, color = C.light, rowH = 28, labelW = 150, tipFn } = {}) {
+  if (!data.length) return empty(el);
+  const h = data.length * rowH + 10;
+  const { g, iw } = box(el, h, { left: labelW, right: 70, bottom: 0, top: 4 });
+  const x = d3.scaleLinear().domain([0, d3.max(data, d => d.value) || 1]).range([0, iw]);
+  const y = d3.scaleBand().domain(data.map((d, i) => i)).range([0, data.length * rowH]).padding(0.28);
+  g.selectAll('.lbl').data(data).join('text').attr('x', -8).attr('y', (d, i) => y(i) + y.bandwidth() / 2).attr('dy', '.35em').attr('text-anchor', 'end')
+    .style('font-size', '12px').style('fill', '#2a3a30').text(d => d.label.length > 24 ? d.label.slice(0, 23) + '…' : d.label);
+  const bars = g.selectAll('.b').data(data).join('rect').attr('x', 0).attr('y', (d, i) => y(i)).attr('height', y.bandwidth()).attr('rx', 4)
+    .attr('fill', d => d.color || color).attr('width', 0);
+  bars.transition().duration(DUR * 550).attr('width', d => Math.max(2, x(d.value)));
+  g.selectAll('.v').data(data).join('text').attr('x', d => x(d.value) + 6).attr('y', (d, i) => y(i) + y.bandwidth() / 2).attr('dy', '.35em')
+    .style('font-size', '11.5px').style('font-weight', 600).style('fill', '#2a3a30').text(d => fmt(d.value));
+  hover(bars, d => tipFn ? tipFn(d) : `<b>${esc(d.label)}</b><br>${fmt(d.value)}`);
+}
+
+// ---- chart: monthly columns (stacked series) ---------------------------------
+function columns(el, months, series, { fmt = GBPk, h = 280, line } = {}) {
+  if (!months.length) return empty(el);
+  const { g, iw, ih } = box(el, h, { left: 48 });
+  const rows = months.map(m => { const o = { m }; series.forEach(s => o[s.key] = s.vals[m] || 0); o.total = sum(series, s => o[s.key]); return o; });
+  const x = d3.scaleBand().domain(months).range([0, iw]).padding(0.25);
+  const ymax = Math.max(d3.max(rows, r => r.total) || 0, line ? d3.max(months, m => line.vals[m] || 0) : 0) || 1000;
+  const y = d3.scaleLinear().domain([0, ymax * 1.08]).nice().range([ih, 0]);
+  g.append('g').attr('class', 'grid-line').call(d3.axisLeft(y).ticks(5).tickSize(-iw).tickFormat(''));
+  g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(5).tickFormat(fmt).tickSize(0).tickPadding(8));
+  const every = Math.ceil(months.length / Math.max(1, Math.floor(iw / 46)));
+  g.append('g').attr('class', 'axis').attr('transform', `translate(0,${ih})`).call(d3.axisBottom(x).tickValues(months.filter((m, i) => i % every === 0)).tickFormat(mLabel).tickSize(0).tickPadding(8)).select('.domain').remove();
+  const stack = d3.stack().keys(series.map(s => s.key))(rows);
+  const layers = g.selectAll('.layer').data(stack).join('g').attr('fill', (d, i) => series[i].color);
+  const rects = layers.selectAll('rect').data(d => d.map(p => ({ ...p, key: d.key }))).join('rect')
+    .attr('x', d => x(d.data.m)).attr('width', x.bandwidth()).attr('rx', 3).attr('y', ih).attr('height', 0);
+  rects.transition().duration(DUR * 550).attr('y', d => y(d[1])).attr('height', d => Math.max(0, y(d[0]) - y(d[1])));
+  hover(rects, d => `<b>${mLabel(d.data.m)}</b><br>` + series.map(s => `${esc(s.name)}: ${fmt === GBPk ? GBP(d.data[s.key]) : d.data[s.key]}`).join('<br>') + (series.length > 1 ? `<br><b>Total ${fmt === GBPk ? GBP(d.data.total) : d.data.total}</b>` : ''));
+  if (line) {
+    const pts = months.map(m => [x(m) + x.bandwidth() / 2, y(line.vals[m] || 0)]);
+    g.append('path').attr('d', d3.line().curve(d3.curveMonotoneX)(pts)).attr('fill', 'none').attr('stroke', line.color).attr('stroke-width', 2.4).attr('stroke-dasharray', '1,0');
+    g.selectAll('.dot').data(pts).join('circle').attr('cx', d => d[0]).attr('cy', d => d[1]).attr('r', 2.8).attr('fill', '#fff').attr('stroke', line.color).attr('stroke-width', 1.6);
+  }
+}
+
+// ---- chart: lines ----------------------------------------------------------------
+function lines(el, series, { fmt = GBPk, h = 260, xfmt, area = false, yMax } = {}) {
+  const all = series.flatMap(s => s.pts);
+  if (!all.length) return empty(el);
+  const { g, iw, ih } = box(el, h, { left: 48 });
+  const x = d3.scaleLinear().domain(d3.extent(all, p => p.x)).range([0, iw]);
+  const y = d3.scaleLinear().domain([0, yMax ?? ((d3.max(all, p => p.y) || 1) * 1.1)]).nice().range([ih, 0]);
+  g.append('g').attr('class', 'grid-line').call(d3.axisLeft(y).ticks(5).tickSize(-iw).tickFormat(''));
+  g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(5).tickFormat(fmt).tickSize(0).tickPadding(8));
+  g.append('g').attr('class', 'axis').attr('transform', `translate(0,${ih})`).call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(iw / 80))).tickFormat(xfmt || (v => v)).tickSize(0).tickPadding(8)).select('.domain').remove();
+  series.forEach((s, i) => {
+    const gid = 'ga' + Math.random().toString(36).slice(2, 7);
+    if (area) {
+      const defs = g.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+      defs.append('stop').attr('offset', '0%').attr('stop-color', s.color).attr('stop-opacity', .28); defs.append('stop').attr('offset', '100%').attr('stop-color', s.color).attr('stop-opacity', 0);
+      g.append('path').attr('d', d3.area().curve(d3.curveMonotoneX).x(p => x(p.x)).y0(ih).y1(p => y(p.y))(s.pts)).attr('fill', `url(#${gid})`);
+    }
+    const path = g.append('path').attr('d', d3.line().curve(d3.curveMonotoneX).x(p => x(p.x)).y(p => y(p.y))(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2.5).attr('stroke-dasharray', s.dash || null);
+    const L = path.node().getTotalLength(); if (!s.dash) path.attr('stroke-dasharray', `${L} ${L}`).attr('stroke-dashoffset', L).transition().duration(DUR * 800).attr('stroke-dashoffset', 0);
+    const dots = g.selectAll('.d' + i).data(s.pts).join('circle').attr('cx', p => x(p.x)).attr('cy', p => y(p.y)).attr('r', s.pts.length > 40 ? 0 : 3.2).attr('fill', '#fff').attr('stroke', s.color).attr('stroke-width', 1.8);
+    g.selectAll('.h' + i).data(s.pts).join('circle').attr('cx', p => x(p.x)).attr('cy', p => y(p.y)).attr('r', 9).attr('fill', 'transparent')
+      .on('mouseenter mousemove', (ev, p) => tip(`<b>${esc(s.name)}</b><br>${p.label || (xfmt ? xfmt(p.x) : p.x)}: ${fmt === GBPk ? GBP(p.y) : fmt(p.y)}`, ev)).on('mouseleave', hideTip);
+  });
+}
+
+// ---- chart: donut ---------------------------------------------------------------
+function donut(el, data, { center, sub, fmt = v => v, h = 230, keep = false } = {}) {
+  const all = data; data = data.filter(d => d.value > 0);
+  if (!data.length) return empty(el);
+  const { g, iw, ih } = box(el, h, { left: 0, right: 0, top: 0, bottom: 0 });
+  const r = Math.min(iw, ih) / 2 - 4;
+  const gg = g.append('g').attr('transform', `translate(${iw / 2},${ih / 2})`);
+  const arc = d3.arc().innerRadius(r * 0.64).outerRadius(r).cornerRadius(4).padAngle(0.015);
+  const pie = d3.pie().value(d => d.value).sort(null)(data);
+  const tot = sum(data, d => d.value);
+  const paths = gg.selectAll('path').data(pie).join('path').attr('fill', d => d.data.color).attr('d', arc).style('cursor', 'default');
+  paths.transition().duration(DUR * 700).attrTween('d', d => { const i = d3.interpolate({ startAngle: d.startAngle, endAngle: d.startAngle }, d); return t => arc(i(t)); });
+  hover(paths, d => `<b>${esc(d.data.label)}</b><br>${fmt(d.data.value)} · ${pct(d.data.value / tot)}`);
+  gg.append('text').attr('text-anchor', 'middle').attr('dy', sub ? '-.1em' : '.35em').style('font-size', '26px').style('font-weight', 700).style('fill', '#1a3a2a').text(center ?? fmt(tot));
+  if (sub) gg.append('text').attr('text-anchor', 'middle').attr('dy', '1.4em').style('font-size', '11px').style('fill', '#6b7a70').text(sub);
+  el.insertAdjacentHTML('afterend', legend((keep ? all : data).map(d => [d.label, d.color])));
+}
+
+// ---- chart: treemap ------------------------------------------------------------
+function treemap(el, data, { fmt = GBP, h = 300 } = {}) {
+  data = data.filter(d => d.value > 0);
+  if (!data.length) return empty(el);
+  const { g, iw, ih } = box(el, h, { left: 0, right: 0, top: 0, bottom: 0 });
+  const root = d3.hierarchy({ children: data }).sum(d => d.value).sort((a, b) => b.value - a.value);
+  d3.treemap().size([iw, ih]).paddingInner(3).round(true)(root);
+  const cell = g.selectAll('g').data(root.leaves()).join('g').attr('transform', d => `translate(${d.x0},${d.y0})`);
+  const rects = cell.append('rect').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).attr('rx', 7).attr('fill', (d, i) => d.data.color || PAL[i % PAL.length]).attr('opacity', 0.92);
+  hover(rects, d => `<b>${esc(d.data.label)}</b><br>${fmt(d.data.value)}${d.data.extra ? '<br>' + d.data.extra : ''}`);
+  cell.each(function (d) {
+    const w = d.x1 - d.x0, hh = d.y1 - d.y0; if (w < 54 || hh < 34) return;
+    const t = d3.select(this).append('text').attr('x', 9).attr('y', 18).style('fill', '#fff').style('pointer-events', 'none');
+    t.append('tspan').style('font-size', '12px').style('font-weight', 700).text(d.data.label.length > w / 7 ? d.data.label.slice(0, Math.max(3, Math.floor(w / 7) - 1)) + '…' : d.data.label);
+    t.append('tspan').attr('x', 9).attr('dy', '1.35em').style('font-size', '11px').style('opacity', .9).text(fmt(d.value));
+  });
+}
+
+// ---- chart: histogram -----------------------------------------------------------
+function histogram(el, values, { thresholds = 12, label = 'days', h = 240, color = C.light, marker } = {}) {
+  values = values.filter(Number.isFinite);
+  if (values.length < 2) return empty(el, 'Not enough completed jobs yet');
+  const { g, iw, ih } = box(el, h, { left: 36 });
+  const x = d3.scaleLinear().domain([0, d3.max(values) * 1.02]).nice().range([0, iw]);
+  const bins = d3.bin().domain(x.domain()).thresholds(x.ticks(thresholds))(values);
+  const y = d3.scaleLinear().domain([0, d3.max(bins, b => b.length)]).nice().range([ih, 0]);
+  g.append('g').attr('class', 'grid-line').call(d3.axisLeft(y).ticks(4).tickSize(-iw).tickFormat(''));
+  g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(8));
+  g.append('g').attr('class', 'axis').attr('transform', `translate(0,${ih})`).call(d3.axisBottom(x).ticks(8).tickSize(0).tickPadding(8)).select('.domain').remove();
+  const r = g.selectAll('rect').data(bins).join('rect').attr('x', b => x(b.x0) + 1).attr('width', b => Math.max(1, x(b.x1) - x(b.x0) - 2)).attr('rx', 3).attr('fill', color).attr('y', ih).attr('height', 0);
+  r.transition().duration(DUR * 550).attr('y', b => y(b.length)).attr('height', b => ih - y(b.length));
+  hover(r, b => `<b>${b.x0}–${b.x1} ${label}</b><br>${b.length} job${b.length === 1 ? '' : 's'}`);
+  if (marker != null && Number.isFinite(marker)) {
+    g.append('line').attr('x1', x(marker)).attr('x2', x(marker)).attr('y1', 0).attr('y2', ih).attr('stroke', C.amber).attr('stroke-width', 2).attr('stroke-dasharray', '5,4');
+    g.append('text').attr('x', x(marker) + 5).attr('y', 11).style('font-size', '11px').style('font-weight', 700).style('fill', C.amber).text('median ' + d1(marker));
+  }
+}
+
+// ---- chart: heatmap ----------------------------------------------------------------
+function heatmap(el, rows, cols, val, { colLabel = c => c, rowH = 26 } = {}) {
+  if (!rows.length || !cols.length) return empty(el);
+  const h = rows.length * rowH + 34;
+  const { g, iw, ih } = box(el, h, { left: 130, top: 22, bottom: 4, right: 4 });
+  const x = d3.scaleBand().domain(cols).range([0, iw]).padding(0.08);
+  const y = d3.scaleBand().domain(rows).range([0, rows.length * rowH]).padding(0.12);
+  const mx = d3.max(rows.flatMap(r => cols.map(c => val(r, c)))) || 1;
+  const col = d3.scaleSequential(d3.interpolateRgb('#eef5f0', '#1a3a2a')).domain([0, mx]);
+  const every = Math.ceil(cols.length / Math.max(1, Math.floor(iw / 40)));
+  g.selectAll('.cl').data(cols.filter((c, i) => i % every === 0)).join('text').attr('x', c => x(c) + x.bandwidth() / 2).attr('y', -8).attr('text-anchor', 'middle').style('font-size', '10.5px').style('fill', '#6b7a70').text(colLabel);
+  g.selectAll('.rl').data(rows).join('text').attr('x', -8).attr('y', r => y(r) + y.bandwidth() / 2).attr('dy', '.35em').attr('text-anchor', 'end').style('font-size', '12px').style('fill', '#2a3a30').text(r => r.length > 20 ? r.slice(0, 19) + '…' : r);
+  const cells = rows.flatMap(r => cols.map(c => ({ r, c, v: val(r, c) })));
+  const rr = g.selectAll('rect').data(cells).join('rect').attr('x', d => x(d.c)).attr('y', d => y(d.r)).attr('width', x.bandwidth()).attr('height', y.bandwidth()).attr('rx', 4).attr('fill', d => d.v ? col(d.v) : '#f3f6f4');
+  hover(rr, d => `<b>${esc(d.r)}</b><br>${colLabel(d.c)}: ${d.v} job${d.v === 1 ? '' : 's'}`);
+}
+
+// ---- chart: funnel -------------------------------------------------------------------
+function funnel(el, stages) {
+  if (!stages.length || !stages[0].value) return empty(el);
+  const rowH = 46; const { g, iw } = box(el, stages.length * rowH + 4, { left: 120, right: 90, bottom: 0, top: 2 });
+  const x = d3.scaleLinear().domain([0, stages[0].value]).range([0, iw]);
+  stages.forEach((s, i) => {
+    const yy = i * rowH;
+    g.append('text').attr('x', -10).attr('y', yy + 20).attr('text-anchor', 'end').style('font-size', '12.5px').style('font-weight', 600).style('fill', '#2a3a30').text(s.label);
+    const w = Math.max(3, x(s.value));
+    g.append('rect').attr('x', 0).attr('y', yy + 4).attr('height', 32).attr('rx', 7).attr('fill', PAL[i % PAL.length]).attr('opacity', 0.92).attr('width', 0).transition().duration(DUR * 600).delay(DUR * i * 80).attr('width', w);
+    g.append('text').attr('x', w + 8).attr('y', yy + 20).attr('dy', '.1em').style('font-size', '13px').style('font-weight', 700).style('fill', '#1a3a2a').text(s.value + (i ? '  ·  ' + pct(s.value / stages[i - 1].value) : ''));
+  });
+}
+
+// ---- chart: radial progress ---------------------------------------------------------
+function radial(el, v, label, color = C.light) {
+  const { g, iw, ih } = box(el, 190, { left: 0, right: 0, top: 0, bottom: 0 });
+  const r = Math.min(iw, ih) / 2 - 8; const gg = g.append('g').attr('transform', `translate(${iw / 2},${ih / 2})`);
+  const arc = d3.arc().innerRadius(r * 0.78).outerRadius(r).cornerRadius(8).startAngle(-Math.PI * 0.75);
+  gg.append('path').attr('d', arc.endAngle(Math.PI * 0.75)()).attr('fill', '#eaf1ec');
+  if (Number.isFinite(v)) gg.append('path').datum(0).attr('fill', color).transition().duration(DUR * 900).attrTween('d', () => t => arc.endAngle(-Math.PI * 0.75 + t * v * Math.PI * 1.5)());
+  gg.append('text').attr('text-anchor', 'middle').attr('dy', '.1em').style('font-size', '30px').style('font-weight', 700).style('fill', '#1a3a2a').text(pct(v));
+  gg.append('text').attr('text-anchor', 'middle').attr('dy', '2.4em').style('font-size', '11.5px').style('fill', '#6b7a70').text(label);
+}
+
+// =====================================================================
+// DATA
+// =====================================================================
+let RAW = null;       // { jobs, enquiries, clients, surveyors }
+let M = null;         // normalised model
+const QP = new URLSearchParams(location.search);
+let period = ['month', 'quarter', 'year', '12m', 'all'].includes(QP.get('p')) ? QP.get('p') : 'year';
+let tab = ['overview', 'revenue', 'pipeline', 'mix', 'clients', 'surveyors', 'delivery', 'geo'].includes(QP.get('tab')) ? QP.get('tab') : 'overview';
+
+async function fetchAll(table, select, extra = {}) {
+  const out = []; const page = 1000;
+  for (let off = 0; off < 50000; off += page) {
+    const rows = await dbGet(table, { select, order: 'id.asc', limit: page, offset: off, ...extra });
+    if (!rows || !rows.length) break;
+    out.push(...rows);
+    if (rows.length < page) break;
+  }
+  return out;
+}
+
+async function loadData() {
+  if (DEMO) return demoData();
+  const [jobs, enquiries, clients, surveyors] = await Promise.all([
+    fetchAll('jobs', '*'),
+    fetchAll('enquiries', 'id,status,submitted_at,created_at,quoted_price,travel_cost,survey_type,deadline_tier,tree_count_band,site_postcode,introducer_name'),
+    fetchAll('clients', 'id,full_name,company_name,client_type'),
+    fetchAll('surveyors', 'id,full_name,status,hourly_rate'),
+  ]);
+  return { jobs, enquiries, clients, surveyors };
+}
+
+function normalise(raw) {
+  const cl = {}; raw.clients.forEach(c => cl[c.id] = c);
+  const sv = {}; raw.surveyors.forEach(s => sv[s.id] = s);
+  const enqById = {}; raw.enquiries.forEach(e => enqById[e.id] = e);
+  const jobs = raw.jobs.map(j => {
+    const e = enqById[j.enquiry_id];
+    const c = cl[j.introducer_client_id];
+    const clientLabel = c ? (c.company_name || c.full_name) : (j.billing_contact_name || j.end_client_name || 'Direct / unknown');
+    const inv = [1, 2].map(n => ({
+      n, date: parseD(j['invoice' + n + '_date']), amt: num(j['invoice' + n + '_amount']), paid: !!j['invoice' + n + '_paid'],
+      paidAt: parseD(j['invoice' + n + '_paid_at']) || (j['invoice' + n + '_paid'] ? parseD(j['invoice' + n + '_date']) : null),
+    })).filter(i => i.date && i.amt > 0);
+    const pc = String(j.site_postcode || '').toUpperCase().trim();
+    return {
+      id: j.id, ref: j.reference || '', type: j.survey_type || 'other', jtype: j.job_type || '', dispatch: j.dispatch_state, urgency: j.urgency_state,
+      archived: !!j.is_archived || j.dispatch_state === 'archived', declined: e && e.status === 'declined',
+      postcode: pc, area: (pc.match(/^[A-Z]{1,2}/) || ['—'])[0],
+      sla: parseD(j.sla_deadline), created: parseD(j.created_at), claimed: parseD(j.claimed_at), surveyDone: parseD(j.survey_done_at),
+      surveyorId: j.surveyor_id, surveyor: sv[j.surveyor_id] ? sv[j.surveyor_id].full_name : null,
+      pay: num(j.surveyor_pay_amount), value: num(j.agreed_amount) || num(j.quoted_amount) || num(e && e.quoted_price),
+      inv, invoiced: sum(inv, i => i.amt), firstInv: inv.length ? new Date(Math.min(...inv.map(i => i.date))) : null,
+      client: clientLabel, clientType: c ? c.client_type : null, enquiryId: j.enquiry_id, plans: !!j.plans_outstanding,
+    };
+  });
+  const enq = raw.enquiries.map(e => ({ ...e, date: parseD(e.submitted_at || e.created_at), price: num(e.quoted_price), travel: num(e.travel_cost),
+    pc: String(e.site_postcode || '').toUpperCase(), area: (String(e.site_postcode || '').toUpperCase().match(/^[A-Z]{1,2}/) || ['—'])[0] }));
+  const events = jobs.flatMap(j => j.inv.map(i => ({ ...i, job: j })));
+  const dates = [...events.map(e => e.date), ...enq.map(e => e.date), ...jobs.map(j => j.created)].filter(Boolean);
+  const minDate = dates.length ? new Date(Math.min(...dates)) : new Date();
+  return { jobs, enq, events, surveyors: raw.surveyors, minDate };
+}
+
+function range(p) {
+  const now = new Date(); const y = now.getFullYear(), m = now.getMonth();
+  let s, e = new Date(y, m + 1, 0, 23, 59, 59);
+  if (p === 'month') s = new Date(y, m, 1);
+  else if (p === 'quarter') s = new Date(y, m - 2, 1);
+  else if (p === 'year') s = new Date(y, 0, 1);
+  else if (p === '12m') s = new Date(y, m - 11, 1);
+  else { s = new Date(M.minDate.getFullYear(), M.minDate.getMonth(), 1); }
+  const len = e - s; const ps = new Date(s - len - 1), pe = new Date(s - 1);
+  return { s, e, ps, pe, hasPrev: p !== 'all' };
+}
+const inR = (d, s, e) => d && d >= s && d <= e;
+
+// ---- everything the charts need for a window ---------------------------------------
+function compute(s, e) {
+  const ev = M.events.filter(x => inR(x.date, s, e));
+  const paidEv = M.events.filter(x => x.paid && inR(x.paidAt, s, e));
+  const doneJobs = M.jobs.filter(j => inR(j.firstInv, s, e));
+  const enq = M.enq.filter(x => inR(x.date, s, e));
+  const won = enq.filter(x => x.status === 'accepted'), lost = enq.filter(x => x.status === 'declined');
+  const invoiced = sum(ev, x => x.amt), collected = sum(paidEv, x => x.amt);
+  const doneRev = sum(doneJobs, j => j.invoiced), doneCost = sum(doneJobs, j => j.pay);
+  const withSla = doneJobs.filter(j => j.sla);
+  const onTime = withSla.length ? withSla.filter(j => j.firstInv <= new Date(j.sla.getTime() + 86400000)).length / withSla.length : NaN;
+  return {
+    ev, paidEv, doneJobs, enq, won, lost, invoiced, collected, onTime, withSla,
+    avgJob: doneJobs.length ? doneRev / doneJobs.length : NaN, margin: doneRev > 0 ? (doneRev - doneCost) / doneRev : NaN, doneRev, doneCost,
+    winRate: (won.length + lost.length) ? won.length / (won.length + lost.length) : (enq.length ? won.length / enq.length : NaN),
+    wonValue: sum(won, x => x.price),
+  };
+}
+
+function outstanding() {
+  const now = new Date();
+  return M.events.filter(x => !x.paid).map(x => ({ ...x, age: dayDiff(x.date, now) }));
+}
+
+// =====================================================================
+// RENDER
+// =====================================================================
+function delta(cur, prev, { invert = false, pts = false } = {}) {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev) || prev === 0 && !pts) return '';
+  const d = pts ? (cur - prev) * 100 : (cur - prev) / Math.abs(prev) * 100;
+  if (Math.abs(d) < 0.5) return `<span class="delta flat">≈ flat</span>`;
+  const good = invert ? d < 0 : d > 0;
+  return `<span class="delta ${good ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(Math.round(d))}${pts ? ' pts' : '%'}</span>`;
+}
+function kpi(label, value, sub, color, dl = '') {
+  return `<div class="kpi" style="--kc:${color}"><div class="kpi-l">${label}</div><div class="kpi-v">${value}</div><div class="kpi-s">${dl}<span>${sub}</span></div></div>`;
+}
+const card = (title, sub, id, extra = '') => `<div class="cc"><h3>${title}</h3><div class="sub">${sub || ''}</div><div class="chart" id="${id}"></div>${extra}</div>`;
+
+async function init() {
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('reports')}
+    <div class="main-content">
+      <div class="topbar"><div class="topbar-title">Reports</div>
+        <span style="font-size:13px;color:var(--text-muted)">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+      </div>
+      <div class="page-body">
+        ${DEMO ? '<div class="demo-banner"><b>Demo data.</b> Everything on this page is made up so you can see how the reports look. Remove <code>?demo=1</code> from the address to see real figures.</div>' : ''}
+        <div class="rp-bar">
+          <div class="seg" id="periodSeg">
+            <button data-p="month">This month</button><button data-p="quarter">3 months</button><button data-p="year" class="on">This year</button><button data-p="12m">12 months</button><button data-p="all">All time</button>
+          </div>
+          <div style="display:flex;gap:8px;"><button class="tool" onclick="exportCsv()">Download jobs (CSV)</button><button class="tool" onclick="window.print()">Print / PDF</button></div>
+        </div>
+        <div class="rp-tabs" id="tabs">
+          ${[['overview', 'Overview'], ['revenue', 'Revenue & Cash'], ['pipeline', 'Pipeline & Quotes'], ['mix', 'Work Mix'], ['clients', 'Clients'], ['surveyors', 'Surveyors'], ['delivery', 'Delivery & SLA'], ['geo', 'Geography']]
+            .map(([k, l]) => `<button data-t="${k}" class="${k === 'overview' ? 'on' : ''}">${l}</button>`).join('')}
+        </div>
+        <div id="view"><div class="loading-big"><div class="spinner"></div><br>Crunching the numbers…</div></div>
+      </div>
+    </div>`;
+  [...document.getElementById('periodSeg').children].forEach(x => x.classList.toggle('on', x.dataset.p === period));
+  [...document.getElementById('tabs').children].forEach(x => x.classList.toggle('on', x.dataset.t === tab));
+  document.getElementById('periodSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; period = b.dataset.p; [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); render(); };
+  document.getElementById('tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.t; [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); render(); };
+  try {
+    RAW = await loadData(); M = normalise(RAW); render();
+  } catch (err) {
+    document.getElementById('view').innerHTML = `<div class="empty">Could not load report data: ${esc(err.message)}</div>`;
+  }
+  let t; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => M && render(), 250); });
+}
+
+function render() {
+  const R = range(period); const cur = compute(R.s, R.e); const prev = R.hasPrev ? compute(R.ps, R.pe) : null;
+  const v = document.getElementById('view'); hideTip();
+  ({ overview, revenue, pipeline, mix, clients, surveyors, delivery, geo })[tab](v, R, cur, prev);
+}
+const months = R => monthsBetween(R.s, R.e < new Date() ? R.e : new Date());
+
+// ---------------- OVERVIEW ----------------
+function overview(v, R, c, p) {
+  const out = outstanding(); const outAmt = sum(out, x => x.amt); const overdue = out.filter(x => x.age > 30);
+  const active = M.jobs.filter(j => !j.archived);
+  v.innerHTML = `
+    <div class="kpis k4">
+      ${kpi('Invoiced', GBP(c.invoiced), c.ev.length + ' invoices', C.green, p ? delta(c.invoiced, p.invoiced) : '')}
+      ${kpi('Collected', GBP(c.collected), c.paidEv.length + ' payments', C.light, p ? delta(c.collected, p.collected) : '')}
+      ${kpi('Outstanding', GBP(outAmt), overdue.length ? `<b style="color:#b3261e">${overdue.length} over 30 days</b>` : 'nothing overdue', C.amber)}
+      ${kpi('Jobs completed', c.doneJobs.length, 'first invoice issued', C.blue, p ? delta(c.doneJobs.length, p.doneJobs.length) : '')}
+      ${kpi('Average job', GBP(c.avgJob || 0), 'per completed job', '#0e7490', p ? delta(c.avgJob, p.avgJob) : '')}
+      ${kpi('Gross margin', pct(c.margin), 'after surveyor pay', '#7c3aed', p ? delta(c.margin, p.margin, { pts: true }) : '')}
+      ${kpi('On-time delivery', pct(c.onTime), c.withSla.length + ' jobs with a deadline', '#b8960a', p ? delta(c.onTime, p.onTime, { pts: true }) : '')}
+      ${kpi('Quote win rate', pct(c.winRate), c.won.length + ' won · ' + c.lost.length + ' declined', '#be185d', p ? delta(c.winRate, p.winRate, { pts: true }) : '')}
+    </div>
+    <div class="grid g21">
+      ${card('Revenue by month', 'Invoiced and collected, with 3-month trend', 'c1', legend([['Collected', C.green], ['Invoiced, not yet paid', C.pale], ['3-month average', C.amber]]))}
+      ${card('Jobs in progress', active.length + ' open jobs right now', 'c2')}
+    </div>
+    <div class="grid g3">
+      ${card('Top clients', 'By invoiced revenue in the period', 'c3')}
+      ${card('Revenue by survey type', 'Where the money comes from', 'c4')}
+      ${card('Quote funnel', 'Enquiries to invoiced jobs', 'c5')}
+    </div>`;
+  monthlyRevenue(document.getElementById('c1'), R, true);
+  donut(document.getElementById('c2'), STAGES.map(([k, l, col]) => ({ label: l, value: active.filter(j => j.dispatch === k).length, color: col })), { center: active.length, sub: 'open jobs', keep: true });
+  hbars(document.getElementById('c3'), topClients(c, 7), { labelW: 140 });
+  hbars(document.getElementById('c4'), byType(c).slice(0, 7).map((d, i) => ({ ...d, color: PAL[i % PAL.length] })), { labelW: 140 });
+  funnel(document.getElementById('c5'), funnelStages(R));
+}
+
+function monthlyRevenue(el, R, trend) {
+  const ms = months(R); const paid = {}, unpaid = {}, inv = {};
+  M.events.forEach(x => { if (!inR(x.date, R.s, R.e)) return; const k = mKey(x.date); inv[k] = (inv[k] || 0) + x.amt; if (x.paid) paid[k] = (paid[k] || 0) + x.amt; else unpaid[k] = (unpaid[k] || 0) + x.amt; });
+  const avg = {}; ms.forEach((m, i) => { const w = ms.slice(Math.max(0, i - 2), i + 1); avg[m] = mean(w.map(k => inv[k] || 0)); });
+  columns(el, ms, [{ key: 'paid', name: 'Paid', vals: paid, color: C.green }, { key: 'unpaid', name: 'Unpaid', vals: unpaid, color: C.pale }], { line: trend ? { vals: avg, color: C.amber } : null });
+}
+function topClients(c, n = 10) {
+  const m = {}; c.ev.forEach(x => m[x.job.client] = (m[x.job.client] || 0) + x.amt);
+  return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, n);
+}
+function byType(c) {
+  const m = {}; c.ev.forEach(x => m[x.job.type] = (m[x.job.type] || 0) + x.amt);
+  return Object.entries(m).map(([k, value]) => ({ label: typeLabel(k), value, key: k })).sort((a, b) => b.value - a.value);
+}
+function funnelStages(R) {
+  const enq = M.enq.filter(e => inR(e.date, R.s, R.e)); const ids = new Set(enq.filter(e => e.status === 'accepted').map(e => e.id));
+  const js = M.jobs.filter(j => ids.has(j.enquiryId));
+  return [
+    { label: 'Enquiries', value: enq.length }, { label: 'Accepted', value: ids.size },
+    { label: 'Allocated', value: js.filter(j => j.surveyorId).length }, { label: 'Surveyed', value: js.filter(j => j.surveyDone).length },
+    { label: 'Invoiced', value: js.filter(j => j.firstInv).length },
+  ];
+}
+
+// ---------------- REVENUE ----------------
+function revenue(v, R, c, p) {
+  const out = outstanding();
+  const buckets = [['Not yet due (0–30)', 0, 30, C.light], ['31–60 days', 31, 60, C.amber], ['61–90 days', 61, 90, '#c0392b'], ['90+ days', 91, 1e9, '#7f1d1d']];
+  const bdata = buckets.map(([label, lo, hi, color]) => ({ label, color, value: sum(out.filter(x => x.age >= lo && x.age <= hi), x => x.amt) }));
+  const list = out.sort((a, b) => b.age - a.age).slice(0, 12);
+  const ytd = new Date().getFullYear(); const cum = y => { let t = 0; const pts = []; for (let m = 0; m < 12; m++) { t += sum(M.events.filter(x => x.date.getFullYear() === y && x.date.getMonth() === m), x => x.amt); if (y < ytd || m <= new Date().getMonth()) pts.push({ x: m, y: t, label: MONTHS[m] + ' ' + y }); } return pts; };
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('Invoiced', GBP(c.invoiced), 'in this period', C.green, p ? delta(c.invoiced, p.invoiced) : '')}
+      ${kpi('Collected', GBP(c.collected), 'cash received', C.light, p ? delta(c.collected, p.collected) : '')}
+      ${kpi('Outstanding', GBP(sum(out, x => x.amt)), out.length + ' unpaid invoices', C.amber)}
+      ${kpi('Surveyor cost', GBP(c.doneCost), 'on completed jobs', '#7c3aed')}
+      ${kpi('Gross profit', GBP(c.doneRev - c.doneCost), pct(c.margin) + ' margin', '#0e7490')}
+      ${kpi('Won quotes', GBP(c.wonValue), c.won.length + ' accepted', '#be185d')}
+    </div>
+    <div class="grid g21">
+      ${card('Monthly invoicing', 'Paid vs still owed, by invoice month', 'r1', legend([['Paid', C.green], ['Unpaid', C.pale]]))}
+      ${card('Who owes us', 'Unpaid invoices by age', 'r2')}
+    </div>
+    <div class="grid g2">
+      ${card('Cumulative revenue: this year vs last', 'Running total invoiced', 'r3', legend([[String(ytd), C.green], [String(ytd - 1), C.grey]]))}
+      <div class="cc"><h3>Oldest unpaid invoices</h3><div class="sub">Chase these first</div>
+        ${list.length ? `<table class="rt"><tr><th>Job</th><th>Client</th><th class="n">Amount</th><th class="n">Age</th></tr>${list.map(x => `<tr><td><a href="job-detail.html?id=${x.job.id}">${esc(x.job.ref || '—')}</a></td><td>${esc(x.job.client.slice(0, 26))}</td><td class="n">${GBP(x.amt)}</td><td class="n"><span class="pill ${x.age > 60 ? 'red' : x.age > 30 ? 'amber' : ''}">${Math.round(x.age)}d</span></td></tr>`).join('')}</table>` : '<div class="empty">Nothing outstanding 🎉</div>'}
+      </div>
+    </div>`;
+  monthlyRevenue(document.getElementById('r1'), R, false);
+  hbars(document.getElementById('r2'), bdata, { labelW: 130, tipFn: d => `<b>${d.label}</b><br>${GBP(d.value)}` });
+  lines(document.getElementById('r3'), [{ name: ytd, color: C.green, pts: cum(ytd) }, { name: ytd - 1, color: C.grey, pts: cum(ytd - 1), dash: '5,4' }], { xfmt: i => MONTHS[Math.round(i)] || '', area: true });
+}
+
+// ---------------- PIPELINE ----------------
+function pipeline(v, R, c) {
+  const active = M.jobs.filter(j => !j.archived);
+  const stageVal = STAGES.map(([k, l, col]) => ({ label: l, color: col, n: active.filter(j => j.dispatch === k).length, value: sum(active.filter(j => j.dispatch === k), j => j.value) }));
+  const types = {}; c.enq.forEach(e => { const t = types[e.survey_type] = types[e.survey_type] || { w: 0, l: 0, n: 0 }; t.n++; if (e.status === 'accepted') t.w++; if (e.status === 'declined') t.l++; });
+  const conv = Object.entries(types).filter(([, t]) => t.n >= 2).map(([k, t]) => ({ label: typeLabel(k), value: t.w / Math.max(1, t.w + t.l), extra: t })).sort((a, b) => b.value - a.value);
+  const tiers = {}; c.enq.forEach(e => { const k = (typeof DEADLINE_LABELS !== 'undefined' && DEADLINE_LABELS[e.deadline_tier]) || e.deadline_tier || 'Not set'; tiers[k] = (tiers[k] || 0) + 1; });
+  const bands = {}; c.enq.forEach(e => { const k = e.tree_count_band || 'Not set'; bands[k] = (bands[k] || 0) + 1; });
+  const weekly = d3.rollups(c.enq, a => a.length, e => d3.timeMonday(e.date)).sort((a, b) => a[0] - b[0]);
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('Enquiries', c.enq.length, 'received in period', C.blue)}
+      ${kpi('Accepted', c.won.length, GBP(c.wonValue) + ' of work won', C.green)}
+      ${kpi('Declined', c.lost.length, 'quotes turned down', C.red)}
+      ${kpi('Win rate', pct(c.winRate), 'accepted ÷ decided', C.light)}
+      ${kpi('Avg quote', GBP(mean(c.enq.map(e => e.price).filter(Boolean)) || 0), 'excl. VAT', '#0e7490')}
+      ${kpi('Avg travel cost', GBP(mean(c.enq.map(e => e.travel).filter(Boolean)) || 0), 'where charged', '#b8960a')}
+    </div>
+    <div class="grid g2">
+      ${card('Quote to invoice funnel', 'Follows each enquiry from this period', 'p1')}
+      ${card('Open work by stage', 'Number of jobs and the value sitting in each stage', 'p2')}
+    </div>
+    <div class="grid g3">
+      ${card('Win rate by survey type', 'Accepted ÷ (accepted + declined)', 'p3')}
+      ${card('How urgent do clients want it?', 'Deadline chosen on the quote form', 'p4')}
+      ${card('Job size', 'Tree-count band on enquiries', 'p5')}
+    </div>
+    <div class="grid"><div class="cc"><h3>Enquiries per week</h3><div class="sub">Demand over time</div><div class="chart" id="p6"></div></div></div>`;
+  funnel(document.getElementById('p1'), funnelStages(R));
+  hbars(document.getElementById('p2'), stageVal.map(s => ({ ...s, value: s.value, label: `${s.label} (${s.n})` })), { labelW: 170 });
+  hbars(document.getElementById('p3'), conv.map(d => ({ ...d })), { fmt: pct, labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${pct(d.value)}<br>${d.extra.w} won · ${d.extra.l} declined · ${d.extra.n} quoted` });
+  donut(document.getElementById('p4'), Object.entries(tiers).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { sub: 'enquiries' });
+  hbars(document.getElementById('p5'), Object.entries(bands).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 110 });
+  lines(document.getElementById('p6'), [{ name: 'Enquiries', color: C.blue, pts: weekly.map(([d, n]) => ({ x: +d, y: n, label: 'w/c ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) })) }],
+    { fmt: n => Math.round(n), xfmt: t => { const d = new Date(t); return d.getDate() + ' ' + MONTHS[d.getMonth()]; }, area: true, h: 200 });
+}
+
+// ---------------- MIX ----------------
+function mix(v, R, c) {
+  const bt = byType(c); const ms = months(R);
+  const countBy = {}; M.jobs.filter(j => inR(j.created, R.s, R.e)).forEach(j => { const k = mKey(j.created); (countBy[j.type] = countBy[j.type] || {})[k] = ((countBy[j.type] || {})[k] || 0) + 1; });
+  const topTypes = Object.entries(countBy).map(([k, o]) => [k, sum(Object.values(o))]).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
+  const series = topTypes.map((k, i) => ({ key: 't' + i, name: typeLabel(k), vals: countBy[k], color: PAL[i] }));
+  const jt = {}; c.doneJobs.forEach(j => { const k = j.jtype || 'standard'; jt[k] = (jt[k] || 0) + j.invoiced; });
+  const avg = {}; c.doneJobs.forEach(j => { (avg[j.type] = avg[j.type] || []).push(j.invoiced); });
+  const avgRows = Object.entries(avg).map(([k, a]) => ({ label: typeLabel(k), value: mean(a), n: a.length })).sort((a, b) => b.value - a.value);
+  v.innerHTML = `
+    <div class="grid g21">
+      ${card('Revenue by survey type', 'Size shows invoiced value', 'm1')}
+      ${card('Job type', 'Revenue split', 'm2')}
+    </div>
+    <div class="grid g2">
+      ${card('New jobs per month, by type', 'Top six survey types', 'm3', legend(series.map(s => [s.name, s.color])))}
+      ${card('Average job value by type', 'Completed jobs in the period', 'm4')}
+    </div>`;
+  treemap(document.getElementById('m1'), bt.map((d, i) => ({ ...d, color: PAL[i % PAL.length], extra: pct(d.value / (sum(bt, x => x.value) || 1)) + ' of revenue' })), { h: 320 });
+  donut(document.getElementById('m2'), Object.entries(jt).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(sum(Object.values(jt))), sub: 'invoiced', h: 300 });
+  columns(document.getElementById('m3'), ms, series, { fmt: n => n });
+  hbars(document.getElementById('m4'), avgRows.slice(0, 9), { labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${GBP(d.value)} average<br>${d.n} jobs` });
+}
+
+// ---------------- CLIENTS ----------------
+function clients(v, R, c) {
+  const all = {}; c.ev.forEach(x => { const k = x.job.client; const o = all[k] = all[k] || { label: k, value: 0, jobs: new Set(), type: x.job.clientType }; o.value += x.amt; o.jobs.add(x.job.id); });
+  const rows = Object.values(all).sort((a, b) => b.value - a.value); const total = sum(rows, r => r.value) || 1;
+  let run = 0; const pareto = rows.map((r, i) => { run += r.value; return { x: i + 1, y: run / total, label: r.label }; });
+  const firstSeen = {}; M.jobs.forEach(j => { if (!j.created) return; if (!firstSeen[j.client] || j.created < firstSeen[j.client]) firstSeen[j.client] = j.created; });
+  const ms = months(R); const nw = {}, rt = {};
+  M.jobs.filter(j => inR(j.created, R.s, R.e)).forEach(j => { const k = mKey(j.created); const isNew = firstSeen[j.client] && mKey(firstSeen[j.client]) === k; (isNew ? nw : rt)[k] = ((isNew ? nw : rt)[k] || 0) + 1; });
+  const types = {}; rows.forEach(r => { const k = r.type || 'unknown'; types[k] = (types[k] || 0) + r.value; });
+  const top3 = sum(rows.slice(0, 3), r => r.value) / total;
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('Active clients', rows.length, 'invoiced in period', C.blue)}
+      ${kpi('Top client share', pct(rows[0] ? rows[0].value / total : NaN), rows[0] ? esc(rows[0].label.slice(0, 24)) : '', C.amber)}
+      ${kpi('Top 3 clients', pct(top3), 'of revenue — concentration', C.red)}
+      ${kpi('Avg per client', GBP(rows.length ? total / rows.length : 0), 'invoiced', C.green)}
+    </div>
+    <div class="grid g21">
+      ${card('Top 15 clients', 'By invoiced revenue', 'k1')}
+      ${card('Revenue by client type', '', 'k2')}
+    </div>
+    <div class="grid g2">
+      ${card('Dependence on top clients', 'Cumulative share of revenue — a steep curve means a few clients carry the business', 'k3')}
+      ${card('New vs returning clients', 'Jobs created per month', 'k4', legend([['Returning', C.green], ['New client', C.amber]]))}
+    </div>
+    <div class="cc" style="margin-bottom:16px"><h3>Client league table</h3><div class="sub">Everyone invoiced in the period</div>
+      <table class="rt"><tr><th>#</th><th>Client</th><th class="n">Jobs</th><th class="n">Revenue</th><th class="n">Avg job</th><th style="width:22%">Share</th></tr>
+      ${rows.slice(0, 25).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.label)}</td><td class="n">${r.jobs.size}</td><td class="n">${GBP(r.value)}</td><td class="n">${GBP(r.value / r.jobs.size)}</td><td><div class="bar-cell"><i style="width:${Math.max(2, r.value / rows[0].value * 100)}%"></i></div></td></tr>`).join('')}</table></div>`;
+  hbars(document.getElementById('k1'), rows.slice(0, 15), { labelW: 170 });
+  donut(document.getElementById('k2'), Object.entries(types).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(total), sub: 'invoiced' });
+  lines(document.getElementById('k3'), [{ name: 'Cumulative share', color: C.green, pts: pareto }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => Math.round(i), yMax: 1, area: true, h: 230 });
+  columns(document.getElementById('k4'), ms, [{ key: 'rt', name: 'Returning', vals: rt, color: C.green }, { key: 'nw', name: 'New client', vals: nw, color: C.amber }], { fmt: n => n, h: 230 });
+}
+
+// ---------------- SURVEYORS ----------------
+function surveyors(v, R, c) {
+  const by = {};
+  const get = n => by[n] = by[n] || { name: n, claimed: 0, done: 0, rev: 0, pay: 0, ot: [], toSurvey: [], months: {} };
+  M.jobs.forEach(j => { if (!j.surveyor) return; const s = get(j.surveyor);
+    if (inR(j.claimed, R.s, R.e)) { s.claimed++; const k = mKey(j.claimed); s.months[k] = (s.months[k] || 0) + 1; }
+    if (inR(j.surveyDone, R.s, R.e)) s.toSurvey.push(dayDiff(j.claimed, j.surveyDone));
+    if (inR(j.firstInv, R.s, R.e)) { s.done++; s.rev += j.invoiced; s.pay += j.pay; if (j.sla) s.ot.push(j.firstInv <= new Date(j.sla.getTime() + 86400000)); } });
+  const rows = Object.values(by).filter(s => s.claimed || s.done).sort((a, b) => b.claimed - a.claimed);
+  const ms = months(R);
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('Surveyors working', rows.length, 'allocated or completed jobs', C.blue)}
+      ${kpi('Jobs allocated', sum(rows, r => r.claimed), 'in period', C.green)}
+      ${kpi('Surveyor pay', GBP(sum(rows, r => r.pay)), 'on completed jobs', '#7c3aed')}
+      ${kpi('Median days to survey', d1(median(rows.flatMap(r => r.toSurvey))), 'allocation to survey done', '#0e7490')}
+    </div>
+    <div class="grid g2">
+      ${card('Jobs allocated per surveyor', '', 's1')}
+      ${card('Margin we make on each surveyor’s jobs', 'Revenue minus pay, completed jobs', 's2')}
+    </div>
+    <div class="cc" style="margin-bottom:16px"><h3>Workload by month</h3><div class="sub">Jobs allocated — spot who is stretched and who has capacity</div><div class="chart" id="s3"></div></div>
+    <div class="cc"><h3>Surveyor scorecard</h3><div class="sub">Completed = first invoice issued in the period</div>
+      <table class="rt"><tr><th>Surveyor</th><th class="n">Allocated</th><th class="n">Completed</th><th class="n">Revenue</th><th class="n">Pay</th><th class="n">Margin</th><th class="n">Days to survey</th><th class="n">On time</th></tr>
+      ${rows.map(s => `<tr><td><b>${esc(s.name)}</b></td><td class="n">${s.claimed}</td><td class="n">${s.done}</td><td class="n">${GBP(s.rev)}</td><td class="n">${GBP(s.pay)}</td><td class="n">${s.rev ? pct((s.rev - s.pay) / s.rev) : '—'}</td><td class="n">${d1(median(s.toSurvey))}</td><td class="n">${s.ot.length ? pct(s.ot.filter(Boolean).length / s.ot.length) : '—'}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No allocations in this period yet</td></tr>'}</table></div>`;
+  hbars(document.getElementById('s1'), rows.slice(0, 12).map((r, i) => ({ label: r.name, value: r.claimed, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 140 });
+  hbars(document.getElementById('s2'), rows.filter(r => r.done).map(r => ({ label: r.name, value: r.rev - r.pay, extra: r })).sort((a, b) => b.value - a.value).slice(0, 12), { labelW: 140, color: C.green, tipFn: d => `<b>${esc(d.label)}</b><br>Margin ${GBP(d.value)}<br>Revenue ${GBP(d.extra.rev)} · Pay ${GBP(d.extra.pay)}` });
+  heatmap(document.getElementById('s3'), rows.map(r => r.name), ms, (r, m) => (by[r].months[m] || 0), { colLabel: mLabel });
+}
+
+// ---------------- DELIVERY ----------------
+function delivery(v, R, c) {
+  const done = c.doneJobs; const total = done.map(j => dayDiff(j.created, j.firstInv));
+  const stagesAvg = [
+    ['Created → allocated', done.map(j => dayDiff(j.created, j.claimed))], ['Allocated → survey done', done.map(j => dayDiff(j.claimed, j.surveyDone))],
+    ['Survey done → invoiced', done.map(j => dayDiff(j.surveyDone, j.firstInv))],
+  ].map(([label, a]) => ({ label, value: median(a) || 0 }));
+  const ms = months(R); const ot = {}, tot = {};
+  M.jobs.filter(j => j.firstInv && j.sla && inR(j.firstInv, R.s, R.e)).forEach(j => { const k = mKey(j.firstInv); tot[k] = (tot[k] || 0) + 1; if (j.firstInv <= new Date(j.sla.getTime() + 86400000)) ot[k] = (ot[k] || 0) + 1; });
+  const trend = ms.filter(m => tot[m]).map((m, i) => ({ x: i, y: ot[m] ? ot[m] / tot[m] : 0, label: mLabel(m) }));
+  const now = new Date(); const late = M.jobs.filter(j => !j.archived && j.sla && j.sla < now && !['awaiting_client', 'pending_approval'].includes(j.dispatch)).sort((a, b) => a.sla - b.sla).slice(0, 10);
+  const byUrg = ['red', 'orange', 'yellow', 'grey'].map(u => ({ label: { red: 'Urgent', orange: 'Elevated', yellow: 'Standard', grey: 'Low' }[u], color: { red: C.red, orange: C.amber, yellow: '#b8960a', grey: C.grey }[u], value: M.jobs.filter(j => !j.archived && j.urgency === u).length }));
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('On-time delivery', pct(c.onTime), c.withSla.length + ' jobs measured', C.green)}
+      ${kpi('Median turnaround', d1(median(total)) + ' days', 'created to first invoice', C.blue)}
+      ${kpi('Slowest 10%', d1(d3.quantile(total.filter(Number.isFinite).sort((a, b) => a - b), .9) || NaN) + ' days', 'or longer to invoice', C.amber)}
+      ${kpi('Overdue now', late.length, 'past deadline, not delivered', C.red)}
+    </div>
+    <div class="grid g3">
+      <div class="cc"><h3>On-time rate</h3><div class="sub">Report delivered by the deadline</div><div class="chart" id="d1"></div></div>
+      ${card('Where the time goes', 'Median days in each step', 'd2')}
+      ${card('Open jobs by urgency', 'Current SLA position', 'd3')}
+    </div>
+    <div class="grid g2">
+      ${card('How long do jobs take?', 'Days from creation to first invoice', 'd4')}
+      ${card('On-time rate by month', '100% = every report on time', 'd5')}
+    </div>
+    <div class="cc"><h3>Overdue right now</h3><div class="sub">Open jobs past their deadline</div>
+      ${late.length ? `<table class="rt"><tr><th>Job</th><th>Client</th><th>Stage</th><th class="n">Days late</th></tr>${late.map(j => `<tr><td><a href="job-detail.html?id=${j.id}">${esc(j.ref)}</a></td><td>${esc(j.client.slice(0, 30))}</td><td>${esc((DISPATCH_META[j.dispatch] || {}).label || j.dispatch)}</td><td class="n"><span class="pill red">${Math.round(dayDiff(j.sla, now))}d</span></td></tr>`).join('')}</table>` : '<div class="empty">Nothing is overdue 🎉</div>'}</div>`;
+  radial(document.getElementById('d1'), c.onTime, 'delivered on time', c.onTime >= .9 ? C.light : c.onTime >= .75 ? '#b8960a' : C.red);
+  hbars(document.getElementById('d2'), stagesAvg, { fmt: n => d1(n) + 'd', labelW: 150, color: C.blue });
+  donut(document.getElementById('d3'), byUrg, { sub: 'open jobs' });
+  histogram(document.getElementById('d4'), total, { marker: median(total) });
+  lines(document.getElementById('d5'), [{ name: 'On time', color: C.green, pts: trend }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => (trend[Math.round(i)] || {}).label || '', yMax: 1, area: true, h: 220 });
+}
+
+// ---------------- GEOGRAPHY ----------------
+function geo(v, R, c) {
+  const a = {}; M.jobs.filter(j => inR(j.created, R.s, R.e) || inR(j.firstInv, R.s, R.e)).forEach(j => { const o = a[j.area] = a[j.area] || { area: j.area, jobs: 0, rev: 0, pay: 0 }; o.jobs++; o.rev += j.invoiced; o.pay += j.pay; });
+  const tr = {}; c.enq.forEach(e => { if (e.travel) { (tr[e.area] = tr[e.area] || []).push(e.travel); } });
+  const rows = Object.values(a).filter(r => r.area !== '—').sort((x, y) => y.rev - x.rev || y.jobs - x.jobs);
+  v.innerHTML = `
+    <div class="kpis">
+      ${kpi('Postcode areas served', rows.length, 'with work in period', C.blue)}
+      ${kpi('Busiest area', rows[0] ? rows[0].area : '—', rows[0] ? rows[0].jobs + ' jobs · ' + GBP(rows[0].rev) : '', C.green)}
+      ${kpi('Avg travel charge', GBP(mean(Object.values(tr).flat()) || 0), 'on quotes with travel', C.amber)}
+    </div>
+    <div class="grid g21">
+      ${card('Revenue by postcode area', 'Bigger block = more invoiced revenue', 'g1')}
+      ${card('Jobs by area', 'Top 12', 'g2')}
+    </div>
+    <div class="cc"><h3>Area detail</h3><div class="sub">Revenue, surveyor cost and travel charged</div>
+      <table class="rt"><tr><th>Area</th><th class="n">Jobs</th><th class="n">Revenue</th><th class="n">Surveyor pay</th><th class="n">Margin</th><th class="n">Avg travel</th></tr>
+      ${rows.slice(0, 25).map(r => `<tr><td><b>${r.area}</b></td><td class="n">${r.jobs}</td><td class="n">${GBP(r.rev)}</td><td class="n">${GBP(r.pay)}</td><td class="n">${r.rev ? pct((r.rev - r.pay) / r.rev) : '—'}</td><td class="n">${tr[r.area] ? GBP(mean(tr[r.area])) : '—'}</td></tr>`).join('')}</table></div>`;
+  treemap(document.getElementById('g1'), rows.filter(r => r.rev > 0).map((r, i) => ({ label: r.area, value: r.rev, color: PAL[i % PAL.length], extra: r.jobs + ' jobs' })), { h: 330 });
+  hbars(document.getElementById('g2'), rows.sort((x, y) => y.jobs - x.jobs).slice(0, 12).map(r => ({ label: r.area, value: r.jobs })), { fmt: n => n, labelW: 50 });
+}
+
+// =====================================================================
+// EXPORT
+// =====================================================================
+function exportCsv() {
+  const R = range(period); const rows = M.jobs.filter(j => inR(j.created, R.s, R.e) || inR(j.firstInv, R.s, R.e));
+  const f = d => d ? d.toISOString().slice(0, 10) : '';
+  const head = ['Reference', 'Client', 'Survey type', 'Postcode', 'Stage', 'Surveyor', 'Created', 'Allocated', 'Survey done', 'Deadline', 'First invoice', 'Invoiced £', 'Surveyor pay £'];
+  const lines = [head, ...rows.map(j => [j.ref, j.client, typeLabel(j.type), j.postcode, (DISPATCH_META[j.dispatch] || {}).label || j.dispatch, j.surveyor || '', f(j.created), f(j.claimed), f(j.surveyDone), f(j.sla), f(j.firstInv), j.invoiced, j.pay])];
+  const csv = lines.map(r => r.map(x => '"' + String(x ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `thac-jobs-${period}.csv`; a.click();
+}
+
+// =====================================================================
+// DEMO DATA (only used with ?demo=1)
+// =====================================================================
+function demoData() {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; const pick = a => a[Math.floor(rnd() * a.length)];
+  const types = [['planning_stage1', 0.28, 950], ['planning_stage2', 0.2, 1700], ['subsidence', 0.2, 650], ['health_safety', 0.1, 520], ['insurer_mortgage', 0.1, 400], ['site_visit', 0.07, 380], ['nhbc', 0.05, 450]];
+  const pickType = () => { let r = rnd(), t = 0; for (const x of types) { t += x[1]; if (r <= t) return x; } return types[0]; };
+  const surveyors = ['Antony Gillingham', 'Stuart Hunt', 'Thomas Bach', 'Sam Carter', 'Trevor Heaps', 'Phil Barwell'].map((n, i) => ({ id: 's' + i, full_name: n, status: 'active' }));
+  const cls = [['Heritage Trees Ltd', 'agent'], ['Redrow Homes', 'developer'], ['Lovell Partnerships', 'developer'], ['Cotswold Planning', 'agent'], ['Brookes & Co Architects', 'agent'], ['Persimmon SW', 'developer'], ['Anthony Gale', 'private'], ['Meridian Surveyors', 'agent'], ['Stonewood Estates', 'developer'], ['Sarah Whitfield', 'private'], ['Harlow Insurance Services', 'insurer'], ['Bluebell Homes', 'developer']]
+    .map((c, i) => ({ id: 'c' + i, full_name: c[0], company_name: c[0], client_type: c[1] }));
+  const weights = cls.map((c, i) => 1 / (i + 1) ** 1.1); const wsum = weights.reduce((a, b) => a + b);
+  const pickClient = () => { let r = rnd() * wsum, t = 0; for (let i = 0; i < cls.length; i++) { t += weights[i]; if (r <= t) return cls[i]; } return cls[0]; };
+  const areas = ['GL', 'BS', 'OX', 'RG', 'SN', 'BA', 'HR', 'WR', 'CF', 'SP', 'GU', 'SO'];
+  const now = new Date(); const jobs = [], enquiries = [];
+  for (let i = 0; i < 420; i++) {
+    const created = new Date(now.getTime() - rnd() ** 1.4 * 400 * 86400000); const [type, , base] = pickType(); const c = pickClient();
+    const price = Math.round((base * (0.7 + rnd() * 1.1) + (rnd() < .4 ? 300 : 0)) / 5) * 5; const area = pick(areas) + ' ' + Math.ceil(rnd() * 20);
+    const eid = 'e' + i; const status = rnd() < .68 ? 'accepted' : rnd() < .55 ? 'declined' : 'quoted';
+    enquiries.push({ id: eid, status, submitted_at: created.toISOString(), quoted_price: price, travel_cost: rnd() < .5 ? pick([300, 400, 500]) : 0, survey_type: type, deadline_tier: pick(['3days', '5days', '10days', '15days', '5days']), tree_count_band: pick(['1-5', '6-20', '21-50', '51-100', '100+', '6-20']), site_postcode: area, introducer_name: c.full_name });
+    if (status !== 'accepted') continue;
+    const s = pick(surveyors); const age = (now - created) / 86400000; const claimed = new Date(created.getTime() + (0.3 + rnd() * 3) * 86400000);
+    const surveyDone = age > 6 ? new Date(claimed.getTime() + (1 + rnd() * 6) * 86400000) : null; let sla = new Date(created.getTime() + pick([7, 10, 14, 21]) * 86400000);
+    const invd = surveyDone && age > 12 ? new Date(surveyDone.getTime() + (2 + rnd() * 12 + (rnd() < .18 ? 12 : 0)) * 86400000) : null;
+    if (invd) sla = new Date(invd.getTime() + (rnd() < .86 ? (1 + rnd() * 9) : -(1 + rnd() * 5)) * 86400000);
+    const j = { id: 'j' + i, reference: 'TH ' + (6800 - i), survey_type: type, job_type: type === 'subsidence' ? 'insurance' : pick(['standard', 'standard', 'amendment']), dispatch_state: invd ? 'archived' : surveyDone ? pick(['yellow', 'data_received', 'awaiting_client']) : pick(['red', 'orange', 'orange']), urgency_state: pick(['red', 'orange', 'yellow', 'grey']), site_postcode: area, sla_deadline: sla.toISOString(), surveyor_id: s.id, created_at: created.toISOString(), claimed_at: claimed.toISOString(), survey_done_at: surveyDone && surveyDone.toISOString(), surveyor_pay_amount: Math.round(price * (0.28 + rnd() * .14)), agreed_amount: price, enquiry_id: eid, introducer_client_id: c.id, is_archived: false };
+    if (invd) { j.invoice1_date = invd.toISOString().slice(0, 10); j.invoice1_amount = price; const paid = (now - invd) / 86400000 > 35 || rnd() < .55; j.invoice1_paid = paid; j.invoice1_paid_at = paid ? new Date(invd.getTime() + (5 + rnd() * 40) * 86400000).toISOString() : null; }
+    jobs.push(j);
+  }
+  return { jobs, enquiries, clients: cls, surveyors };
+}
+
+init();
+</script>
+</body>
+</html>
