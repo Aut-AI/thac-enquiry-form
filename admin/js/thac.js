@@ -457,6 +457,12 @@ function setActiveNav(pageId) {
 // SIDEBAR HTML (shared across all pages)
 // ============================================================
 
+// Reports page is hidden from the client for now (Nick is selling it as an add-on).
+// Unlock in your own browser with: localStorage.setItem('thac_reports', '1')
+function reportsUnlocked() {
+  try { return localStorage.getItem('thac_reports') === '1'; } catch (e) { return false; }
+}
+
 function renderSidebar(activePage) {
   const user = getUser();
   const initials = user?.email ? user.email[0].toUpperCase() : 'T';
@@ -515,9 +521,9 @@ function renderSidebar(activePage) {
         <a href="map.html" class="nav-item ${activePage === 'map' ? 'active' : ''}" data-page="map">
           <span class="nav-icon">${icon('map', 16)}</span> Live Map
         </a>
-        <a href="reports.html" class="nav-item ${activePage === 'reports' ? 'active' : ''}" data-page="reports">
+        ${reportsUnlocked() ? `<a href="reports.html" class="nav-item ${activePage === 'reports' ? 'active' : ''}" data-page="reports">
           <span class="nav-icon">${icon('chartBar', 16)}</span> Reports
-        </a>
+        </a>` : ''}
         <a href="clients.html" class="nav-item ${activePage === 'clients' ? 'active' : ''}" data-page="clients">
           <span class="nav-icon">${icon('users', 16)}</span> Clients
         </a>
