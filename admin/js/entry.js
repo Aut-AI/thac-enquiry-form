@@ -305,12 +305,24 @@
             <option value="5days">5 working days (Elevated)</option>
             <option value="15days">15 working days or more (Low)</option>
           </select></div>
+        <div class="form-group"><label>Instruction date</label>
+          <input class="form-control" id="nj_instructed" type="date" value="${new Date().toLocaleDateString('en-CA')}">
+          <div class="ent-hint">Defaults to today. Change it for a job you were instructed on earlier.</div></div>
         <div class="form-group"><label>Survey date</label>
           <input class="form-control" id="nj_date" type="date"></div>
         <div class="form-group"><label>Agreed fee (£)</label>
           <input class="form-control" id="nj_amount" type="number" min="0" step="0.01" inputmode="decimal"></div>
         <div class="form-group"><label>Introducer</label>
-          <select class="form-control" id="nj_intro"><option value="">Direct (no introducer)</option>${introOpts}</select></div>
+          <select class="form-control" id="nj_intro"><option value="">Direct (no introducer)</option>${introOpts}<option value="__new">+ Add a new introducer...</option></select></div>
+        <div class="form-group full" id="nj_newintro" hidden>
+          <label>New introducer</label>
+          <div class="ent-grid">
+            <div class="form-group"><label>Name <span class="req">*</span></label><input class="form-control" id="nj_i_name" autocomplete="off"></div>
+            <div class="form-group"><label>Company</label><input class="form-control" id="nj_i_company" autocomplete="off"></div>
+            <div class="form-group"><label>Email</label><input class="form-control" id="nj_i_email" type="email" autocomplete="off"></div>
+            <div class="form-group"><label>Phone</label><input class="form-control" id="nj_i_phone" type="tel" autocomplete="off"></div>
+          </div>
+        </div>
         <div class="form-group"><label>Site contact / end client</label>
           <input class="form-control" id="nj_endname" autocomplete="off" placeholder="If different from the customer"></div>
         <div class="form-group"><label>Site contact email</label>
@@ -364,6 +376,7 @@
       $('nj_new').hidden = m !== 'new';
       if (m === 'new') $('nj_c_name').focus();
     }
+    $('nj_intro').onchange = () => { $('nj_newintro').hidden = val('nj_intro') !== '__new'; };
     $('nj_modeExisting').onclick = () => setMode('existing');
     $('nj_modeNew').onclick = () => setMode('new');
     renderExisting();
@@ -384,6 +397,12 @@
       if (reference && usedRefs.has(reference.toLowerCase())) {
         showToast(`${reference} is already used by another job`, 'error'); return;
       }
+      let newIntro = null;
+      if (val('nj_intro') === '__new') {
+        newIntro = { type: 'agent', full_name: val('nj_i_name'), company_name: val('nj_i_company'), email: val('nj_i_email'), phone: val('nj_i_phone') };
+        const ip = checkCustomer(newIntro);
+        if (ip) { showToast('Introducer: ' + ip, 'error'); return; }
+      }
       btn.disabled = true;
       try {
         let clientId = chosen?.id, reusedNote = '';
@@ -392,6 +411,8 @@
           clientId = r.id;
           if (r.existing) reusedNote = ` (used the existing customer ${clientName(r.client)})`;
         }
+        let introducerId = val('nj_intro') || null;
+        if (newIntro) introducerId = (await createClientRecord(newIntro)).id;
         const geo = await lookupPostcode(pc);
         const startAs = val('nj_dispatch') || 'red';
         const plans_outstanding = startAs === 'plans';
@@ -417,13 +438,19 @@
           urgency_surcharge: SURCHARGE[deadline] ?? 0,
           billing_mode: 'single',
           arranging_client_id: clientId,
-          introducer_client_id: val('nj_intro') || null,
+          introducer_client_id: introducerId,
           end_client_name: val('nj_endname') || null,
           end_client_email: val('nj_endemail') || null,
           survey_date: val('nj_date') || null,
           agreed_amount: amount === '' ? null : Number(amount),
           internal_notes: val('nj_notes') || null,
         };
+        // Instruction date: stored as the job's created date. Only sent when it
+        // differs from today, so a normal entry keeps the exact creation time.
+        const instructed = val('nj_instructed');
+        if (instructed && instructed !== new Date().toLocaleDateString('en-CA')) {
+          payload.created_at = new Date(instructed + 'T09:00:00').toISOString();
+        }
         const inserted = await dbInsert('jobs', payload);
         const job = inserted?.[0];
         if (!job?.id) throw new Error('The job was not saved');

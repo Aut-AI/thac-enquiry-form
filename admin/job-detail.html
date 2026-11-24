@@ -947,7 +947,7 @@ function renderJob() {
         <div class="card">
           <div class="card-title">Record</div>
           <div class="kv one">
-            ${kv('Created', formatDateTime(job.created_at), { always: true })}
+            ${kv('Instructed', formatDateTime(job.created_at), { always: true })}
             ${job.parent_job_id ? kv('Parent job', `<a href="job-detail.html?id=${job.parent_job_id}">← ${escapeHtml(job.parent_job_ref || 'Parent job')}</a>`) : ''}
             ${(job.linkedJobs && job.linkedJobs.length) ? kv('Linked jobs', job.linkedJobs.map(child =>
               `<div style="display:flex;align-items:center;gap:8px;margin:2px 0;"><a href="job-detail.html?id=${child.id}" style="font-weight:600;">${escapeHtml(child.reference || '')} →</a>${dispatchBadge(child.dispatch_state)}</div>`).join('')) : ''}
@@ -2202,6 +2202,7 @@ async function sendQuoteEmailFromJob() {
         deadline_tier: enquiry.deadline_tier,
         survey_type: enquiry.survey_type,
         site_postcode: enquiry.site_postcode,
+        site_street: enquiry.site_street || job.site_street,
         travel_cost: enquiry.travel_cost,
         travel_note: enquiry.travel_note,
       })

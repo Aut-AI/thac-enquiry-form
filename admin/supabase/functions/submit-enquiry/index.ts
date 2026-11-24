@@ -191,6 +191,7 @@ serve(async (req) => {
             survey_type: enquiry.survey_type,
             job_number: enquiry.job_number,
             site_postcode: enquiry.site_postcode,
+            site_street: enquiry.site_street,
             travel_cost: enquiry.travel_cost,
             travel_note: enquiry.travel_note,
           }),

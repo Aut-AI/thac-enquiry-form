@@ -20,7 +20,7 @@ serve(async (req) => {
     })
   }
 
-  const { enquiry_id, contact_email, contact_name, introducer_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode, travel_cost, travel_note } = await req.json()
+  const { enquiry_id, contact_email, contact_name, introducer_email, quoted_price, deadline_tier, survey_type, job_number, site_postcode, site_street, travel_cost, travel_note } = await req.json()
 
   if (!contact_email || !quoted_price) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -44,6 +44,7 @@ serve(async (req) => {
     ${detailBlock([
       detailRow('Reference', job_number || 'Pending'),
       detailRow('Survey Type', SURVEY_LABELS[survey_type] || survey_type || '—'),
+      site_street ? detailRow('Site Address', site_street) : '',
       detailRow('Site Postcode', site_postcode || '—'),
       detailRow('Deadline', DEADLINE_LABELS[deadline_tier] || deadline_tier || '—'),
       travel_cost ? detailRow('Travel Cost', '£' + Number(travel_cost).toLocaleString() + ' + VAT') : '',
@@ -83,7 +84,7 @@ serve(async (req) => {
   const recipients = [...new Set([contact_email, introducer_email].filter(Boolean))]
 
   try {
-    await sendEmail(recipients, `Your Tree Survey Quote — ${job_number || 'THAC'} | ${price}`, emailHtml)
+    await sendEmail(recipients, `Your Tree Survey Quote — ${job_number || 'THAC'} | ${[site_street, site_postcode].filter(Boolean).join(', ')}${site_street || site_postcode ? ' | ' : ''}${price}`, emailHtml)
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
