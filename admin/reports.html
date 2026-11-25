@@ -65,7 +65,6 @@
 <script>
 requireAuth();
 // Hidden from the client for now: only browsers that ran localStorage.setItem('thac_reports','1') get in.
-if (!reportsUnlocked()) { window.location.replace('dashboard.html'); }
 
 // =====================================================================
 // CONSTANTS + HELPERS
@@ -753,7 +752,7 @@ function demoData() {
   return { jobs, enquiries, clients: cls, surveyors };
 }
 
-if (reportsUnlocked()) init();
+init();
 </script>
 </body>
 </html>

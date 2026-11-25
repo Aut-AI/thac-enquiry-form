@@ -457,11 +457,8 @@ function setActiveNav(pageId) {
 // SIDEBAR HTML (shared across all pages)
 // ============================================================
 
-// Reports page is hidden from the client for now (Nick is selling it as an add-on).
-// Unlock in your own browser with: localStorage.setItem('thac_reports', '1')
-function reportsUnlocked() {
-  try { return localStorage.getItem('thac_reports') === '1'; } catch (e) { return false; }
-}
+// Reports is part of the solution for everyone (unhidden 25 Nov 2026).
+function reportsUnlocked() { return true; }
 
 function renderSidebar(activePage) {
   const user = getUser();
