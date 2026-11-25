@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/thac.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 <style>
   .rp-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:16px; }
   .seg { display:inline-flex; background:#fff; border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; flex-wrap:wrap; }
@@ -53,6 +54,13 @@
   .loading-big { padding:80px 0; text-align:center; color:var(--text-muted); }
   .tool { font:inherit; font-size:13px; font-weight:600; padding:8px 14px; border-radius:9px; border:1px solid var(--border); background:#fff; color:var(--green-dark); cursor:pointer; }
   .tool:hover { background:var(--green-pale); }
+  .cc { position:relative; } .cc h3 { padding-right:130px; }
+  .eng { position:absolute; top:13px; right:14px; display:inline-flex; background:#f1f5f2; border-radius:8px; padding:2px; gap:1px; }
+  .eng button { border:0; background:transparent; font:inherit; font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--text-muted); padding:3px 8px; border-radius:6px; cursor:pointer; }
+  .eng button:hover { color:var(--green-dark); } .eng button.on { background:#fff; color:var(--green-dark); box-shadow:0 1px 2px rgba(0,0,0,.15); }
+  .cc.ec-on .static-lg { display:none; }
+  .chart canvas { max-width:100%; }
+  @media print { .eng { display:none; } }
   @media print { .sidebar, .topbar, .rp-bar, .rp-tabs { display:none !important; } .main-content { margin:0 !important; } }
 </style>
 </head>
@@ -199,7 +207,7 @@ function donut(el, data, { center, sub, fmt = v => v, h = 230, keep = false } = 
   hover(paths, d => `<b>${esc(d.data.label)}</b><br>${fmt(d.data.value)} · ${pct(d.data.value / tot)}`);
   gg.append('text').attr('text-anchor', 'middle').attr('dy', sub ? '-.1em' : '.35em').style('font-size', '26px').style('font-weight', 700).style('fill', '#1a3a2a').text(center ?? fmt(tot));
   if (sub) gg.append('text').attr('text-anchor', 'middle').attr('dy', '1.4em').style('font-size', '11px').style('fill', '#6b7a70').text(sub);
-  el.insertAdjacentHTML('afterend', legend((keep ? all : data).map(d => [d.label, d.color])));
+  el.insertAdjacentHTML('afterend', legend((keep ? all : data).map(d => [d.label, d.color])).replace('class="legend"', 'class="legend dlg"'));
 }
 
 // ---- chart: treemap ------------------------------------------------------------
@@ -280,6 +288,226 @@ function radial(el, v, label, color = C.light) {
   if (Number.isFinite(v)) gg.append('path').datum(0).attr('fill', color).transition().duration(DUR * 900).attrTween('d', () => t => arc.endAngle(-Math.PI * 0.75 + t * v * Math.PI * 1.5)());
   gg.append('text').attr('text-anchor', 'middle').attr('dy', '.1em').style('font-size', '30px').style('font-weight', 700).style('fill', '#1a3a2a').text(pct(v));
   gg.append('text').attr('text-anchor', 'middle').attr('dy', '2.4em').style('font-size', '11.5px').style('fill', '#6b7a70').text(label);
+}
+
+// =====================================================================
+// APACHE ECHARTS VERSIONS + PER-CHART ENGINE SWITCH (D3 | ECharts)
+// =====================================================================
+const EC = typeof echarts !== 'undefined';
+const ENG_KEY = 'thac_reports_engine';
+let ENG = {}; try { ENG = JSON.parse(localStorage.getItem(ENG_KEY) || '{}') || {}; } catch (e) { ENG = {}; }
+const saveEng = () => { try { localStorage.setItem(ENG_KEY, JSON.stringify(ENG)); } catch (e) { /* storage blocked */ } };
+const engOf = id => ENG[id] || ENG['*'] || 'ec';
+const REG = {}, ECH = {};
+function disposeAll() { Object.keys(ECH).forEach(k => { try { ECH[k].dispose(); } catch (e) { } delete ECH[k]; }); }
+
+if (EC) echarts.registerTheme('thac', { color: PAL, textStyle: { fontFamily: "'DM Sans', sans-serif" } });
+const TT = { backgroundColor: 'rgba(26,58,42,.96)', borderWidth: 0, padding: [8, 11], textStyle: { color: '#fff', fontSize: 12 }, extraCssText: 'border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.25);' };
+const AX = { color: '#6b7a70', fontSize: 11 };
+const gradV = c => new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: c }, { offset: 1, color: c + '99' }]);
+const gradH = c => new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: c + '99' }, { offset: 1, color: c }]);
+
+function ecInit(el, h, opt) {
+  el.style.height = h + 'px';
+  const ch = echarts.init(el, 'thac');
+  ch.setOption({ animation: DUR > 0, animationDuration: 800, animationEasing: 'cubicOut', ...opt, tooltip: { ...TT, ...(opt.tooltip || {}) } });
+  ECH[el.id] = ch; return ch;
+}
+
+// plot(): register a chart with a D3 and/or ECharts renderer and draw whichever the viewer picked.
+function plot(id, d3fn, ecfn) {
+  REG[id] = { d3fn, ecfn };
+  const el = document.getElementById(id); const cc = el && el.closest('.cc');
+  if (cc && d3fn && ecfn && EC && !cc.querySelector('.eng')) {
+    const s = document.createElement('div'); s.className = 'eng'; s.dataset.id = id; s.title = 'Switch chart style (remembered)';
+    s.innerHTML = '<button data-e="ec">ECharts</button><button data-e="d3">D3</button>';
+    s.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; ENG[id] = b.dataset.e; saveEng(); draw(id); };
+    cc.appendChild(s);
+  }
+  draw(id);
+}
+function draw(id) {
+  const { d3fn, ecfn } = REG[id]; const el = document.getElementById(id); if (!el) return;
+  if (ECH[id]) { try { ECH[id].dispose(); } catch (e) { } delete ECH[id]; }
+  el.innerHTML = ''; el.style.height = '';
+  const sib = el.nextElementSibling; if (sib && sib.classList.contains('dlg')) sib.remove();
+  const useEc = !!ecfn && EC && (!d3fn || engOf(id) === 'ec');
+  const cc = el.closest('.cc'); if (cc) { cc.classList.toggle('ec-on', useEc); const s = cc.querySelector('.eng'); if (s) [...s.children].forEach(b => b.classList.toggle('on', b.dataset.e === (useEc ? 'ec' : 'd3'))); }
+  if (useEc) ecfn(el); else if (d3fn) d3fn(el); else empty(el, 'This chart needs the ECharts library, which could not be loaded');
+}
+
+// ---- ECharts: horizontal bars -------------------------------------------------
+function ecBars(el, data, { fmt = GBP, color = C.light, rowH = 30, labelW = 150, tipFn } = {}) {
+  if (!data.length) return empty(el);
+  const rev = [...data].reverse();
+  ecInit(el, Math.max(110, data.length * rowH + 20), {
+    grid: { left: 4, right: 70, top: 4, bottom: 4, containLabel: true },
+    xAxis: { type: 'value', show: false, max: v => v.max * 1.0 },
+    yAxis: { type: 'category', data: rev.map(d => d.label), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { width: Math.max(80, labelW - 14), overflow: 'truncate', color: '#2a3a30', fontSize: 12 } },
+    tooltip: { trigger: 'item', formatter: p => { const d = rev[p.dataIndex]; return tipFn ? tipFn(d) : `<b>${esc(d.label)}</b><br>${fmt(d.value)}`; } },
+    series: [{ type: 'bar', barWidth: Math.min(20, rowH - 10), showBackground: true, backgroundStyle: { color: '#f1f5f2', borderRadius: [0, 8, 8, 0] },
+      data: rev.map(d => ({ value: d.value, itemStyle: { color: gradH(d.color || color), borderRadius: [0, 8, 8, 0] } })),
+      label: { show: true, position: 'right', formatter: p => fmt(p.value), fontWeight: 600, color: '#2a3a30', fontSize: 11.5 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(26,58,42,.3)' } } }],
+  });
+}
+
+// ---- ECharts: stacked monthly columns (+ trend line) ------------------------------
+function ecColumns(el, months, series, { fmt = GBPk, h = 290, line } = {}) {
+  if (!months.length) return empty(el);
+  const tf = v => fmt === GBPk ? GBP(v) : fmt(v); const zoom = months.length > 14;
+  const opt = {
+    grid: { left: 6, right: 14, top: 34, bottom: zoom ? 50 : 6, containLabel: true },
+    legend: { top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#6b7a70', fontSize: 12 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(74,140,92,.08)' } }, formatter: ps => {
+      const bars = ps.filter(p => p.seriesType === 'bar'); const t = sum(bars, p => p.value);
+      return `<b>${ps[0].axisValueLabel}</b><br>` + ps.map(p => `${p.marker}${esc(p.seriesName)}: <b>${tf(p.value)}</b>`).join('<br>') + (bars.length > 1 ? `<br><b>Total ${tf(t)}</b>` : ''); } },
+    xAxis: { type: 'category', data: months.map(mLabel), axisTick: { show: false }, axisLine: { lineStyle: { color: '#dfe7e1' } }, axisLabel: AX },
+    yAxis: { type: 'value', axisLabel: { ...AX, formatter: v => fmt(v) }, splitLine: { lineStyle: { color: '#eef2ef' } } },
+    series: [...series.map((s, i) => ({ name: s.name, type: 'bar', stack: 'a', barMaxWidth: 40, data: months.map(m => s.vals[m] || 0), emphasis: { focus: 'series' },
+      itemStyle: { color: gradV(s.color), borderRadius: i === series.length - 1 ? [6, 6, 0, 0] : 0 } })),
+      line ? { name: line.name || 'Trend', type: 'line', smooth: true, z: 5, data: months.map(m => line.vals[m] || 0), symbol: 'circle', symbolSize: 7,
+        lineStyle: { width: 3, color: line.color, shadowBlur: 8, shadowColor: line.color + '66' }, itemStyle: { color: '#fff', borderColor: line.color, borderWidth: 2 } } : null].filter(Boolean),
+  };
+  if (zoom) opt.dataZoom = [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 6, borderColor: 'transparent', fillerColor: 'rgba(74,140,92,.18)', handleSize: '90%', showDetail: false }];
+  ecInit(el, h, opt);
+}
+
+// ---- ECharts: lines / areas --------------------------------------------------------
+function ecLines(el, series, { fmt = GBPk, h = 260, xfmt, area = false, yMax } = {}) {
+  const all = series.flatMap(s => s.pts); if (!all.length) return empty(el);
+  const xs = [...new Set(all.map(p => p.x))].sort((a, b) => a - b);
+  const short = xs.map(x => xfmt ? xfmt(x) : x);
+  const long = xs.map((x, i) => { const p = all.find(q => q.x === x); return (p && p.label) || short[i]; });
+  const tf = v => fmt === GBPk ? GBP(v) : fmt(v); const zoom = xs.length > 36;
+  const opt = {
+    grid: { left: 6, right: 30, top: series.length > 1 ? 32 : 14, bottom: zoom ? 50 : 6, containLabel: true },
+    legend: series.length > 1 ? { top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#6b7a70', fontSize: 12 } } : { show: false },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#94a3b8', type: 'dashed' } }, formatter: ps => `<b>${esc(long[ps[0].dataIndex])}</b><br>` + ps.filter(p => p.value != null).map(p => `${p.marker}${esc(p.seriesName)}: <b>${tf(p.value)}</b>`).join('<br>') },
+    xAxis: { type: 'category', data: xs.map((x, i) => i), boundaryGap: false, axisTick: { show: false }, axisLine: { lineStyle: { color: '#dfe7e1' } }, axisLabel: { ...AX, formatter: (v, i) => short[i] ?? '' } },
+    yAxis: { type: 'value', max: yMax, axisLabel: { ...AX, formatter: v => fmt(v) }, splitLine: { lineStyle: { color: '#eef2ef' } } },
+    series: series.map(s => { const m = new Map(s.pts.map(p => [p.x, p.y])); return { name: String(s.name), type: 'line', smooth: true, data: xs.map(x => m.has(x) ? m.get(x) : null), connectNulls: false,
+      showSymbol: s.pts.length <= 40, symbolSize: 7, lineStyle: { width: 3, color: s.color, type: s.dash ? 'dashed' : 'solid', shadowBlur: s.dash ? 0 : 8, shadowColor: s.color + '55' }, itemStyle: { color: '#fff', borderColor: s.color, borderWidth: 2 },
+      areaStyle: area ? { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: s.color + (s.dash ? '22' : '55') }, { offset: 1, color: s.color + '00' }]) } : null, emphasis: { focus: 'series' } }; }),
+  };
+  if (zoom) opt.dataZoom = [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 6, borderColor: 'transparent', fillerColor: 'rgba(74,140,92,.18)', showDetail: false }];
+  ecInit(el, h, opt);
+}
+
+// ---- ECharts: donut ------------------------------------------------------------------
+function ecDonut(el, data, { center, sub, fmt = v => v, h = 230, keep = false } = {}) {
+  const pos = data.filter(d => d.value > 0); if (!pos.length) return empty(el);
+  const tot = sum(pos, d => d.value); const list = keep ? data : pos; const H = h + 20 + 24 * Math.ceil(list.length / 2.5); const cy = Math.round(h * 0.5);
+  ecInit(el, H, {
+    legend: { bottom: 0, left: 'center', width: '92%', icon: 'circle', itemWidth: 9, itemHeight: 9, itemGap: 14, textStyle: { color: '#6b7a70', fontSize: 12 }, data: list.map(d => d.label) },
+    title: { text: String(center ?? fmt(tot)), subtext: sub || '', left: 'center', top: cy - (sub ? 26 : 16), itemGap: 2, textStyle: { fontSize: 26, fontWeight: 700, color: '#1a3a2a' }, subtextStyle: { fontSize: 11, color: '#6b7a70' } },
+    tooltip: { trigger: 'item', formatter: p => `${p.marker}<b>${esc(p.name)}</b><br>${fmt(p.value)} · ${pct(p.value / tot)}` },
+    series: [{ type: 'pie', center: ['50%', cy], radius: [Math.round(h * 0.31), Math.round(h * 0.46)], padAngle: 2, avoidLabelOverlap: true, label: { show: false }, labelLine: { show: false },
+      itemStyle: { borderRadius: 9, borderColor: '#fff', borderWidth: 2 }, emphasis: { scale: true, scaleSize: 7, itemStyle: { shadowBlur: 14, shadowColor: 'rgba(26,58,42,.3)' } },
+      data: list.map(d => ({ name: d.label, value: d.value, itemStyle: { color: d.color } })) }],
+  });
+}
+
+// ---- ECharts: treemap -----------------------------------------------------------------
+function ecTreemap(el, data, { fmt = GBP, h = 300 } = {}) {
+  data = data.filter(d => d.value > 0); if (!data.length) return empty(el);
+  ecInit(el, h, {
+    tooltip: { formatter: p => `<b>${esc(p.name)}</b><br>${fmt(p.value)}${p.data.extra ? '<br>' + p.data.extra : ''}` },
+    series: [{ type: 'treemap', roam: false, nodeClick: false, breadcrumb: { show: false }, left: 0, right: 0, top: 0, bottom: 0, squareRatio: 1.1,
+      itemStyle: { borderColor: '#fff', borderWidth: 3, gapWidth: 2, borderRadius: 9 }, emphasis: { itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,.25)' } },
+      label: { show: true, position: ['10%', '12%'], formatter: p => `{n|${p.name.length > 22 ? p.name.slice(0, 21) + '…' : p.name}}\n{v|${fmt(p.value)}}`, rich: { n: { color: '#fff', fontWeight: 700, fontSize: 12.5, lineHeight: 18 }, v: { color: 'rgba(255,255,255,.88)', fontSize: 11.5 } } },
+      data: data.map((d, i) => ({ name: d.label, value: d.value, extra: d.extra, itemStyle: { color: d.color || PAL[i % PAL.length] } })) }],
+  });
+}
+
+// ---- ECharts: funnel ---------------------------------------------------------------------
+function ecFunnel(el, stages) {
+  if (!stages.length || !stages[0].value) return empty(el);
+  ecInit(el, 290, {
+    tooltip: { trigger: 'item', formatter: p => { const i = p.dataIndex; const prev = i ? stages[i - 1].value : null; return `<b>${esc(p.name)}</b><br>${p.value}${prev ? ` · ${pct(p.value / prev)} of previous step` : ''}<br>${pct(p.value / stages[0].value)} of enquiries`; } },
+    series: [{ type: 'funnel', left: '6%', right: '6%', top: 6, bottom: 6, minSize: '14%', gap: 4, sort: 'none', funnelAlign: 'center',
+      itemStyle: { borderColor: '#fff', borderWidth: 1, borderRadius: 6 }, emphasis: { label: { fontSize: 14 } },
+      label: { show: true, position: 'inside', color: '#fff', fontWeight: 700, fontSize: 12.5, lineHeight: 17, formatter: p => `${p.name}\n${p.value}` + (p.dataIndex ? ` · ${pct(p.value / stages[p.dataIndex - 1].value)}` : '') },
+      data: stages.map((s, i) => ({ name: s.label, value: s.value, itemStyle: { color: gradH(PAL[i % PAL.length]) } })) }],
+  });
+}
+
+// ---- ECharts: heatmap ---------------------------------------------------------------------
+function ecHeat(el, rows, cols, val, { colLabel = c => c } = {}) {
+  if (!rows.length || !cols.length) return empty(el);
+  const data = []; let mx = 1; rows.forEach((r, ri) => cols.forEach((c, ci) => { const v = val(r, c); mx = Math.max(mx, v); data.push([ci, ri, v]); }));
+  const every = Math.ceil(cols.length / Math.max(1, Math.floor((el.clientWidth - 150) / 42)));
+  ecInit(el, rows.length * 30 + 70, {
+    grid: { left: 6, right: 14, top: 8, bottom: 40, containLabel: true },
+    tooltip: { formatter: p => `<b>${esc(rows[p.value[1]])}</b><br>${colLabel(cols[p.value[0]])}: ${p.value[2]} job${p.value[2] === 1 ? '' : 's'}` },
+    xAxis: { type: 'category', data: cols.map(colLabel), splitArea: { show: false }, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { ...AX, interval: every - 1 } },
+    yAxis: { type: 'category', data: rows, inverse: true, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#2a3a30', fontSize: 12, width: 130, overflow: 'truncate' } },
+    visualMap: { min: 0, max: mx, show: false, inRange: { color: ['#eef5f0', '#8fc4a0', '#2d5a3d', '#1a3a2a'] } },
+    series: [{ type: 'heatmap', data, itemStyle: { borderColor: '#fff', borderWidth: 3, borderRadius: 6 }, label: { show: cols.length <= 14, formatter: p => p.value[2] || '', color: '#fff', fontSize: 11, fontWeight: 600 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.3)' } } }],
+  });
+}
+
+// ---- ECharts: histogram -----------------------------------------------------------------
+function ecHist(el, values, { thresholds = 12, label = 'days', marker } = {}) {
+  values = values.filter(Number.isFinite); if (values.length < 2) return empty(el, 'Not enough completed jobs yet');
+  const x = d3.scaleLinear().domain([0, d3.max(values) * 1.02]).nice(); const bins = d3.bin().domain(x.domain()).thresholds(x.ticks(thresholds))(values);
+  const names = bins.map(b => `${b.x0}–${b.x1}`); const mi = Number.isFinite(marker) ? bins.findIndex(b => marker >= b.x0 && marker < b.x1) : -1;
+  ecInit(el, 250, {
+    grid: { left: 6, right: 14, top: 24, bottom: 22, containLabel: true },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: ps => `<b>${ps[0].name} ${label}</b><br>${ps[0].value} job${ps[0].value === 1 ? '' : 's'}` },
+    xAxis: { type: 'category', data: names, axisTick: { show: false }, axisLine: { lineStyle: { color: '#dfe7e1' } }, axisLabel: AX, name: label, nameLocation: 'middle', nameGap: 26, nameTextStyle: { color: '#6b7a70', fontSize: 11 } },
+    yAxis: { type: 'value', minInterval: 1, axisLabel: AX, splitLine: { lineStyle: { color: '#eef2ef' } } },
+    series: [{ type: 'bar', barCategoryGap: '8%', data: bins.map(b => b.length), itemStyle: { color: gradV(C.light), borderRadius: [5, 5, 0, 0] },
+      markLine: mi >= 0 ? { symbol: 'none', silent: true, lineStyle: { color: C.amber, width: 2, type: 'dashed' }, label: { formatter: 'median ' + d1(marker), color: C.amber, fontWeight: 700, position: 'end' }, data: [{ xAxis: mi }] } : undefined }],
+  });
+}
+
+// ---- ECharts: gauge ---------------------------------------------------------------------
+function ecGauge(el, v, label, color = C.light) {
+  ecInit(el, 200, {
+    series: [{ type: 'gauge', startAngle: 220, endAngle: -40, min: 0, max: 100, radius: '96%', center: ['50%', '58%'], splitNumber: 4,
+      progress: { show: Number.isFinite(v), width: 18, roundCap: true, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [{ offset: 0, color: color + 'aa' }, { offset: 1, color }]) } },
+      axisLine: { roundCap: true, lineStyle: { width: 18, color: [[1, '#eaf1ec']] } }, pointer: { show: false }, axisTick: { show: false }, splitLine: { show: false },
+      axisLabel: { show: false }, anchor: { show: false },
+      title: { offsetCenter: [0, '46%'], fontSize: 12, color: '#6b7a70' }, detail: { valueAnimation: true, offsetCenter: [0, '2%'], fontSize: 34, fontWeight: 700, color: '#1a3a2a', formatter: n => Number.isFinite(v) ? Math.round(n) + '%' : '—' },
+      data: [{ value: Number.isFinite(v) ? v * 100 : 0, name: label }] }],
+  });
+}
+
+// ---- ECharts only: demand calendar, revenue sunburst, work sankey ---------------------------
+function ecCalendar(el, dates) {
+  const end = new Date(); const start = new Date(end.getTime() - 364 * 86400000); const f = d => d.toLocaleDateString('en-CA');
+  const cnt = {}; dates.filter(d => d && d >= start && d <= end).forEach(d => { const k = f(d); cnt[k] = (cnt[k] || 0) + 1; });
+  const data = Object.entries(cnt); if (!data.length) return empty(el);
+  ecInit(el, 200, {
+    tooltip: { formatter: p => `<b>${p.value[0]}</b><br>${p.value[1]} enquir${p.value[1] === 1 ? 'y' : 'ies'}` },
+    visualMap: { min: 0, max: Math.max(3, d3.max(data, d => d[1])), show: false, inRange: { color: ['#e8f1ea', '#8fc4a0', '#2d5a3d', '#1a3a2a'] } },
+    calendar: { top: 26, left: 34, right: 10, bottom: 6, cellSize: ['auto', 15], range: [f(start), f(end)], itemStyle: { borderWidth: 3, borderColor: '#fff', color: '#f3f6f4' }, splitLine: { show: false }, yearLabel: { show: false },
+      dayLabel: { firstDay: 1, color: '#6b7a70', fontSize: 10 }, monthLabel: { color: '#6b7a70', fontSize: 11 } },
+    series: [{ type: 'heatmap', coordinateSystem: 'calendar', data, itemStyle: { borderRadius: 4 } }],
+  });
+}
+function ecSunburst(el, ev) {
+  const t = {}; ev.forEach(x => { const a = t[x.job.type] = t[x.job.type] || {}; a[x.job.client] = (a[x.job.client] || 0) + x.amt; });
+  const kids = Object.entries(t).map(([k, cl], i) => { const arr = Object.entries(cl).sort((a, b) => b[1] - a[1]); const top = arr.slice(0, 5).map(([n, v]) => ({ name: n, value: v })); const rest = sum(arr.slice(5), a => a[1]);
+    if (rest > 0) top.push({ name: 'Other clients', value: rest }); return { name: typeLabel(k), itemStyle: { color: PAL[i % PAL.length] }, children: top.map(c => ({ ...c, itemStyle: { color: PAL[i % PAL.length], opacity: .72 } })) }; });
+  if (!kids.length) return empty(el);
+  ecInit(el, 440, {
+    tooltip: { formatter: p => `<b>${esc(p.name)}</b><br>${GBP(p.value)}` },
+    series: [{ type: 'sunburst', radius: ['14%', '92%'], center: ['50%', '50%'], sort: 'desc', nodeClick: 'rootToNode', data: kids, emphasis: { focus: 'ancestor' },
+      itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 5 }, label: { fontSize: 11, color: '#fff', minAngle: 16, overflow: 'truncate' },
+      levels: [{}, { r0: '14%', r: '46%', label: { rotate: 'tangential', fontWeight: 700, minAngle: 20, fontSize: 10.5 } }, { r0: '48%', r: '92%', label: { align: 'right', minAngle: 12, fontSize: 10.5 } }] }],
+  });
+}
+function ecSankey(el, jobs) {
+  const link = {}; jobs.forEach(j => { if (!j.surveyor) return; const k = typeLabel(j.type) + '||' + j.surveyor; link[k] = (link[k] || 0) + 1; });
+  const links = Object.entries(link).map(([k, value]) => { const [source, target] = k.split('||'); return { source, target, value }; });
+  if (!links.length) return empty(el, 'No allocations in this period yet');
+  const types = [...new Set(links.map(l => l.source))], sv = [...new Set(links.map(l => l.target))];
+  ecInit(el, Math.max(300, Math.max(types.length, sv.length) * 34 + 40), {
+    tooltip: { trigger: 'item', formatter: p => p.dataType === 'edge' ? `<b>${esc(p.data.source)}</b> → <b>${esc(p.data.target)}</b><br>${p.data.value} job${p.data.value === 1 ? '' : 's'}` : `<b>${esc(p.name)}</b><br>${p.value} job${p.value === 1 ? '' : 's'}` },
+    series: [{ type: 'sankey', left: 175, right: 135, top: 8, bottom: 8, nodeWidth: 14, nodeGap: 10, draggable: false, emphasis: { focus: 'adjacency' }, lineStyle: { color: 'gradient', curveness: .5, opacity: .45 },
+      label: { color: '#2a3a30', fontSize: 12 }, data: [...types.map((n, i) => ({ name: n, label: { position: 'left' }, itemStyle: { color: PAL[i % PAL.length] } })), ...sv.map(n => ({ name: n, itemStyle: { color: '#64748b' } }))], links }],
+  });
 }
 
 // =====================================================================
@@ -395,7 +623,7 @@ function delta(cur, prev, { invert = false, pts = false } = {}) {
 function kpi(label, value, sub, color, dl = '') {
   return `<div class="kpi" style="--kc:${color}"><div class="kpi-l">${label}</div><div class="kpi-v">${value}</div><div class="kpi-s">${dl}<span>${sub}</span></div></div>`;
 }
-const card = (title, sub, id, extra = '') => `<div class="cc"><h3>${title}</h3><div class="sub">${sub || ''}</div><div class="chart" id="${id}"></div>${extra}</div>`;
+const card = (title, sub, id, extra = '') => `<div class="cc"><h3>${title}</h3><div class="sub">${sub || ''}</div><div class="chart" id="${id}"></div>${extra ? `<div class="static-lg">${extra}</div>` : ''}</div>`;
 
 async function init() {
   document.getElementById('app').innerHTML = `
@@ -410,7 +638,7 @@ async function init() {
           <div class="seg" id="periodSeg">
             <button data-p="month">This month</button><button data-p="quarter">3 months</button><button data-p="year" class="on">This year</button><button data-p="12m">12 months</button><button data-p="all">All time</button>
           </div>
-          <div style="display:flex;gap:8px;"><button class="tool" onclick="exportCsv()">Download jobs (CSV)</button><button class="tool" onclick="window.print()">Print / PDF</button></div>
+          <div style="display:flex;gap:8px;align-items:center;">${EC ? '<div class="seg" id="engSeg" title="Chart style for every chart (you can still switch each chart on its own)"><button data-e="ec">ECharts</button><button data-e="d3">D3</button></div>' : ''}<button class="tool" onclick="exportCsv()">Download jobs (CSV)</button><button class="tool" onclick="window.print()">Print / PDF</button></div>
         </div>
         <div class="rp-tabs" id="tabs">
           ${[['overview', 'Overview'], ['revenue', 'Revenue & Cash'], ['pipeline', 'Pipeline & Quotes'], ['mix', 'Work Mix'], ['clients', 'Clients'], ['surveyors', 'Surveyors'], ['delivery', 'Delivery & SLA'], ['geo', 'Geography']]
@@ -421,6 +649,9 @@ async function init() {
     </div>`;
   [...document.getElementById('periodSeg').children].forEach(x => x.classList.toggle('on', x.dataset.p === period));
   [...document.getElementById('tabs').children].forEach(x => x.classList.toggle('on', x.dataset.t === tab));
+  const eg = document.getElementById('engSeg');
+  if (eg) { const sync = () => [...eg.children].forEach(x => x.classList.toggle('on', x.dataset.e === (ENG['*'] || 'ec')));
+    sync(); eg.onclick = e => { const b = e.target.closest('button'); if (!b) return; ENG = { '*': b.dataset.e }; saveEng(); sync(); if (M) render(); }; }
   document.getElementById('periodSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; period = b.dataset.p; [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); render(); };
   document.getElementById('tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.t; [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); render(); };
   try {
@@ -433,7 +664,7 @@ async function init() {
 
 function render() {
   const R = range(period); const cur = compute(R.s, R.e); const prev = R.hasPrev ? compute(R.ps, R.pe) : null;
-  const v = document.getElementById('view'); hideTip();
+  const v = document.getElementById('view'); hideTip(); disposeAll();
   ({ overview, revenue, pipeline, mix, clients, surveyors, delivery, geo })[tab](v, R, cur, prev);
 }
 const months = R => monthsBetween(R.s, R.e < new Date() ? R.e : new Date());
@@ -462,19 +693,21 @@ function overview(v, R, c, p) {
       ${card('Revenue by survey type', 'Where the money comes from', 'c4')}
       ${card('Quote funnel', 'Enquiries to invoiced jobs', 'c5')}
     </div>`;
-  monthlyRevenue(document.getElementById('c1'), R, true);
-  donut(document.getElementById('c2'), STAGES.map(([k, l, col]) => ({ label: l, value: active.filter(j => j.dispatch === k).length, color: col })), { center: active.length, sub: 'open jobs', keep: true });
-  hbars(document.getElementById('c3'), topClients(c, 7), { labelW: 140 });
-  hbars(document.getElementById('c4'), byType(c).slice(0, 7).map((d, i) => ({ ...d, color: PAL[i % PAL.length] })), { labelW: 140 });
-  funnel(document.getElementById('c5'), funnelStages(R));
+  plot('c1', el => monthlyRevenue(el, R, true), el => ecMonthlyRevenue(el, R, true));
+  plot('c2', el => donut(el, STAGES.map(([k, l, col]) => ({ label: l, value: active.filter(j => j.dispatch === k).length, color: col })), { center: active.length, sub: 'open jobs', keep: true }), el => ecDonut(el, STAGES.map(([k, l, col]) => ({ label: l, value: active.filter(j => j.dispatch === k).length, color: col })), { center: active.length, sub: 'open jobs', keep: true }));
+  plot('c3', el => hbars(el, topClients(c, 7), { labelW: 140 }), el => ecBars(el, topClients(c, 7), { labelW: 140 }));
+  plot('c4', el => hbars(el, byType(c).slice(0, 7).map((d, i) => ({ ...d, color: PAL[i % PAL.length] })), { labelW: 140 }), el => ecBars(el, byType(c).slice(0, 7).map((d, i) => ({ ...d, color: PAL[i % PAL.length] })), { labelW: 140 }));
+  plot('c5', el => funnel(el, funnelStages(R)), el => ecFunnel(el, funnelStages(R)));
 }
 
-function monthlyRevenue(el, R, trend) {
+function revModel(R, trend) {
   const ms = months(R); const paid = {}, unpaid = {}, inv = {};
   M.events.forEach(x => { if (!inR(x.date, R.s, R.e)) return; const k = mKey(x.date); inv[k] = (inv[k] || 0) + x.amt; if (x.paid) paid[k] = (paid[k] || 0) + x.amt; else unpaid[k] = (unpaid[k] || 0) + x.amt; });
   const avg = {}; ms.forEach((m, i) => { const w = ms.slice(Math.max(0, i - 2), i + 1); avg[m] = mean(w.map(k => inv[k] || 0)); });
-  columns(el, ms, [{ key: 'paid', name: 'Paid', vals: paid, color: C.green }, { key: 'unpaid', name: 'Unpaid', vals: unpaid, color: C.pale }], { line: trend ? { vals: avg, color: C.amber } : null });
+  return { ms, series: [{ key: 'paid', name: 'Paid', vals: paid, color: C.green }, { key: 'unpaid', name: 'Unpaid', vals: unpaid, color: C.pale }], line: trend ? { vals: avg, color: C.amber, name: '3-month average' } : null };
 }
+function monthlyRevenue(el, R, trend) { const m = revModel(R, trend); columns(el, m.ms, m.series, { line: m.line }); }
+function ecMonthlyRevenue(el, R, trend) { const m = revModel(R, trend); ecColumns(el, m.ms, m.series, { line: m.line }); }
 function topClients(c, n = 10) {
   const m = {}; c.ev.forEach(x => m[x.job.client] = (m[x.job.client] || 0) + x.amt);
   return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, n);
@@ -519,9 +752,9 @@ function revenue(v, R, c, p) {
         ${list.length ? `<table class="rt"><tr><th>Job</th><th>Client</th><th class="n">Amount</th><th class="n">Age</th></tr>${list.map(x => `<tr><td><a href="job-detail.html?id=${x.job.id}">${esc(x.job.ref || '—')}</a></td><td>${esc(x.job.client.slice(0, 26))}</td><td class="n">${GBP(x.amt)}</td><td class="n"><span class="pill ${x.age > 60 ? 'red' : x.age > 30 ? 'amber' : ''}">${Math.round(x.age)}d</span></td></tr>`).join('')}</table>` : '<div class="empty">Nothing outstanding 🎉</div>'}
       </div>
     </div>`;
-  monthlyRevenue(document.getElementById('r1'), R, false);
-  hbars(document.getElementById('r2'), bdata, { labelW: 130, tipFn: d => `<b>${d.label}</b><br>${GBP(d.value)}` });
-  lines(document.getElementById('r3'), [{ name: ytd, color: C.green, pts: cum(ytd) }, { name: ytd - 1, color: C.grey, pts: cum(ytd - 1), dash: '5,4' }], { xfmt: i => MONTHS[Math.round(i)] || '', area: true });
+  plot('r1', el => monthlyRevenue(el, R, false), el => ecMonthlyRevenue(el, R, false));
+  plot('r2', el => hbars(el, bdata, { labelW: 130, tipFn: d => `<b>${d.label}</b><br>${GBP(d.value)}` }), el => ecBars(el, bdata, { labelW: 130, tipFn: d => `<b>${d.label}</b><br>${GBP(d.value)}` }));
+  plot('r3', el => lines(el, [{ name: ytd, color: C.green, pts: cum(ytd) }, { name: ytd - 1, color: C.grey, pts: cum(ytd - 1), dash: '5,4' }], { xfmt: i => MONTHS[Math.round(i)] || '', area: true }), el => ecLines(el, [{ name: ytd, color: C.green, pts: cum(ytd) }, { name: ytd - 1, color: C.grey, pts: cum(ytd - 1), dash: '5,4' }], { xfmt: i => MONTHS[Math.round(i)] || '', area: true }));
 }
 
 // ---------------- PIPELINE ----------------
@@ -551,14 +784,17 @@ function pipeline(v, R, c) {
       ${card('How urgent do clients want it?', 'Deadline chosen on the quote form', 'p4')}
       ${card('Job size', 'Tree-count band on enquiries', 'p5')}
     </div>
-    <div class="grid"><div class="cc"><h3>Enquiries per week</h3><div class="sub">Demand over time</div><div class="chart" id="p6"></div></div></div>`;
-  funnel(document.getElementById('p1'), funnelStages(R));
-  hbars(document.getElementById('p2'), stageVal.map(s => ({ ...s, value: s.value, label: `${s.label} (${s.n})` })), { labelW: 170 });
-  hbars(document.getElementById('p3'), conv.map(d => ({ ...d })), { fmt: pct, labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${pct(d.value)}<br>${d.extra.w} won · ${d.extra.l} declined · ${d.extra.n} quoted` });
-  donut(document.getElementById('p4'), Object.entries(tiers).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { sub: 'enquiries' });
-  hbars(document.getElementById('p5'), Object.entries(bands).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 110 });
-  lines(document.getElementById('p6'), [{ name: 'Enquiries', color: C.blue, pts: weekly.map(([d, n]) => ({ x: +d, y: n, label: 'w/c ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) })) }],
-    { fmt: n => Math.round(n), xfmt: t => { const d = new Date(t); return d.getDate() + ' ' + MONTHS[d.getMonth()]; }, area: true, h: 200 });
+    <div class="grid"><div class="cc"><h3>Enquiries per week</h3><div class="sub">Demand over time</div><div class="chart" id="p6"></div></div></div>
+    ${EC ? `<div class="grid">${card('Demand calendar', 'Enquiries per day over the last 12 months — darker means busier', 'p7')}</div>` : ''}`;
+  plot('p1', el => funnel(el, funnelStages(R)), el => ecFunnel(el, funnelStages(R)));
+  plot('p2', el => hbars(el, stageVal.map(s => ({ ...s, value: s.value, label: `${s.label} (${s.n})` })), { labelW: 170 }), el => ecBars(el, stageVal.map(s => ({ ...s, value: s.value, label: `${s.label} (${s.n})` })), { labelW: 170 }));
+  plot('p3', el => hbars(el, conv.map(d => ({ ...d })), { fmt: pct, labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${pct(d.value)}<br>${d.extra.w} won · ${d.extra.l} declined · ${d.extra.n} quoted` }), el => ecBars(el, conv.map(d => ({ ...d })), { fmt: pct, labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${pct(d.value)}<br>${d.extra.w} won · ${d.extra.l} declined · ${d.extra.n} quoted` }));
+  plot('p4', el => donut(el, Object.entries(tiers).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { sub: 'enquiries' }), el => ecDonut(el, Object.entries(tiers).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { sub: 'enquiries' }));
+  plot('p5', el => hbars(el, Object.entries(bands).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 110 }), el => ecBars(el, Object.entries(bands).map(([label, value], i) => ({ label, value, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 110 }));
+  if (EC) plot('p7', null, el => ecCalendar(el, M.enq.map(e => e.date)));
+  const wkS = [{ name: 'Enquiries', color: C.blue, pts: weekly.map(([d, n]) => ({ x: +d, y: n, label: 'w/c ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) })) }];
+  const wkO = { fmt: n => Math.round(n), xfmt: t => { const d = new Date(t); return d.getDate() + ' ' + MONTHS[d.getMonth()]; }, area: true, h: 200 };
+  plot('p6', el => lines(el, wkS, wkO), el => ecLines(el, wkS, wkO));
 }
 
 // ---------------- MIX ----------------
@@ -578,11 +814,13 @@ function mix(v, R, c) {
     <div class="grid g2">
       ${card('New jobs per month, by type', 'Top six survey types', 'm3', legend(series.map(s => [s.name, s.color])))}
       ${card('Average job value by type', 'Completed jobs in the period', 'm4')}
-    </div>`;
-  treemap(document.getElementById('m1'), bt.map((d, i) => ({ ...d, color: PAL[i % PAL.length], extra: pct(d.value / (sum(bt, x => x.value) || 1)) + ' of revenue' })), { h: 320 });
-  donut(document.getElementById('m2'), Object.entries(jt).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(sum(Object.values(jt))), sub: 'invoiced', h: 300 });
-  columns(document.getElementById('m3'), ms, series, { fmt: n => n });
-  hbars(document.getElementById('m4'), avgRows.slice(0, 9), { labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${GBP(d.value)} average<br>${d.n} jobs` });
+    </div>
+    ${EC ? `<div class="grid">${card('Where the money comes from', 'Survey type, then the clients behind it. Click a slice to zoom in, click the centre to go back.', 'm5')}</div>` : ''}`;
+  if (EC) plot('m5', null, el => ecSunburst(el, c.ev));
+  plot('m1', el => treemap(el, bt.map((d, i) => ({ ...d, color: PAL[i % PAL.length], extra: pct(d.value / (sum(bt, x => x.value) || 1)) + ' of revenue' })), { h: 320 }), el => ecTreemap(el, bt.map((d, i) => ({ ...d, color: PAL[i % PAL.length], extra: pct(d.value / (sum(bt, x => x.value) || 1)) + ' of revenue' })), { h: 320 }));
+  plot('m2', el => donut(el, Object.entries(jt).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(sum(Object.values(jt))), sub: 'invoiced', h: 300 }), el => ecDonut(el, Object.entries(jt).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(sum(Object.values(jt))), sub: 'invoiced', h: 300 }));
+  plot('m3', el => columns(el, ms, series, { fmt: n => n }), el => ecColumns(el, ms, series, { fmt: n => n }));
+  plot('m4', el => hbars(el, avgRows.slice(0, 9), { labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${GBP(d.value)} average<br>${d.n} jobs` }), el => ecBars(el, avgRows.slice(0, 9), { labelW: 150, tipFn: d => `<b>${esc(d.label)}</b><br>${GBP(d.value)} average<br>${d.n} jobs` }));
 }
 
 // ---------------- CLIENTS ----------------
@@ -613,10 +851,10 @@ function clients(v, R, c) {
     <div class="cc" style="margin-bottom:16px"><h3>Client league table</h3><div class="sub">Everyone invoiced in the period</div>
       <table class="rt"><tr><th>#</th><th>Client</th><th class="n">Jobs</th><th class="n">Revenue</th><th class="n">Avg job</th><th style="width:22%">Share</th></tr>
       ${rows.slice(0, 25).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.label)}</td><td class="n">${r.jobs.size}</td><td class="n">${GBP(r.value)}</td><td class="n">${GBP(r.value / r.jobs.size)}</td><td><div class="bar-cell"><i style="width:${Math.max(2, r.value / rows[0].value * 100)}%"></i></div></td></tr>`).join('')}</table></div>`;
-  hbars(document.getElementById('k1'), rows.slice(0, 15), { labelW: 170 });
-  donut(document.getElementById('k2'), Object.entries(types).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(total), sub: 'invoiced' });
-  lines(document.getElementById('k3'), [{ name: 'Cumulative share', color: C.green, pts: pareto }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => Math.round(i), yMax: 1, area: true, h: 230 });
-  columns(document.getElementById('k4'), ms, [{ key: 'rt', name: 'Returning', vals: rt, color: C.green }, { key: 'nw', name: 'New client', vals: nw, color: C.amber }], { fmt: n => n, h: 230 });
+  plot('k1', el => hbars(el, rows.slice(0, 15), { labelW: 170 }), el => ecBars(el, rows.slice(0, 15), { labelW: 170 }));
+  plot('k2', el => donut(el, Object.entries(types).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(total), sub: 'invoiced' }), el => ecDonut(el, Object.entries(types).map(([label, value], i) => ({ label: label.replace(/_/g, ' '), value, color: PAL[i % PAL.length] })), { fmt: GBP, center: GBPk(total), sub: 'invoiced' }));
+  plot('k3', el => lines(el, [{ name: 'Cumulative share', color: C.green, pts: pareto }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => Math.round(i), yMax: 1, area: true, h: 230 }), el => ecLines(el, [{ name: 'Cumulative share', color: C.green, pts: pareto }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => Math.round(i), yMax: 1, area: true, h: 230 }));
+  plot('k4', el => columns(el, ms, [{ key: 'rt', name: 'Returning', vals: rt, color: C.green }, { key: 'nw', name: 'New client', vals: nw, color: C.amber }], { fmt: n => n, h: 230 }), el => ecColumns(el, ms, [{ key: 'rt', name: 'Returning', vals: rt, color: C.green }, { key: 'nw', name: 'New client', vals: nw, color: C.amber }], { fmt: n => n, h: 230 }));
 }
 
 // ---------------- SURVEYORS ----------------
@@ -640,13 +878,15 @@ function surveyors(v, R, c) {
       ${card('Jobs allocated per surveyor', '', 's1')}
       ${card('Margin we make on each surveyor’s jobs', 'Revenue minus pay, completed jobs', 's2')}
     </div>
+    ${EC ? `<div class="grid">${card('Who does which work', 'Jobs allocated in the period, from survey type to surveyor. Hover a surveyor to see their mix.', 's4')}</div>` : ''}
     <div class="cc" style="margin-bottom:16px"><h3>Workload by month</h3><div class="sub">Jobs allocated — spot who is stretched and who has capacity</div><div class="chart" id="s3"></div></div>
     <div class="cc"><h3>Surveyor scorecard</h3><div class="sub">Completed = first invoice issued in the period</div>
       <table class="rt"><tr><th>Surveyor</th><th class="n">Allocated</th><th class="n">Completed</th><th class="n">Revenue</th><th class="n">Pay</th><th class="n">Margin</th><th class="n">Days to survey</th><th class="n">On time</th></tr>
       ${rows.map(s => `<tr><td><b>${esc(s.name)}</b></td><td class="n">${s.claimed}</td><td class="n">${s.done}</td><td class="n">${GBP(s.rev)}</td><td class="n">${GBP(s.pay)}</td><td class="n">${s.rev ? pct((s.rev - s.pay) / s.rev) : '—'}</td><td class="n">${d1(median(s.toSurvey))}</td><td class="n">${s.ot.length ? pct(s.ot.filter(Boolean).length / s.ot.length) : '—'}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No allocations in this period yet</td></tr>'}</table></div>`;
-  hbars(document.getElementById('s1'), rows.slice(0, 12).map((r, i) => ({ label: r.name, value: r.claimed, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 140 });
-  hbars(document.getElementById('s2'), rows.filter(r => r.done).map(r => ({ label: r.name, value: r.rev - r.pay, extra: r })).sort((a, b) => b.value - a.value).slice(0, 12), { labelW: 140, color: C.green, tipFn: d => `<b>${esc(d.label)}</b><br>Margin ${GBP(d.value)}<br>Revenue ${GBP(d.extra.rev)} · Pay ${GBP(d.extra.pay)}` });
-  heatmap(document.getElementById('s3'), rows.map(r => r.name), ms, (r, m) => (by[r].months[m] || 0), { colLabel: mLabel });
+  plot('s1', el => hbars(el, rows.slice(0, 12).map((r, i) => ({ label: r.name, value: r.claimed, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 140 }), el => ecBars(el, rows.slice(0, 12).map((r, i) => ({ label: r.name, value: r.claimed, color: PAL[i % PAL.length] })), { fmt: n => n, labelW: 140 }));
+  plot('s2', el => hbars(el, rows.filter(r => r.done).map(r => ({ label: r.name, value: r.rev - r.pay, extra: r })).sort((a, b) => b.value - a.value).slice(0, 12), { labelW: 140, color: C.green, tipFn: d => `<b>${esc(d.label)}</b><br>Margin ${GBP(d.value)}<br>Revenue ${GBP(d.extra.rev)} · Pay ${GBP(d.extra.pay)}` }), el => ecBars(el, rows.filter(r => r.done).map(r => ({ label: r.name, value: r.rev - r.pay, extra: r })).sort((a, b) => b.value - a.value).slice(0, 12), { labelW: 140, color: C.green, tipFn: d => `<b>${esc(d.label)}</b><br>Margin ${GBP(d.value)}<br>Revenue ${GBP(d.extra.rev)} · Pay ${GBP(d.extra.pay)}` }));
+  if (EC) plot('s4', null, el => ecSankey(el, M.jobs.filter(j => inR(j.claimed, R.s, R.e))));
+  plot('s3', el => heatmap(el, rows.map(r => r.name), ms, (r, m) => (by[r].months[m] || 0), { colLabel: mLabel }), el => ecHeat(el, rows.map(r => r.name), ms, (r, m) => (by[r].months[m] || 0), { colLabel: mLabel }));
 }
 
 // ---------------- DELIVERY ----------------
@@ -679,11 +919,11 @@ function delivery(v, R, c) {
     </div>
     <div class="cc"><h3>Overdue right now</h3><div class="sub">Open jobs past their deadline</div>
       ${late.length ? `<table class="rt"><tr><th>Job</th><th>Client</th><th>Stage</th><th class="n">Days late</th></tr>${late.map(j => `<tr><td><a href="job-detail.html?id=${j.id}">${esc(j.ref)}</a></td><td>${esc(j.client.slice(0, 30))}</td><td>${esc((DISPATCH_META[j.dispatch] || {}).label || j.dispatch)}</td><td class="n"><span class="pill red">${Math.round(dayDiff(j.sla, now))}d</span></td></tr>`).join('')}</table>` : '<div class="empty">Nothing is overdue 🎉</div>'}</div>`;
-  radial(document.getElementById('d1'), c.onTime, 'delivered on time', c.onTime >= .9 ? C.light : c.onTime >= .75 ? '#b8960a' : C.red);
-  hbars(document.getElementById('d2'), stagesAvg, { fmt: n => d1(n) + 'd', labelW: 150, color: C.blue });
-  donut(document.getElementById('d3'), byUrg, { sub: 'open jobs' });
-  histogram(document.getElementById('d4'), total, { marker: median(total) });
-  lines(document.getElementById('d5'), [{ name: 'On time', color: C.green, pts: trend }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => (trend[Math.round(i)] || {}).label || '', yMax: 1, area: true, h: 220 });
+  plot('d1', el => radial(el, c.onTime, 'delivered on time', c.onTime >= .9 ? C.light : c.onTime >= .75 ? '#b8960a' : C.red), el => ecGauge(el, c.onTime, 'delivered on time', c.onTime >= .9 ? C.light : c.onTime >= .75 ? '#b8960a' : C.red));
+  plot('d2', el => hbars(el, stagesAvg, { fmt: n => d1(n) + 'd', labelW: 150, color: C.blue }), el => ecBars(el, stagesAvg, { fmt: n => d1(n) + 'd', labelW: 150, color: C.blue }));
+  plot('d3', el => donut(el, byUrg, { sub: 'open jobs' }), el => ecDonut(el, byUrg, { sub: 'open jobs' }));
+  plot('d4', el => histogram(el, total, { marker: median(total) }), el => ecHist(el, total, { marker: median(total) }));
+  plot('d5', el => lines(el, [{ name: 'On time', color: C.green, pts: trend }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => (trend[Math.round(i)] || {}).label || '', yMax: 1, area: true, h: 220 }), el => ecLines(el, [{ name: 'On time', color: C.green, pts: trend }], { fmt: n => Math.round(n * 100) + '%', xfmt: i => (trend[Math.round(i)] || {}).label || '', yMax: 1, area: true, h: 220 }));
 }
 
 // ---------------- GEOGRAPHY ----------------
@@ -704,8 +944,8 @@ function geo(v, R, c) {
     <div class="cc"><h3>Area detail</h3><div class="sub">Revenue, surveyor cost and travel charged</div>
       <table class="rt"><tr><th>Area</th><th class="n">Jobs</th><th class="n">Revenue</th><th class="n">Surveyor pay</th><th class="n">Margin</th><th class="n">Avg travel</th></tr>
       ${rows.slice(0, 25).map(r => `<tr><td><b>${r.area}</b></td><td class="n">${r.jobs}</td><td class="n">${GBP(r.rev)}</td><td class="n">${GBP(r.pay)}</td><td class="n">${r.rev ? pct((r.rev - r.pay) / r.rev) : '—'}</td><td class="n">${tr[r.area] ? GBP(mean(tr[r.area])) : '—'}</td></tr>`).join('')}</table></div>`;
-  treemap(document.getElementById('g1'), rows.filter(r => r.rev > 0).map((r, i) => ({ label: r.area, value: r.rev, color: PAL[i % PAL.length], extra: r.jobs + ' jobs' })), { h: 330 });
-  hbars(document.getElementById('g2'), rows.sort((x, y) => y.jobs - x.jobs).slice(0, 12).map(r => ({ label: r.area, value: r.jobs })), { fmt: n => n, labelW: 50 });
+  plot('g1', el => treemap(el, rows.filter(r => r.rev > 0).map((r, i) => ({ label: r.area, value: r.rev, color: PAL[i % PAL.length], extra: r.jobs + ' jobs' })), { h: 330 }), el => ecTreemap(el, rows.filter(r => r.rev > 0).map((r, i) => ({ label: r.area, value: r.rev, color: PAL[i % PAL.length], extra: r.jobs + ' jobs' })), { h: 330 }));
+  plot('g2', el => hbars(el, rows.sort((x, y) => y.jobs - x.jobs).slice(0, 12).map(r => ({ label: r.area, value: r.jobs })), { fmt: n => n, labelW: 50 }), el => ecBars(el, rows.sort((x, y) => y.jobs - x.jobs).slice(0, 12).map(r => ({ label: r.area, value: r.jobs })), { fmt: n => n, labelW: 50 }));
 }
 
 // =====================================================================
