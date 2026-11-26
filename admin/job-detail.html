@@ -60,6 +60,42 @@
 .jd-main, .jd-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 @media (max-width: 1100px) { .jd-grid { grid-template-columns: minmax(0, 1fr); } }
 
+/* ---- Work log search panel (replaces the right-hand column while open) ---- */
+.wl { position: sticky; top: 12px; max-height: calc(100vh - 24px); display: none; flex-direction: column; background: #fff;
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 8px 28px rgba(26,58,42,.12); animation: wlIn .22s ease; }
+.jd-grid.wl-open .wl { display: flex; }
+.jd-grid.wl-open .jd-side { display: none; }
+@keyframes wlIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.wl-head { background: linear-gradient(135deg, #1a3a2a, #2d5a3d); color: #fff; padding: 14px 16px 16px; }
+.wl-top { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: .2px; }
+.wl-top .sp { flex: 1; }
+.wl-x { background: rgba(255,255,255,.14); border: 0; color: #fff; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+.wl-x:hover { background: rgba(255,255,255,.28); }
+.wl-search { position: relative; margin-top: 12px; }
+.wl-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #7c9a87; pointer-events: none; }
+.wl-search input { width: 100%; box-sizing: border-box; padding: 11px 12px 11px 36px; border-radius: 10px; border: 0; font: inherit; font-size: 14px; outline: none; box-shadow: 0 0 0 2px transparent; }
+.wl-search input:focus { box-shadow: 0 0 0 2px #8fd0a4; }
+.wl-meta { font-size: 11.5px; opacity: .78; margin-top: 8px; min-height: 14px; }
+.wl-body { overflow-y: auto; flex: 1; min-height: 120px; }
+.wl-item { padding: 11px 16px; border-bottom: 1px solid #edf2ee; cursor: pointer; transition: background .12s; }
+.wl-item:hover { background: var(--green-pale); }
+.wl-item .r1 { display: flex; align-items: baseline; gap: 8px; }
+.wl-item .ref { font-weight: 700; color: var(--green-dark); font-size: 13px; }
+.wl-item .amt { margin-left: auto; font-weight: 600; font-size: 12.5px; color: var(--green-mid); }
+.wl-item .cl { font-size: 13px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-item .st { font-size: 12px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-item mark { background: #fff1b8; border-radius: 3px; padding: 0 1px; }
+.wl-empty { padding: 36px 20px; text-align: center; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.wl-detail-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #edf2ee; background: #f7faf8; }
+.wl-detail-bar .btn { padding: 5px 10px; font-size: 12px; }
+.wl-f { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 9px 16px; border-bottom: 1px solid #f0f4f1; align-items: start; }
+.wl-f .k { grid-column: 1 / -1; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; color: #8a9a90; font-weight: 600; }
+.wl-f .v { font-size: 13.5px; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.wl-f .v.nil { color: #b5c0b9; }
+.wl-cp { border: 0; background: transparent; color: #8a9a90; cursor: pointer; padding: 4px; border-radius: 6px; }
+.wl-cp:hover { background: var(--green-pale); color: var(--green-dark); }
+.wl-cp.ok { color: var(--green-light); }
+
 .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--border);
   border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
 .strip-t { background: var(--white); padding: 10px 14px; min-width: 0; }
@@ -751,6 +787,7 @@ function renderJob() {
         ${job.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle', 12)}Details Received</span>` : `<span class="badge badge-low">${icon('clock', 12)}Awaiting Customer Details</span>`}
         ${urgencyColorBadge(job.urgency_state)}
         ${dispatchBadge(job.dispatch_state, job, true)}
+        <button class="btn btn-secondary btn-sm" onclick="wlToggle()" title="Search Trevor's old work log">${icon('search', 14)}Work log</button>
       </div>
     </div>
 
@@ -955,13 +992,151 @@ function renderJob() {
         </div>
 
       </div>
+
+      <aside class="wl" id="wlPanel"></aside>
     </div>
   `;
 
   placeFilesCard();
+  wlApply();
 
   // Display boundary map
   setTimeout(() => displayParkingMap(), 250);
+}
+
+// ============================================================
+// WORK LOG PANEL: search Trevor's historic spreadsheet (table work_log),
+// pick a record, copy fields into the job. Replaces the right-hand column
+// while open; closing brings the normal column back.
+// ============================================================
+const WL_FIELDS = [
+  ['ref', 'Reference'], ['client', 'Client'], ['introducer', 'From / introducer'], ['site', 'Site'],
+  ['surveyor', 'Surveyor'], ['survey_type', 'Survey type'], ['stage', 'Stage'], ['progress', 'Progress'],
+  ['notes', 'Notes'], ['date_instructed', 'Date instructed'], ['job_date', 'Date'], ['axi_dwg', 'Axi & DWG drafted'],
+  ['report_drafted', 'Report drafted'], ['quote', 'Quote', 'money'], ['cost', 'Cost', 'money'], ['vat', 'VAT', 'money'],
+  ['total', 'Total', 'money'], ['date_invoiced', 'Date invoiced'],
+];
+let wlOpen = false, wlQuery = '', wlRows = [], wlSel = null, wlTimer = null, wlSeq = 0;
+
+function wlToggle() { wlOpen = !wlOpen; wlApply(true); }
+
+function wlApply(focus) {
+  const grid = document.querySelector('.jd-grid');
+  if (!grid) return;
+  grid.classList.toggle('wl-open', wlOpen);
+  if (!wlOpen) return;
+  wlRenderShell();
+  if (wlSel) wlRenderDetail(); else { wlRenderList(); if (!wlRows.length) wlSearch(); }
+  if (focus && !wlSel) setTimeout(() => document.getElementById('wlInput')?.focus(), 60);
+}
+
+function wlRenderShell() {
+  document.getElementById('wlPanel').innerHTML = `
+    <div class="wl-head">
+      <div class="wl-top">${icon('clock', 15)}Work log<span class="sp"></span>
+        <button class="wl-x" onclick="wlToggle()" title="Close">${icon('x', 14)}</button></div>
+      <div class="wl-search">${icon('search', 15)}
+        <input id="wlInput" type="text" autocomplete="off" placeholder="Search ref, client, site, notes..." value="${escapeHtml(wlQuery)}" oninput="wlOnInput(this.value)"></div>
+      <div class="wl-meta" id="wlMeta"></div>
+    </div>
+    <div class="wl-body" id="wlBody"></div>`;
+}
+
+function wlOnInput(v) {
+  wlQuery = v; wlSel = null;
+  clearTimeout(wlTimer);
+  wlTimer = setTimeout(wlSearch, 250);
+}
+
+async function wlSearch() {
+  const my = ++wlSeq;
+  const terms = wlQuery.toLowerCase().split(/\s+/).filter(Boolean);
+  const params = { select: '*', order: 'id.desc', limit: '50' };
+  if (terms.length) {
+    params.and = '(' + terms.map(t => `search_text.ilike.*${t.replace(/[*,()%\\]/g, '')}*`).join(',') + ')';
+  }
+  const meta = document.getElementById('wlMeta');
+  if (meta) meta.textContent = 'Searching...';
+  try {
+    const rows = await dbGet('work_log', params);
+    if (my !== wlSeq) return;
+    wlRows = rows || [];
+    wlRenderList();
+  } catch (e) {
+    if (my !== wlSeq) return;
+    const b = document.getElementById('wlBody');
+    if (b) b.innerHTML = `<div class="wl-empty">Could not search the work log.<br><span style="font-size:11px;">${escapeHtml(e.message)}</span></div>`;
+  }
+}
+
+function wlMark(text) {
+  let out = escapeHtml(text || '');
+  wlQuery.split(/\s+/).filter(t => t.length > 1).forEach(t => {
+    const safe = escapeHtml(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp('(' + safe + ')', 'ig'), '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function wlRenderList() {
+  const body = document.getElementById('wlBody'), meta = document.getElementById('wlMeta');
+  if (!body) return;
+  const n = wlRows.length;
+  if (meta) meta.textContent = n ? (n === 50 ? 'Showing the latest 50 matches. Type more to narrow.' : `${n} match${n !== 1 ? 'es' : ''}`) : '';
+  if (!n) { body.innerHTML = `<div class="wl-empty">${wlQuery ? 'No records match that search.' : 'No work log has been imported yet.'}</div>`; return; }
+  body.innerHTML = wlRows.map((r, i) => `
+    <div class="wl-item" onclick="wlPick(${i})">
+      <div class="r1"><span class="ref">${wlMark(r.ref) || '-'}</span>
+        <span style="font-size:11.5px;color:#8a9a90;">${escapeHtml(r.survey_type || '')}</span>
+        <span class="amt">${r.total != null ? '£' + Number(r.total).toLocaleString() : (r.quote != null ? '£' + Number(r.quote).toLocaleString() : '')}</span></div>
+      <div class="cl">${wlMark(r.client)}</div>
+      <div class="st">${wlMark(r.site)}</div>
+    </div>`).join('');
+}
+
+function wlPick(i) { wlSel = wlRows[i]; wlRenderDetail(); }
+
+function wlFmt(r, [key, , kind]) {
+  const v = r[key];
+  if (v === null || v === undefined || v === '') return '';
+  if (kind === 'money') return '£' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return formatDate(v);
+  return String(v);
+}
+
+function wlRenderDetail() {
+  const body = document.getElementById('wlBody'), r = wlSel;
+  if (!body || !r) return;
+  const meta = document.getElementById('wlMeta'); if (meta) meta.textContent = '';
+  body.innerHTML = `
+    <div class="wl-detail-bar">
+      <button class="btn btn-secondary" onclick="wlBack()">${icon('arrowLeft', 13)}Results</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-secondary" onclick="wlCopyAll()">${icon('copy', 13)}Copy all</button>
+    </div>` + WL_FIELDS.map((f, i) => {
+      const val = wlFmt(r, f);
+      return `<div class="wl-f"><div class="k">${f[1]}</div>
+        <div class="v ${val ? '' : 'nil'}">${val ? escapeHtml(val) : '-'}</div>
+        ${val ? `<button class="wl-cp" title="Copy" onclick="wlCopy(${i}, this)">${icon('copy', 14)}</button>` : ''}</div>`;
+    }).join('');
+}
+
+function wlBack() { wlSel = null; wlApply(true); }
+
+async function wlClip(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) {
+    const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+    const ok = document.execCommand('copy'); t.remove(); return ok;
+  }
+}
+async function wlCopy(i, btn) {
+  const val = wlFmt(wlSel, WL_FIELDS[i]);
+  if (await wlClip(val)) { btn.classList.add('ok'); showToast('Copied: ' + (val.length > 40 ? val.slice(0, 40) + '...' : val)); setTimeout(() => btn.classList.remove('ok'), 1200); }
+}
+async function wlCopyAll() {
+  const text = WL_FIELDS.map(f => [f[1], wlFmt(wlSel, f)]).filter(x => x[1]).map(x => x[0] + ': ' + x[1]).join('\n');
+  if (await wlClip(text)) showToast('Copied the whole record');
 }
 
 async function updateStates() {

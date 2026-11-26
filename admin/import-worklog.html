@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAC CRM — Import work log</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/thac.css">
+</head>
+<body>
+<div class="app-layout" id="app"></div>
+<script src="js/supabase.js"></script>
+<script src="js/thac.js"></script>
+<script>
+requireAuth();
+
+const COLS = ['stage','date_instructed','job_date','surveyor','client','introducer','site','notes','axi_dwg','report_drafted','progress','survey_type','quote','ref','cost','vat','total','date_invoiced'];
+const NUM = new Set(['quote','cost','vat','total']);
+let parsed = [];
+
+// Small RFC-4180 CSV parser (quoted fields, embedded commas/newlines/quotes).
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+async function init() {
+  if (!(await requireAdmin())) return;
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar('settings')}
+    <div class="main-content">
+      <div class="topbar"><div class="topbar-title">Import work log</div></div>
+      <div class="page-body">
+        <div class="card" style="max-width:640px;">
+          <div class="card-title">Work log spreadsheet</div>
+          <p style="font-size:13px;color:#666;margin:0 0 14px;">
+            Pick the prepared <b>work_log_import.csv</b>. Importing <b>replaces</b> everything currently in the work log.
+            The file is read in your browser and never stored in the repo.
+          </p>
+          <input type="file" id="f" accept=".csv" onchange="onFile(this.files[0])">
+          <div id="info" style="margin:14px 0;font-size:13px;"></div>
+          <button class="btn btn-primary" id="go" disabled onclick="runImport()">Replace work log with this file</button>
+          <div id="bar" style="height:8px;background:#e5e7eb;border-radius:4px;margin-top:14px;overflow:hidden;display:none;"><div id="barIn" style="height:100%;width:0;background:#2d5a3d;transition:width .2s;"></div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function onFile(file) {
+  if (!file) return;
+  const rows = parseCSV(await file.text());
+  const head = rows.shift();
+  const bad = COLS.filter(c => !head.includes(c));
+  if (bad.length) { document.getElementById('info').textContent = 'Missing columns: ' + bad.join(', '); return; }
+  parsed = rows.filter(r => r.some(v => v !== '')).map(r => {
+    const o = {};
+    COLS.forEach(c => { const v = (r[head.indexOf(c)] || '').trim(); o[c] = v === '' ? null : (NUM.has(c) ? Number(v) : v); });
+    return o;
+  });
+  document.getElementById('info').innerHTML = `<b>${parsed.length.toLocaleString()}</b> rows ready. Example: ${parsed[0].ref} · ${parsed[0].client}`;
+  document.getElementById('go').disabled = false;
+}
+
+async function runImport() {
+  if (!confirm(`Replace the work log with ${parsed.length} rows?`)) return;
+  const btn = document.getElementById('go'); btn.disabled = true;
+  document.getElementById('bar').style.display = 'block';
+  try {
+    await dbDelete('work_log', 'id=gt.0');
+    const N = 500;
+    for (let i = 0; i < parsed.length; i += N) {
+      await supabaseRequest('work_log', { method: 'POST', body: JSON.stringify(parsed.slice(i, i + N)), headers: { 'Prefer': 'return=minimal' } });
+      document.getElementById('barIn').style.width = Math.min(100, (i + N) / parsed.length * 100) + '%';
+    }
+    showToast(`Imported ${parsed.length} rows`);
+    document.getElementById('info').innerHTML = `<b style="color:#2d5a3d;">Done: ${parsed.length.toLocaleString()} rows imported.</b>`;
+  } catch (e) { showToast(e.message, 'error'); btn.disabled = false; }
+}
+init();
+</script>
+</body>
+</html>

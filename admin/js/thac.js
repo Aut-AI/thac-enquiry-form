@@ -30,6 +30,7 @@ const ICON_PATHS = {
   xCircle: '<circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>',
   helpCircle: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.4 2.4 0 1 1 3.4 2.2c-.9.4-1.4 1-1.4 2.1"/><circle cx="12" cy="16.8" r="1" fill="currentColor" stroke="none"/>',
   infoCircle: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.4" r="1" fill="currentColor" stroke="none"/>',
+  copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.6 2.1"/>',
   alarm: '<circle cx="12" cy="12.5" r="8"/><path d="M12 8.5v4.5l3 1.8"/><line x1="6.5" y1="4" x2="4.7" y2="2.3"/><line x1="17.5" y1="4" x2="19.3" y2="2.3"/>',
   pause: '<rect x="7.5" y="5" width="3.2" height="14" rx="1"/><rect x="13.3" y="5" width="3.2" height="14" rx="1"/>',
