@@ -5,7 +5,8 @@
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE TABLE IF NOT EXISTS public.work_log (
+DROP TABLE IF EXISTS public.work_log;  -- reference data only, safe to recreate
+CREATE TABLE public.work_log (
   id            BIGSERIAL PRIMARY KEY,
   stage         TEXT,
   date_instructed TEXT,
@@ -26,7 +27,11 @@ CREATE TABLE IF NOT EXISTS public.work_log (
   total         NUMERIC,
   date_invoiced TEXT,
   search_text   TEXT GENERATED ALWAYS AS (
-    lower(concat_ws(' ', ref, client, introducer, site, surveyor, notes, progress, survey_type, stage))
+    lower(
+      coalesce(ref,'') || ' ' || coalesce(client,'') || ' ' || coalesce(introducer,'') || ' ' ||
+      coalesce(site,'') || ' ' || coalesce(surveyor,'') || ' ' || coalesce(notes,'') || ' ' ||
+      coalesce(progress,'') || ' ' || coalesce(survey_type,'') || ' ' || coalesce(stage,'')
+    )
   ) STORED
 );
 
