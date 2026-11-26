@@ -787,6 +787,7 @@ function renderJob() {
         ${job.extended_info_received ? `<span class="badge badge-accepted">${icon('checkCircle', 12)}Details Received</span>` : `<span class="badge badge-low">${icon('clock', 12)}Awaiting Customer Details</span>`}
         ${urgencyColorBadge(job.urgency_state)}
         ${dispatchBadge(job.dispatch_state, job, true)}
+        <button class="btn btn-secondary btn-sm" onclick="openEditDetails()" title="Edit names, contacts, site address and survey type">${icon('pencil', 14)}Edit details</button>
         <button class="btn btn-secondary btn-sm" onclick="wlToggle()" title="Search Trevor's old work log">${icon('search', 14)}Work log</button>
       </div>
     </div>
@@ -1137,6 +1138,91 @@ async function wlCopy(i, btn) {
 async function wlCopyAll() {
   const text = WL_FIELDS.map(f => [f[1], wlFmt(wlSel, f)]).filter(x => x[1]).map(x => x[0] + ': ' + x[1]).join('\n');
   if (await wlClip(text)) showToast('Copied the whole record');
+}
+
+// ============================================================
+// EDIT JOB DETAILS: names, contacts, site address, survey type, reference.
+// Writes to the job, and to the linked enquiry where the page reads from it
+// (form jobs show contact/site/survey type from the enquiry).
+// ============================================================
+function ejv(v) { return escapeHtml(v == null ? '' : String(v)).replace(/"/g, '&quot;'); }
+
+function openEditDetails() {
+  const e = enquiry || null;
+  const f = (id, label, val, extra = '') =>
+    `<div class="form-group"><label>${label}</label><input type="text" class="form-control" id="ej_${id}" value="${ejv(val)}" ${extra}></div>`;
+  const types = Object.entries(SURVEY_TYPE_LABELS);
+  const curType = (e?.survey_type || job.survey_type || job.job_type || '');
+  const typeOpts = (types.some(([k]) => k === curType) || !curType ? '' : `<option value="${ejv(curType)}" selected>${escapeHtml(getSurveyLabel(curType))}</option>`) +
+    types.map(([k, l]) => `<option value="${k}" ${k === curType ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+  const site = e ? { street: e.site_street, city: e.site_city, pc: e.site_postcode } : { street: job.site_street, city: job.site_city, pc: job.site_postcode };
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay'; ov.id = 'editDetailsModal';
+  ov.innerHTML = `
+    <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-title">Edit job details</div>
+      <div class="modal-sub">Changes apply to this job only.${job.customer ? ` To change the customer's own record, <a href="client-detail.html?id=${job.customer.id}">edit the customer</a>.` : ''}</div>
+      <div class="two">${f('reference', 'Reference', job.reference)}
+        <div class="form-group"><label>Survey type</label><select class="form-control" id="ej_type">${typeOpts}</select></div></div>
+      <div class="kv-group" style="margin:10px 0 4px;">Site</div>
+      ${f('street', 'Street address', site.street)}
+      <div class="two">${f('city', 'Town / city', site.city)}${f('postcode', 'Postcode', site.pc)}</div>
+      ${e ? `<div class="kv-group" style="margin:10px 0 4px;">Contact (from the enquiry)</div>
+      <div class="two">${f('c_name', 'Name', e.contact_name)}${f('c_company', 'Company', e.company)}</div>
+      <div class="two">${f('c_email', 'Email', e.contact_email)}${f('c_phone', 'Phone', e.contact_phone)}</div>` : ''}
+      <div class="kv-group" style="margin:10px 0 4px;">End client / site contact</div>
+      <div class="two">${f('end_name', 'Name', job.end_client_name)}${f('end_email', 'Email', job.end_client_email)}</div>
+      <div class="kv-group" style="margin:10px 0 4px;">Invoice to</div>
+      <div class="two">${f('bill_name', 'Name', job.billing_contact_name)}${f('bill_email', 'Email', job.billing_contact_email)}</div>
+      <div class="form-group"><label>Invoice address</label><textarea class="form-control" id="ej_bill_addr" rows="2">${escapeHtml(job.billing_address || '')}</textarea></div>
+      ${f('report_to', 'Report addressed to', job.report_addressee_name)}
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditDetails()" style="flex:1;justify-content:center;">Cancel</button>
+        <button class="btn btn-primary" id="ejSave" onclick="saveEditDetails()" style="flex:2;justify-content:center;">Save changes</button>
+      </div>
+    </div>`;
+  ov.addEventListener('mousedown', ev => { if (ev.target === ov) closeEditDetails(); });
+  document.body.appendChild(ov);
+  ov.style.display = 'flex';
+}
+function closeEditDetails() { document.getElementById('editDetailsModal')?.remove(); }
+
+async function saveEditDetails() {
+  const g = id => { const el = document.getElementById('ej_' + id); return el ? (el.value || '').trim() || null : null; };
+  const reference = g('reference');
+  if (!reference) { showToast('Reference cannot be empty', 'error'); return; }
+  const postcode = (g('postcode') || '').toUpperCase() || null;
+  const jobUpd = {
+    reference,
+    survey_type: document.getElementById('ej_type').value || null,
+    site_street: g('street'), site_city: g('city'), site_postcode: postcode,
+    end_client_name: g('end_name'), end_client_email: g('end_email'),
+    billing_contact_name: g('bill_name'), billing_contact_email: g('bill_email'),
+    billing_address: g('bill_addr'), report_addressee_name: g('report_to'),
+  };
+  const postcodeChanged = (postcode || '') !== (job.site_postcode || '');
+  if (postcodeChanged) { jobUpd.site_lat = null; jobUpd.site_lng = null; }   // re-geocoded below
+  const btn = document.getElementById('ejSave'); btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    if (enquiry && job.enquiry_id) {
+      const enqUpd = {
+        survey_type: jobUpd.survey_type,
+        site_street: jobUpd.site_street, site_city: jobUpd.site_city, site_postcode: postcode,
+        contact_name: g('c_name'), company: g('c_company'), contact_email: g('c_email'), contact_phone: g('c_phone'),
+      };
+      await dbUpdate('enquiries', `id=eq.${job.enquiry_id}`, enqUpd);
+      Object.assign(enquiry, enqUpd);
+    }
+    await dbUpdate('jobs', `id=eq.${jobId}`, jobUpd);
+    Object.assign(job, jobUpd);
+    closeEditDetails();
+    showToast('Job details saved');
+    renderJob();
+    if (postcodeChanged && postcode) geocodePostcode(true);
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Save changes';
+  }
 }
 
 async function updateStates() {
