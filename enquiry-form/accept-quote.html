@@ -23,6 +23,7 @@ body {
 #mapContainer { position: relative; }
 .map-label { position: absolute; top: 10px; left: 10px; background: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1a3c2e; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .card {
+  box-sizing: border-box;
   background: rgba(245, 242, 235, 0.95);
   border-radius: 16px;
   padding: 48px 40px;
@@ -67,13 +68,20 @@ h1 { font-size: 24px; font-weight: 700; color: #1a3c2e; margin-bottom: 12px; }
 .detail-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
   border-bottom: 1px solid #e8eeeb;
   font-size: 14px;
+  line-height: 1.4;
 }
 .detail-row:last-child { border-bottom: none; }
-.detail-label { color: #666; }
-.detail-value { font-weight: 600; color: #1a1a1a; }
+@media (max-width: 480px) {
+  .card { padding: 32px 20px; }
+  .detail-box { padding: 14px 16px; }
+}
+.detail-label { color: #666; white-space: nowrap; flex-shrink: 0; }
+.detail-value { font-weight: 600; color: #1a1a1a; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .btn {
   display: block;
   width: 100%;
@@ -245,11 +253,6 @@ function showAcceptConfirm(enq) {
         <span class="detail-label">Deadline</span>
         <span class="detail-value">${DEADLINE_LABELS[enq.deadline_tier] || enq.deadline_tier || '—'}</span>
       </div>
-      ${enq.travel_cost ? `
-      <div class="detail-row">
-        <span class="detail-label">Includes Travel</span>
-        <span class="detail-value">£${Number(enq.travel_cost).toLocaleString()}</span>
-      </div>` : ''}
       <div class="detail-row">
         <span class="detail-label">Quote</span>
         <span class="detail-value" style="color:#1a3c2e;font-size:16px;">${price}</span>

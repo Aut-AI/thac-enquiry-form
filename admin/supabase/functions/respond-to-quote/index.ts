@@ -132,7 +132,7 @@ serve(async (req) => {
     if (action === "get") {
       const fields = [
         "id", "job_number", "contact_name", "survey_type", "site_postcode",
-        "deadline_tier", "quoted_price", "travel_cost", "status", "submitted_at",
+        "deadline_tier", "quoted_price", "status", "submitted_at",
         "end_client_name", "end_client_email",
         "billing_contact_name", "billing_contact_email", "billing_address",
         "report_addressee_name", "report_addressee_address",
