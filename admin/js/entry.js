@@ -87,31 +87,43 @@
   }
 
   // ----------------------------------------------------------
-  // Customers
+  // Customers / contacts
   // ----------------------------------------------------------
+  // One list of contacts (the clients table). What a contact IS on a job is
+  // set per job (Trevor's scenarios, 27 Nov 2026):
+  //   introducer  = the firm that sent the work (Heritage Trees, Trinity...)
+  //   who asked   = a person at that firm (clients.parent_client_id = firm)
+  //   end client  = the person whose site it is (details kept on the job)
+  //   bill to     = the introducer or the end client
+  // Type is just a label now; any contact can be picked in any role.
 
-  const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
-  // Finds a customer by email (case-insensitive).
+  // Finds a contact by any of its email addresses (case-insensitive).
   async function clientByEmail(email) {
-    if (!email) return null;
-    const safe = email.replace(/[%*,()]/g, '');
-    const rows = await dbGet('clients', { select: 'id,full_name,company_name,email', email: `ilike.${safe}`, limit: 1 });
+    const first = splitEmails(email)[0];
+    if (!first) return null;
+    const safe = first.replace(/[%*,()"\\]/g, '');
+    let rows;
+    try {
+      rows = await dbGet('clients', { select: 'id,full_name,company_name,email', or: `(email.ilike.${safe},other_emails.ilike.*${safe}*)`, limit: 1 });
+    } catch (e) {
+      rows = await dbGet('clients', { select: 'id,full_name,company_name,email', email: `ilike.${safe}`, limit: 1 });
+    }
     return rows?.[0] || null;
   }
 
-  // Adds a customer unless one with the same email already exists.
+  // Adds a contact unless one with the same email already exists.
   // Returns { id, existing } so callers can tell which happened.
   async function createClientRecord(c) {
     const dup = await clientByEmail(c.email);
     if (dup) return { id: dup.id, existing: true, client: dup };
     const user = getUser();
-    const inserted = await dbInsert('clients', {
+    const emails = splitEmails(c.email);
+    const row = {
       client_type: c.type || 'individual',
       client_category: 'other',
       full_name: c.full_name || null,
       company_name: c.company_name || null,
-      email: c.email || null,
+      email: emails[0] || null,
       phone: c.phone || null,
       address_line_1: c.address_line_1 || null,
       address_line_2: c.address_line_2 || null,
@@ -120,9 +132,14 @@
       address_postcode: c.address_postcode ? c.address_postcode.toUpperCase() : null,
       notes: c.notes || null,
       created_by_user_id: user?.id || null,
-    });
+    };
+    if (emails.length > 1) row.other_emails = emails.slice(1).join(', ');
+    if (c.parent_client_id) row.parent_client_id = c.parent_client_id;
+    if (c.default_fee != null && c.default_fee !== '') row.default_fee = Number(c.default_fee);
+    if (c.default_bill_to) row.default_bill_to = c.default_bill_to;
+    const inserted = await dbInsert('clients', row);
     const id = inserted?.[0]?.id;
-    if (!id) throw new Error('The customer was not saved');
+    if (!id) throw new Error('The contact was not saved');
     return { id, existing: false, client: inserted[0] };
   }
 
@@ -131,17 +148,20 @@
       <div class="ent-grid">
         <div class="form-group"><label>Type</label>
           <select class="form-control" id="${p}type">
-            <option value="individual">Individual</option>
+            <option value="individual">Individual (e.g. a homeowner)</option>
             <option value="company">Company</option>
-            <option value="agent">Introducer / Agent</option>
+            <option value="agent">Introducer firm (sends you work)</option>
             <option value="developer">Developer</option>
           </select></div>
-        <div class="form-group"><label>Full name <span class="req">*</span></label>
-          <input class="form-control" id="${p}name" autocomplete="off"></div>
+        <div class="form-group"></div>
         <div class="form-group"><label>Company</label>
-          <input class="form-control" id="${p}company" autocomplete="off"></div>
-        <div class="form-group"><label>Email</label>
-          <input class="form-control" id="${p}email" type="email" autocomplete="off"></div>
+          <input class="form-control" id="${p}company" autocomplete="off" placeholder="e.g. Trinity Claims"></div>
+        <div class="form-group"><label>Contact name</label>
+          <input class="form-control" id="${p}name" autocomplete="off" placeholder="e.g. Sarah Jones"></div>
+        <div class="full ent-hint" style="margin:-8px 0 12px;">A person's name, a company name, or both. At least one is needed.</div>
+        <div class="form-group"><label>Email(s)</label>
+          <input class="form-control" id="${p}email" autocomplete="off" placeholder="Separate several with commas">
+          </div>
         <div class="form-group"><label>Phone</label>
           <input class="form-control" id="${p}phone" type="tel" autocomplete="off"></div>
         <div class="form-group"><label>Postcode</label>
@@ -153,6 +173,15 @@
         <div class="form-group"><label>County</label>
           <input class="form-control" id="${p}county" autocomplete="off"></div>
       </div>`;
+  }
+
+  // Cursor goes to Company for firms, to Contact name for people.
+  function wireTypeFocus(p) {
+    const t = $(p + 'type');
+    if (!t) return;
+    const go = () => $(['company', 'agent', 'developer'].includes(t.value) ? p + 'company' : p + 'name')?.focus();
+    t.onchange = go;
+    go();
   }
 
   function readCustomer(p) {
@@ -170,22 +199,25 @@
   }
 
   function checkCustomer(c) {
-    if (!c.full_name && !c.company_name) return 'Enter a name or a company';
-    if (c.email && !validEmail(c.email)) return 'That email address does not look right';
+    if (!c.full_name && !c.company_name) return 'Enter a contact name or a company';
+    const bad = badEmail(c.email);
+    if (bad) return `"${bad}" does not look like an email address`;
     return null;
   }
 
   window.openNewCustomerModal = function (opts = {}) {
-    openShell('New customer', 'Add a customer. They can be given jobs straight away, from the Jobs page or their own page.', `
+    openShell('New customer', 'Add a person or a firm. They can then be picked as an introducer, the person who asked, or who to bill.', `
       ${customerFields('nc_')}
       <div id="nc_msg"></div>
       <div class="ent-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('entModal').remove()">Cancel</button>
         <button class="btn btn-primary" id="nc_save">Add customer</button>
       </div>`);
-    $('nc_name').focus();
+    if (opts.type) $('nc_type').value = opts.type;
+    wireTypeFocus('nc_');
     $('nc_save').onclick = async () => {
       const c = readCustomer('nc_');
+      if (opts.parentId) c.parent_client_id = opts.parentId;
       const problem = checkCustomer(c);
       if (problem) { showToast(problem, 'error'); return; }
       const btn = $('nc_save');
@@ -193,7 +225,7 @@
       try {
         const r = await createClientRecord(c);
         if (r.existing) {
-          $('nc_msg').innerHTML = `<div class="ent-warn">A customer with that email is already on the system:
+          $('nc_msg').innerHTML = `<div class="ent-warn">Someone with that email is already on the system:
             <b>${escapeHtml(clientName(r.client))}</b>. <a href="client-detail.html?id=${r.id}">Open them</a> instead of adding a second one.</div>`;
           btn.disabled = false;
           return;
@@ -206,6 +238,105 @@
         showToast('Error: ' + e.message, 'error');
         btn.disabled = false;
       }
+    };
+  };
+
+  // ----------------------------------------------------------
+  // Map pin picker (Leaflet, loaded on demand)
+  // ----------------------------------------------------------
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (window._leafletLoading) return window._leafletLoading;
+    window._leafletLoading = new Promise((resolve, reject) => {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
+      const js = document.createElement('script');
+      js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      js.onload = resolve; js.onerror = reject;
+      document.head.appendChild(js);
+    });
+    return window._leafletLoading;
+  }
+
+  // "51.5, -0.12", a Google Maps link (@51.5,-0.12 / q=51.5,-0.12 / !3d51.5!4d-0.12)
+  function parseLatLng(text) {
+    const t = String(text || '');
+    let m = /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(t)
+      || /@(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(t)
+      || /[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(t)
+      || /^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/.exec(t);
+    if (!m) return null;
+    const lat = Number(m[1]), lng = Number(m[2]);
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat, lng };
+  }
+
+  // Draws a map with a draggable pin in `el`. Returns { set(lat,lng,zoom), get() }.
+  // onChange({lat,lng}) fires whenever the pin moves.
+  async function mountPinMap(el, start, onChange) {
+    await loadLeaflet();
+    const has = start && start.lat != null && start.lng != null;
+    const map = L.map(el, { scrollWheelZoom: false }).setView(has ? [start.lat, start.lng] : [51.2, -1.3], has ? 16 : 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    let marker = null, cur = has ? { lat: Number(start.lat), lng: Number(start.lng) } : null;
+    function place(lat, lng) {
+      cur = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+      if (!marker) {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', () => { const p = marker.getLatLng(); place(p.lat, p.lng); });
+      } else marker.setLatLng([lat, lng]);
+      onChange && onChange(cur);
+    }
+    if (has) place(cur.lat, cur.lng);
+    map.on('click', e => place(e.latlng.lat, e.latlng.lng));
+    setTimeout(() => map.invalidateSize(), 150);
+    return {
+      set(lat, lng, zoom) { map.setView([lat, lng], zoom || 16); place(lat, lng); },
+      get() { return cur; },
+    };
+  }
+
+  function pinBlock(p) {
+    return `
+      <div class="form-group full">
+        <label>Site pin <span class="ent-hint" style="display:inline;font-weight:400;">drag the pin, or click the map, to the exact spot</span></label>
+        <div id="${p}map" style="height:230px;border-radius:10px;border:1px solid var(--border);"></div>
+        <input class="form-control" id="${p}paste" autocomplete="off" style="margin-top:8px;"
+          placeholder="Or paste a Google Maps link, or coordinates like 50.7412, -1.6301">
+        <div class="ent-hint" id="${p}pinmsg"></div>
+      </div>`;
+  }
+
+  async function wirePin(p, start) {
+    const msg = $(p + 'pinmsg');
+    const show = c => { if (msg) msg.textContent = c ? `Pin at ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}` : 'No pin yet: enter the postcode or click the map.'; };
+    const pin = await mountPinMap($(p + 'map'), start, show);
+    show(pin.get());
+    $(p + 'paste').oninput = e => {
+      const c = parseLatLng(e.target.value);
+      if (c) pin.set(c.lat, c.lng, 17);
+    };
+    return pin;
+  }
+
+  // Map pin editor for an existing job (job page "Move pin").
+  window.openPinEditor = async function ({ lat, lng, postcode, onSave }) {
+    openShell('Site pin', 'Drag the pin, or click the map, to the exact spot. You can also paste a Google Maps link.', `
+      ${pinBlock('pe_')}
+      <div class="ent-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('entModal').remove()">Cancel</button>
+        <button class="btn btn-primary" id="pe_save">Save pin</button>
+      </div>`);
+    let start = (lat != null && lng != null) ? { lat, lng } : null;
+    if (!start && postcode) start = await lookupPostcode(postcode);
+    const pin = await wirePin('pe_', start);
+    $('pe_save').onclick = async () => {
+      const c = pin.get();
+      if (!c) { showToast('Place the pin first', 'error'); return; }
+      $('pe_save').disabled = true;
+      try { await onSave(c); closeModal(); }
+      catch (e) { showToast('Error: ' + e.message, 'error'); $('pe_save').disabled = false; }
     };
   };
 
@@ -228,7 +359,8 @@
     ['amendment', 'Amendment'],
     ['other', 'Other'],
   ];
-  const SURCHARGE = { '3days': 200, '5days': 150, '10days': 75, '15days': 0 };
+
+  const LEAD_SOURCES = ['Google', 'Instagram', 'AA website', 'Referral', 'Repeat customer', 'Other'];
 
   // Postcode to coordinates, from the free postcodes.io service. If it fails the
   // job is still saved; job-detail looks the coordinates up when the job is opened.
@@ -242,6 +374,7 @@
     } catch (e) { /* fall through */ }
     return null;
   }
+  window.lookupPostcode = lookupPostcode;
 
   // Next TH number: one above the highest TH reference already used, so a typed
   // job never collides with the imported ones.
@@ -252,201 +385,352 @@
   }
 
   window.openNewJobModal = async function (opts = {}) {
-    const o = openShell('New job', 'Add a job to an existing customer, or add the customer and the job together.', `
-      <div class="loading" style="padding:30px"><div class="spinner"></div><br>Loading...</div>`);
+    const o = openShell('New job', '', `<div class="loading" style="padding:30px"><div class="spinner"></div><br>Loading...</div>`);
 
-    let clients = [], introducers = [], refs = [];
+    let contacts = [], refs = [], tiers = [];
     try {
-      [clients, introducers, refs] = await Promise.all([
-        dbGet('clients', { select: 'id,client_type,full_name,company_name,email,phone,address_postcode', order: 'created_at.desc', limit: 2000 }),
+      [contacts, refs, tiers] = await Promise.all([
         loadIntroducers(),
         dbGet('jobs', { select: 'reference', order: 'created_at.desc', limit: 2000 }),
+        loadSurchargeTiers(),
       ]);
     } catch (e) {
       closeModal();
       showToast('Could not load: ' + e.message, 'error');
       return;
     }
-    clients = (clients || []).filter(c => c.client_type !== 'agent');
     const usedRefs = new Set((refs || []).map(j => (j.reference || '').toLowerCase()).filter(Boolean));
-    let mode = 'existing';
-    let chosen = clients.find(c => c.id === opts.clientId) || null;
+
+    // State
+    let source = 'introducer';           // 'introducer' | 'direct'
+    let firm = null;                     // chosen introducer contact
+    let people = [];                     // people under the firm
+    let directClient = contacts.find(c => c.id === opts.clientId) || null;   // existing customer for a direct job
+    if (opts.clientId && directClient) {
+      if (directClient.client_type === 'agent') { firm = directClient; directClient = null; }
+      else source = 'direct';
+    }
+    let billTo = 'introducer';
+    let pin = null;
 
     const typeOpts = JOB_TYPES.map(([k, l]) => `<option value="${k}">${escapeHtml(l)}</option>`).join('');
-    const introOpts = introducers.map(i => `<option value="${i.id}">${escapeHtml(introducerLabel(i))}</option>`).join('');
+    const tierOpts = tiers.map(t => `<option value="${t.tier}" ${t.tier === '10days' ? 'selected' : ''}>${escapeHtml(t.label)}${t.surcharge ? ` (+£${t.surcharge})` : ''}</option>`).join('');
 
     o.querySelector('.ent-modal').innerHTML = `
       <div class="ent-title">New job</div>
-      <div class="ent-sub">Add a job to an existing customer, or add the customer and the job together.</div>
+      <div class="ent-sub">Fill it in the order the work comes in. Only the starred boxes are needed.</div>
 
-      <div class="ent-section">Customer</div>
-      <div class="ent-seg" role="group" aria-label="Customer">
-        <button type="button" id="nj_modeExisting">Existing customer</button>
-        <button type="button" id="nj_modeNew">New customer</button>
+      <div class="ent-section">1. Who sent the work?</div>
+      <div class="ent-seg" role="group" aria-label="Who sent the work">
+        <button type="button" id="nj_srcIntro">An introducer (Heritage, Plus Rooms, Trinity, an architect...)</button>
+        <button type="button" id="nj_srcDirect">The client directly</button>
       </div>
-      <div id="nj_existing"></div>
-      <div id="nj_new" hidden>${customerFields('nj_c_')}<div id="nj_msg"></div></div>
+      <div id="nj_introBox"></div>
+      <div id="nj_directBox" hidden>
+        <div class="ent-grid">
+          <div class="form-group"><label>How did they find us?</label>
+            <select class="form-control" id="nj_source"><option value="">Not known</option>${LEAD_SOURCES.map(s => `<option>${s}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Already a customer?</label>
+            <div id="nj_directPick"></div></div>
+        </div>
+      </div>
 
-      <div class="ent-section">Job</div>
+      <div class="ent-section">2. Site and end client</div>
       <div class="ent-grid">
-        <div class="form-group"><label>Reference</label>
-          <input class="form-control" id="nj_ref" value="${escapeHtml(nextReference([...usedRefs].map(r => r.toUpperCase())))}" autocomplete="off">
-          <div class="ent-hint">Next free TH number. Change it to use your own.</div></div>
-        <div class="form-group"><label>Survey type <span class="req">*</span></label>
-          <select class="form-control" id="nj_type"><option value="">Select...</option>${typeOpts}</select></div>
         <div class="form-group"><label>Site postcode <span class="req">*</span></label>
           <input class="form-control" id="nj_pc" style="text-transform:uppercase" autocomplete="off"></div>
         <div class="form-group"><label>Site address</label>
-          <input class="form-control" id="nj_street" autocomplete="off" placeholder="Street and number"></div>
+          <input class="form-control" id="nj_street" autocomplete="off" placeholder="House number and street"></div>
+        ${pinBlock('nj_')}
+        <div class="form-group"><label>End client name</label>
+          <input class="form-control" id="nj_endname" autocomplete="off" placeholder="Homeowner, policyholder..."></div>
+        <div class="form-group"><label>End client phone(s)</label>
+          <input class="form-control" id="nj_endphone" autocomplete="off" placeholder="Separate several with commas"></div>
+        <div class="form-group full"><label>End client email(s)</label>
+          <input class="form-control" id="nj_endemail" autocomplete="off" placeholder="Separate several with commas"></div>
+      </div>
+
+      <div class="ent-section">3. The job</div>
+      <div class="ent-grid">
+        <div class="form-group"><label>Survey type <span class="req">*</span></label>
+          <select class="form-control" id="nj_type"><option value="">Select...</option>${typeOpts}</select></div>
+        <div class="form-group"><label>Reference</label>
+          <input class="form-control" id="nj_ref" value="${escapeHtml(nextReference([...usedRefs].map(r => r.toUpperCase())))}" autocomplete="off">
+          <div class="ent-hint">Next free TH number. Change it to use your own.</div></div>
         <div class="form-group"><label>Deadline <span class="req">*</span></label>
-          <select class="form-control" id="nj_deadline">
-            <option value="10days">10 working days (Standard)</option>
-            <option value="3days">3 working days (Urgent)</option>
-            <option value="5days">5 working days (Elevated)</option>
-            <option value="15days">15 working days or more (Low)</option>
-          </select></div>
+          <select class="form-control" id="nj_deadline">${tierOpts}</select></div>
         <div class="form-group"><label>Instruction date</label>
-          <input class="form-control" id="nj_instructed" type="date" value="${new Date().toLocaleDateString('en-CA')}">
-          <div class="ent-hint">Defaults to today. Change it for a job you were instructed on earlier.</div></div>
+          <input class="form-control" id="nj_instructed" type="date" value="${new Date().toLocaleDateString('en-CA')}"></div>
         <div class="form-group"><label>Survey date</label>
           <input class="form-control" id="nj_date" type="date"></div>
-        <div class="form-group"><label>Agreed fee (£)</label>
-          <input class="form-control" id="nj_amount" type="number" min="0" step="0.01" inputmode="decimal"></div>
-        <div class="form-group"><label>Introducer</label>
-          <select class="form-control" id="nj_intro"><option value="">Direct (no introducer)</option>${introOpts}<option value="__new">+ Add a new introducer...</option></select></div>
-        <div class="form-group full" id="nj_newintro" hidden>
-          <label>New introducer</label>
-          <div class="ent-grid">
-            <div class="form-group"><label>Name <span class="req">*</span></label><input class="form-control" id="nj_i_name" autocomplete="off"></div>
-            <div class="form-group"><label>Company</label><input class="form-control" id="nj_i_company" autocomplete="off"></div>
-            <div class="form-group"><label>Email</label><input class="form-control" id="nj_i_email" type="email" autocomplete="off"></div>
-            <div class="form-group"><label>Phone</label><input class="form-control" id="nj_i_phone" type="tel" autocomplete="off"></div>
-          </div>
-        </div>
-        <div class="form-group"><label>Site contact / end client</label>
-          <input class="form-control" id="nj_endname" autocomplete="off" placeholder="If different from the customer"></div>
-        <div class="form-group"><label>Site contact email</label>
-          <input class="form-control" id="nj_endemail" type="email" autocomplete="off"></div>
         <div class="form-group"><label>Start as</label>
           <select class="form-control" id="nj_dispatch">
             <option value="red">On the map (Unallocated)</option>
             <option value="plans">On the map, awaiting plans</option>
           </select></div>
+      </div>
+
+      <div class="ent-section">4. Price and who to bill</div>
+      <div class="ent-grid">
+        <div class="form-group"><label>Fee (£, excl VAT)</label>
+          <input class="form-control" id="nj_base" type="number" min="0" step="0.01" inputmode="decimal">
+          <div class="ent-hint" id="nj_feehint"></div></div>
+        <div class="form-group"><label>Urgency fee (£)</label>
+          <input class="form-control" id="nj_urg" type="number" min="0" step="0.01" inputmode="decimal">
+          <div class="ent-hint">From your Settings for the deadline chosen. You can change it.</div></div>
+        <div class="form-group full"><div class="ent-chosen" style="background:#eef6f1;"><span>Total agreed fee</span><b id="nj_total">£0</b></div></div>
+        <div class="form-group full"><label>Bill to</label>
+          <div class="ent-seg" role="group" aria-label="Bill to" style="margin-bottom:0;">
+            <button type="button" id="nj_billIntro">The introducer</button>
+            <button type="button" id="nj_billEnd">The end client</button>
+          </div></div>
         <div class="form-group full"><label>Notes</label>
-          <textarea class="form-control" id="nj_notes" rows="3" placeholder="Internal notes"></textarea></div>
+          <textarea class="form-control" id="nj_notes" rows="3" placeholder="Internal notes (access, parking, who to ring...)"></textarea></div>
       </div>
       <div class="ent-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('entModal').remove()">Cancel</button>
         <button class="btn btn-primary" id="nj_save">Create job</button>
       </div>`;
 
-    function renderExisting() {
-      const box = $('nj_existing');
-      if (chosen) {
-        box.innerHTML = `<div class="ent-chosen"><span><b>${escapeHtml(clientName(chosen))}</b>
-          <span class="muted"> ${escapeHtml([chosen.email, chosen.address_postcode].filter(Boolean).join(' · '))}</span></span>
-          <button type="button" id="nj_change">Change</button></div>`;
-        $('nj_change').onclick = () => { chosen = null; renderExisting(); };
-        return;
-      }
-      box.innerHTML = `<input class="form-control" id="nj_search" placeholder="Search by name, company, email or phone" autocomplete="off">
-        <div class="ent-results" id="nj_results" hidden></div>`;
-      const inp = $('nj_search'), res = $('nj_results');
+    // ---- price ----
+    const tierBy = Object.fromEntries(tiers.map(t => [t.tier, t]));
+    function setUrgencyFromDeadline() { $('nj_urg').value = tierBy[val('nj_deadline')]?.surcharge ?? 0; total(); }
+    function total() {
+      const t = (Number(val('nj_base')) || 0) + (Number(val('nj_urg')) || 0);
+      $('nj_total').textContent = '£' + t.toLocaleString('en-GB', { maximumFractionDigits: 2 });
+    }
+    $('nj_deadline').onchange = setUrgencyFromDeadline;
+    $('nj_base').oninput = total;
+    $('nj_urg').oninput = total;
+    setUrgencyFromDeadline();
+
+    // ---- bill to ----
+    function setBill(b) {
+      billTo = b;
+      $('nj_billIntro').classList.toggle('on', b === 'introducer');
+      $('nj_billEnd').classList.toggle('on', b === 'end_client');
+    }
+    $('nj_billIntro').onclick = () => { if (source === 'direct') { showToast('A direct job has no introducer to bill', 'error'); return; } setBill('introducer'); };
+    $('nj_billEnd').onclick = () => setBill('end_client');
+
+    // ---- introducer picker ----
+    function pickerHtml(id, placeholder) {
+      return `<input class="form-control" id="${id}" placeholder="${placeholder}" autocomplete="off"><div class="ent-results" id="${id}_r" hidden></div>`;
+    }
+    function wirePicker(id, list, onPick, onAdd, addLabel) {
+      const inp = $(id), res = $(id + '_r');
       inp.oninput = () => {
         const q = inp.value.trim().toLowerCase();
         if (q.length < 2) { res.hidden = true; return; }
-        const hits = clients.filter(c => [c.full_name, c.company_name, c.email, c.phone, c.address_postcode]
+        const hits = list.filter(c => [c.full_name, c.company_name, c.email, c.phone]
           .some(v => (v || '').toLowerCase().includes(q))).slice(0, 8);
-        res.innerHTML = hits.length
-          ? hits.map(c => `<div data-id="${c.id}">${escapeHtml(clientName(c))}<small>${escapeHtml([c.email, c.phone, c.address_postcode].filter(Boolean).join(' · '))}</small></div>`).join('')
-          : `<div style="cursor:default">No match. Use "New customer" above to add them.</div>`;
+        res.innerHTML = hits.map(c => `<div data-id="${c.id}">${escapeHtml(introducerLabel(c))}${c.client_type === 'agent' ? ' <small style="display:inline">· introducer</small>' : ''}<small>${escapeHtml([c.email, c.phone].filter(Boolean).join(' · '))}</small></div>`).join('')
+          + `<div data-add="1" style="color:var(--green-dark);font-weight:600;">+ ${addLabel} "${escapeHtml(inp.value.trim())}"</div>`;
         res.hidden = false;
-        res.querySelectorAll('[data-id]').forEach(d => {
-          d.onclick = () => { chosen = clients.find(c => c.id === d.dataset.id); renderExisting(); };
-        });
+        res.querySelectorAll('[data-id]').forEach(d => { d.onclick = () => onPick(list.find(c => c.id === d.dataset.id)); });
+        res.querySelector('[data-add]').onclick = () => onAdd(inp.value.trim());
       };
-      if (!opts.clientId) inp.focus();
     }
 
-    function setMode(m) {
-      mode = m;
-      $('nj_modeExisting').classList.toggle('on', m === 'existing');
-      $('nj_modeNew').classList.toggle('on', m === 'new');
-      $('nj_existing').hidden = m !== 'existing';
-      $('nj_new').hidden = m !== 'new';
-      if (m === 'new') $('nj_c_name').focus();
+    async function loadPeople() {
+      people = [];
+      if (!firm) return;
+      try { people = await dbGet('clients', { select: 'id,full_name,email,phone', parent_client_id: `eq.${firm.id}`, is_archived: 'not.is.true', order: 'full_name.asc' }) || []; }
+      catch (e) { people = []; }
     }
-    $('nj_intro').onchange = () => { $('nj_newintro').hidden = val('nj_intro') !== '__new'; };
-    $('nj_modeExisting').onclick = () => setMode('existing');
-    $('nj_modeNew').onclick = () => setMode('new');
-    renderExisting();
-    setMode('existing');
 
+    async function renderIntro() {
+      const box = $('nj_introBox');
+      if (firm) {
+        await loadPeople();
+        box.innerHTML = `
+          <div class="ent-chosen"><span><b>${escapeHtml(introducerLabel(firm))}</b>
+            ${firm.default_fee ? `<span class="muted"> · usual fee £${Number(firm.default_fee).toLocaleString()}</span>` : ''}</span>
+            <button type="button" id="nj_firmChange">Change</button></div>
+          <div class="ent-grid" style="margin-top:12px;">
+            <div class="form-group"><label>Who asked?</label>
+              <select class="form-control" id="nj_person">
+                <option value="">Not recorded</option>
+                ${people.map(p => `<option value="${p.id}">${escapeHtml(p.full_name || p.email)}</option>`).join('')}
+                <option value="__new">+ Add a person at ${escapeHtml(firm.company_name || firm.full_name || 'this firm')}...</option>
+              </select></div>
+            <div></div>
+            <div class="full" id="nj_personNew" hidden>
+              <div class="ent-grid">
+                <div class="form-group"><label>Name</label><input class="form-control" id="nj_p_name" autocomplete="off"></div>
+                <div class="form-group"><label>Email</label><input class="form-control" id="nj_p_email" autocomplete="off"></div>
+                <div class="form-group"><label>Phone</label><input class="form-control" id="nj_p_phone" type="tel" autocomplete="off"></div>
+              </div></div>
+          </div>`;
+        $('nj_firmChange').onclick = () => { firm = null; renderIntro(); };
+        $('nj_person').onchange = () => { $('nj_personNew').hidden = val('nj_person') !== '__new'; };
+        // The firm's usual fee and billing fill in, if set.
+        if (firm.default_fee != null && !val('nj_base')) { $('nj_base').value = firm.default_fee; total(); }
+        $('nj_feehint').textContent = firm.default_fee != null ? `${introducerLabel(firm)}'s usual fee.` : '';
+        setBill(firm.default_bill_to === 'end_client' ? 'end_client' : 'introducer');
+        return;
+      }
+      box.innerHTML = pickerHtml('nj_firmQ', 'Type the firm, e.g. Heritage Trees, Plus Rooms, Trinity Claims') +
+        `<div id="nj_newFirm" hidden></div>`;
+      wirePicker('nj_firmQ', contacts, c => { firm = c; renderIntro(); }, name => showNewFirm(name), 'Add new introducer');
+      $('nj_feehint').textContent = '';
+    }
+
+    function showNewFirm(name) {
+      $('nj_firmQ_r').hidden = true;
+      const b = $('nj_newFirm');
+      b.hidden = false;
+      b.innerHTML = `
+        <div class="ent-warn" style="background:#f7faf8;border-color:var(--border);margin-top:10px;">
+          <div class="ent-grid">
+            <div class="form-group"><label>Firm / company</label><input class="form-control" id="nj_f_company" value="${escapeHtml(name)}"></div>
+            <div class="form-group"><label>Main email(s)</label><input class="form-control" id="nj_f_email" autocomplete="off"></div>
+            <div class="form-group"><label>Phone</label><input class="form-control" id="nj_f_phone" type="tel" autocomplete="off"></div>
+            <div class="form-group"><label>Usual fee (£, if fixed)</label><input class="form-control" id="nj_f_fee" type="number" min="0" step="0.01"></div>
+            <div class="form-group full"><label>Usually bill</label>
+              <select class="form-control" id="nj_f_bill"><option value="introducer">The firm</option><option value="end_client">Their client</option></select></div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="nj_f_add">Add introducer</button>
+        </div>`;
+      $('nj_f_add').onclick = async () => {
+        const c = { type: 'agent', company_name: val('nj_f_company'), email: val('nj_f_email'), phone: val('nj_f_phone'),
+          default_fee: val('nj_f_fee'), default_bill_to: val('nj_f_bill') };
+        const problem = checkCustomer(c);
+        if (problem) { showToast(problem, 'error'); return; }
+        try {
+          const r = await createClientRecord(c);
+          const fresh = await dbGet('clients', { select: 'id,client_type,full_name,company_name,email,phone,default_fee,default_bill_to', id: `eq.${r.id}` });
+          firm = fresh?.[0] || { id: r.id, company_name: c.company_name };
+          if (!contacts.some(x => x.id === firm.id)) contacts.unshift(firm);
+          if (r.existing) showToast(`${introducerLabel(firm)} was already on the system, so that one is used`);
+          renderIntro();
+        } catch (e) { showToast('Error: ' + e.message, 'error'); }
+      };
+    }
+
+    function renderDirectPick() {
+      const box = $('nj_directPick');
+      if (directClient) {
+        box.innerHTML = `<div class="ent-chosen"><span><b>${escapeHtml(introducerLabel(directClient))}</b></span><button type="button" id="nj_dcChange">Change</button></div>`;
+        $('nj_dcChange').onclick = () => { directClient = null; renderDirectPick(); };
+        if (!val('nj_endname')) $('nj_endname').value = directClient.full_name || directClient.company_name || '';
+        if (!val('nj_endemail')) $('nj_endemail').value = directClient.email || '';
+        if (!val('nj_endphone')) $('nj_endphone').value = directClient.phone || '';
+        return;
+      }
+      box.innerHTML = pickerHtml('nj_dcQ', 'Search, or leave blank for someone new');
+      wirePicker('nj_dcQ', contacts, c => { directClient = c; renderDirectPick(); },
+        name => { $('nj_dcQ_r').hidden = true; $('nj_endname').value = name; $('nj_endname').focus(); }, 'New client');
+    }
+
+    function setSource(s) {
+      source = s;
+      $('nj_srcIntro').classList.toggle('on', s === 'introducer');
+      $('nj_srcDirect').classList.toggle('on', s === 'direct');
+      $('nj_introBox').hidden = s !== 'introducer';
+      $('nj_directBox').hidden = s !== 'direct';
+      if (s === 'direct') { setBill('end_client'); renderDirectPick(); $('nj_feehint').textContent = ''; }
+      else renderIntro();
+    }
+    setBill(billTo);
+    $('nj_srcIntro').onclick = () => setSource('introducer');
+    $('nj_srcDirect').onclick = () => setSource('direct');
+    setSource(source);
+
+    // ---- pin ----
+    pin = await wirePin('nj_', null);
+    let pcTimer = null;
+    $('nj_pc').oninput = () => {
+      clearTimeout(pcTimer);
+      pcTimer = setTimeout(async () => {
+        const pc = val('nj_pc');
+        if (pc.replace(/\s/g, '').length < 5) return;
+        const g = await lookupPostcode(pc);
+        if (g && !$('nj_paste').value) pin.set(g.lat, g.lng, 16);
+      }, 500);
+    };
+
+    // ---- save ----
     $('nj_save').onclick = async () => {
       const btn = $('nj_save');
       const survey_type = val('nj_type'), pc = val('nj_pc'), deadline = val('nj_deadline');
       const reference = val('nj_ref');
-      let c = null;
-      if (mode === 'new') {
-        c = readCustomer('nj_c_');
-        const problem = checkCustomer(c);
-        if (problem) { showToast(problem, 'error'); return; }
-      } else if (!chosen) { showToast('Choose a customer, or switch to New customer', 'error'); return; }
-      if (!survey_type) { showToast('Choose a survey type', 'error'); return; }
+      if (source === 'introducer' && !firm) { showToast('Pick the introducer, or choose "The client directly"', 'error'); return; }
       if (!pc) { showToast('Enter the site postcode', 'error'); return; }
-      if (reference && usedRefs.has(reference.toLowerCase())) {
-        showToast(`${reference} is already used by another job`, 'error'); return;
+      if (!survey_type) { showToast('Choose a survey type', 'error'); return; }
+      if (reference && usedRefs.has(reference.toLowerCase())) { showToast(`${reference} is already used by another job`, 'error'); return; }
+      const bad = badEmail(val('nj_endemail'));
+      if (bad) { showToast(`"${bad}" does not look like an email address`, 'error'); return; }
+      if (source === 'direct' && !directClient && !val('nj_endname') && !val('nj_endemail')) {
+        showToast('Enter the client\'s name or email', 'error'); return;
       }
-      let newIntro = null;
-      if (val('nj_intro') === '__new') {
-        newIntro = { type: 'agent', full_name: val('nj_i_name'), company_name: val('nj_i_company'), email: val('nj_i_email'), phone: val('nj_i_phone') };
-        const ip = checkCustomer(newIntro);
-        if (ip) { showToast('Introducer: ' + ip, 'error'); return; }
+      let newPerson = null;
+      if (source === 'introducer' && val('nj_person') === '__new') {
+        newPerson = { type: 'individual', full_name: val('nj_p_name'), email: val('nj_p_email'), phone: val('nj_p_phone'), parent_client_id: firm.id };
+        const p = checkCustomer(newPerson);
+        if (p) { showToast('Person who asked: ' + p, 'error'); return; }
       }
       btn.disabled = true;
       try {
-        let clientId = chosen?.id, reusedNote = '';
-        if (mode === 'new') {
-          const r = await createClientRecord(c);
-          clientId = r.id;
-          if (r.existing) reusedNote = ` (used the existing customer ${clientName(r.client)})`;
+        let personId = source === 'introducer' ? (val('nj_person') || null) : null;
+        if (newPerson) personId = (await createClientRecord(newPerson)).id;
+        const person = personId ? (people.find(p => p.id === personId) || { full_name: newPerson?.full_name, email: newPerson?.email }) : null;
+
+        // The customer record: the firm, or (direct) the client themselves.
+        let customerId = null, reusedNote = '';
+        if (source === 'introducer') customerId = firm.id;
+        else if (directClient) customerId = directClient.id;
+        else {
+          const r = await createClientRecord({ type: 'individual', full_name: val('nj_endname'), email: val('nj_endemail'), phone: val('nj_endphone') });
+          customerId = r.id;
+          if (r.existing) reusedNote = ` (matched the existing customer ${clientName(r.client)})`;
         }
-        let introducerId = val('nj_intro') || null;
-        if (newIntro) introducerId = (await createClientRecord(newIntro)).id;
+
+        const geoPin = pin.get();
         const geo = await lookupPostcode(pc);
+        const city = geo?.city || null;
         const startAs = val('nj_dispatch') || 'red';
-        const plans_outstanding = startAs === 'plans';
-        const dispatch_state = 'red';
         const urgency_state = urgencyFromTier(deadline);
-        const days = (URGENCY_TIERS[urgency_state] || {}).days;
-        const amount = val('nj_amount');
+        const days = (URGENCY_TIERS[urgency_state] || {}).days || tierBy[deadline]?.days;
+        const base = val('nj_base'), urg = Number(val('nj_urg')) || 0;
+        const billingName = billTo === 'introducer'
+          ? (person?.full_name ? `${person.full_name} (${firm.company_name || firm.full_name || ''})`.replace(' ()', '') : introducerLabel(firm))
+          : (val('nj_endname') || directClient?.full_name || null);
+        const billingEmail = billTo === 'introducer'
+          ? (person?.email || firm.email || null)
+          : (val('nj_endemail') || directClient?.email || null);
         const payload = {
           reference: reference || null,
           survey_type,
           job_type: 'new',
           site_postcode: pc.toUpperCase(),
           site_street: val('nj_street') || null,
-          site_city: geo?.city || null,
-          site_lat: geo?.lat ?? null,
-          site_lng: geo?.lng ?? null,
-          dispatch_state,
+          site_city: city,
+          site_lat: geoPin ? geoPin.lat : (geo?.lat ?? null),
+          site_lng: geoPin ? geoPin.lng : (geo?.lng ?? null),
+          dispatch_state: 'red',
           urgency_state,
           deadline_tier: deadline,
-          plans_outstanding,
+          plans_outstanding: startAs === 'plans',
           // The SLA clock starts as soon as the job is on the map, plans or not (Trevor, 16 Nov).
           sla_deadline: !days ? null : addWorkingDays(new Date(), days),
-          urgency_surcharge: SURCHARGE[deadline] ?? 0,
+          urgency_surcharge: urg,
+          quoted_amount: base === '' ? null : Number(base),
+          agreed_amount: base === '' ? null : Number(base) + urg,
           billing_mode: 'single',
-          arranging_client_id: clientId,
-          introducer_client_id: introducerId,
+          arranging_client_id: customerId,
+          introducer_client_id: source === 'introducer' ? firm.id : null,
+          introducer_contact_id: personId,
+          bill_to: billTo,
+          lead_source: source === 'direct' ? (val('nj_source') || null) : null,
           end_client_name: val('nj_endname') || null,
-          end_client_email: val('nj_endemail') || null,
+          end_client_phone: val('nj_endphone') || null,
+          end_client_email: splitEmails(val('nj_endemail')).join(', ') || null,
+          billing_contact_name: billingName,
+          billing_contact_email: billingEmail,
           survey_date: val('nj_date') || null,
-          agreed_amount: amount === '' ? null : Number(amount),
           internal_notes: val('nj_notes') || null,
         };
-        // Instruction date: stored as the job's created date. Only sent when it
-        // differs from today, so a normal entry keeps the exact creation time.
         const instructed = val('nj_instructed');
         if (instructed && instructed !== new Date().toLocaleDateString('en-CA')) {
           payload.created_at = new Date(instructed + 'T09:00:00').toISOString();
@@ -467,4 +751,26 @@
       }
     };
   };
+
+  // Deadline options + urgency fees from Settings (deadline_surcharges), so the
+  // CRM charges what the public quote form charges. Falls back to the old
+  // fixed amounts if the table can't be read.
+  async function loadSurchargeTiers() {
+    const DAYS = { '1day': 1, '3days': 3, '5days': 5, '7days': 7, '10days': 10, '15days': 15 };
+    try {
+      const rows = await dbGet('deadline_surcharges', { select: 'tier,label,surcharge,is_available', order: 'surcharge.desc' });
+      const list = (rows || []).filter(r => r.is_available !== false && r.tier !== '1day')
+        .map(r => ({ tier: r.tier, label: r.label || getDeadlineLabel(r.tier), surcharge: Number(r.surcharge) || 0, days: DAYS[r.tier] }));
+      if (list.length) return list;
+    } catch (e) { /* fall through */ }
+    return [
+      { tier: '3days', label: 'Within 3 working days', surcharge: 200, days: 3 },
+      { tier: '5days', label: 'Within 5 working days', surcharge: 150, days: 5 },
+      { tier: '10days', label: 'Within 10 working days', surcharge: 75, days: 10 },
+      { tier: '15days', label: 'Within 15 working days or more', surcharge: 0, days: 15 },
+    ];
+  }
+  window.loadSurchargeTiers = loadSurchargeTiers;
+  window.createClientRecord = createClientRecord;
+  window.clientByEmail = clientByEmail;
 })();

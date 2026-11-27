@@ -1023,6 +1023,19 @@
       </div>
 
       <div class="field-group">
+        <label>How did you hear about us?</label>
+        <select id="leadSource">
+          <option value="">Optional</option>
+          <option>Google</option>
+          <option>Instagram</option>
+          <option>AA website</option>
+          <option>Recommended by someone</option>
+          <option>Used us before</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field-group">
         <label class="on-behalf-toggle">
           <input type="checkbox" id="onBehalfOfToggle" autocomplete="off" onchange="toggleOnBehalfOf()">
           <span>If you are enquiring on behalf of your client, would you like to add their email address so they can be sent a copy of the quote?</span>
@@ -1680,6 +1693,7 @@ async function submitNewEnquiry() {
     contact_email: email,
     contact_phone: document.getElementById('newPhone').value.trim(),
     company: document.getElementById('newCompany').value.trim(),
+    ...(document.getElementById('leadSource')?.value ? { lead_source: document.getElementById('leadSource').value } : {}),
     ...(onBehalfOf ? {
       introducer_name: introducerName,
       introducer_email: introducerEmail,

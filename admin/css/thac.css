@@ -1067,3 +1067,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .stats-collapsed .stat-stack { gap: 6px; }
 .stats-collapsed .stat-card.compact { flex-direction: row; align-items: baseline; justify-content: space-between; padding: 6px 12px; }
 .stats-collapsed .stat-card.compact .stat-value { font-size: 15px; }
+
+/* Site address column on job tables: one line, full address on hover */
+.addr-cell { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

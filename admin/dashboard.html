@@ -269,7 +269,7 @@ function slaCountdown(dateStr) {
 async function loadUrgencyDashboard() {
   try {
     const jobs = await dbGet('jobs', {
-      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name,plans_outstanding',
+      'select': 'id,reference,survey_type,job_type,urgency_state,dispatch_state,site_postcode,site_street,site_city,enquiries(site_street,site_city),survey_date,agreed_amount,sla_deadline,surveyor_id,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,introducer_client_id,end_client_name,billing_contact_name,plans_outstanding',
       'is_archived': 'not.eq.true',
       'order': 'created_at.desc',
       'limit': 500
@@ -345,6 +345,7 @@ function renderUrgencyTable() {
       ref:      j => j.reference,
       introducer: j => introducerLabel(introducerById[j.introducer_client_id]),
       type:     j => getSurveyLabel(j.survey_type || j.job_type),
+      address:  j => siteAddress(j),
       postcode: j => j.site_postcode,
       sla:      j => j.sla_deadline,
       value:    j => j.agreed_amount == null ? null : Number(j.agreed_amount),
@@ -363,6 +364,7 @@ function renderUrgencyTable() {
         </td>
         <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
         <td>${j.introducer_client_id ? escapeHtml(introducerLabel(introducerById[j.introducer_client_id])) : '<span class="muted">Direct</span>'}</td>
+        <td class="addr-cell" title="${escapeHtml(siteAddress(j))}">${siteAddress(j) ? escapeHtml(siteAddress(j)) : '<span class="muted">—</span>'}</td>
         <td>${j.site_postcode || '—'}</td>
         <td>${slaCountdown(j.sla_deadline)}</td>
         <td>${j.agreed_amount ? '£' + Number(j.agreed_amount).toLocaleString() : '—'}</td>
@@ -390,6 +392,7 @@ function renderUrgencyTable() {
             ${sortTh('Reference', 'ref', sort)}
             ${sortTh('Survey Type', 'type', sort)}
             ${sortTh('Introducer', 'introducer', sort)}
+            ${sortTh('Site address', 'address', sort)}
             ${sortTh('Postcode', 'postcode', sort)}
             ${sortTh('SLA Deadline', 'sla', sort)}
             ${sortTh('Value', 'value', sort)}

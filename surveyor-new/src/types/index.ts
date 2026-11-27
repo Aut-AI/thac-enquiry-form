@@ -35,6 +35,18 @@ export interface Surveyor {
 }
 
 export interface Job {
+  // CRM-entered jobs keep site/contact here (no enquiry); allocation fields
+  // from the 16 Nov two-stage allocation.
+  site_street?: string | null;
+  site_city?: string | null;
+  end_client_name?: string | null;
+  end_client_phone?: string | null;
+  end_client_email?: string | null;
+  parking_details?: string | null;
+  allocated_surveyor_id?: string | null;
+  allocation_rejected_at?: string | null;
+  allocated_at?: string | null;
+  allocation_timeout_hours?: number | null;
   id: string;
   reference: string | null;
   survey_type: string;

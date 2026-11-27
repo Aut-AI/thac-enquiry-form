@@ -44,7 +44,7 @@ async function init() {
         <div class="topbar-title">Jobs</div>
         <div class="topbar-search">
           <span>${icon('search')}</span>
-          <input type="text" placeholder="Search by ref, postcode, name, introducer..." oninput="handleSearch(this.value)">
+          <input type="text" placeholder="Search by ref, address, postcode, name, introducer..." oninput="handleSearch(this.value)">
         </div>
         <button class="btn btn-primary btn-sm" onclick="openNewJobModal()">${icon('plus', 14)}New job</button>
       </div>
@@ -67,7 +67,7 @@ async function init() {
 async function loadJobs() {
   try {
     const jobsData = await dbGet('jobs', {
-      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,end_client_name,plans_outstanding,allocated_surveyor_id,allocated_at,allocation_timeout_hours,allocation_rejected_at',
+      'select': 'id,reference,job_type,survey_type,urgency_state,dispatch_state,site_postcode,survey_date,agreed_amount,billing_mode,is_archived,created_at,billing_contact_name,billing_contact_email,billing_address,report_addressee_name,report_addressee_address,report_title,site_access_notes,site_boundary_polygon,enquiry_id,surveyor_id,introducer_client_id,extended_info_received,axi_prepared,axi_prepared_at,database_plan,report_drafted,report_finalised,invoice1_date,end_client_name,site_street,site_city,enquiries(site_street,site_city),plans_outstanding,allocated_surveyor_id,allocated_at,allocation_timeout_hours,allocation_rejected_at',
       'order': 'created_at.desc',
       'limit': 1000
     });
@@ -78,7 +78,8 @@ async function loadJobs() {
     ]);
     introducerById = {};
     introducers.forEach(i => { introducerById[i.id] = i; });
-    introducerList = introducers;
+    const usedIntro = new Set((jobsData || []).map(j => j.introducer_client_id).filter(Boolean));
+    introducerList = introducers.filter(i => usedIntro.has(i.id));
     const surveyorNameById = {};
     (surveyors || []).forEach(s => { surveyorNameById[s.id] = s.full_name; });
     surveyorList = (surveyors || []).filter(s => s.status !== 'archived' || allJobsHaveSurveyor(jobsData, s.id));
@@ -138,6 +139,7 @@ function renderTable() {
       (j.reference || '').toLowerCase().includes(q) ||
       (j.site_postcode || '').toLowerCase().includes(q) ||
       jobName(j).toLowerCase().includes(q) ||
+      siteAddress(j).toLowerCase().includes(q) ||
       introducerLabel(introducerById[j.introducer_client_id]).toLowerCase().includes(q)
     );
   }
@@ -157,6 +159,7 @@ function renderTable() {
   filtered = sortRows(filtered, sort, {
     ref:         j => j.reference || j.id,
     name:        j => jobName(j),
+    address:     j => siteAddress(j),
     introducer:  j => introducerLabel(introducerById[j.introducer_client_id]),
     created:     j => j.created_at,
     type:        j => getSurveyLabel(j.survey_type || j.job_type),
@@ -180,6 +183,7 @@ function renderTable() {
     <tr onclick="window.location.href='job-detail.html?id=${j.id}'" style="cursor:pointer">
       <td><div class="ref">${j.reference || j.id.slice(0,8).toUpperCase()}</div></td>
       <td>${jobName(j) ? escapeHtml(jobName(j)) : '<span class="muted">—</span>'}</td>
+      <td class="addr-cell" title="${escapeHtml(siteAddress(j))}">${siteAddress(j) ? escapeHtml(siteAddress(j)) : '<span class="muted">—</span>'}</td>
       <td>${j.introducer_client_id ? escapeHtml(introducerLabel(introducerById[j.introducer_client_id])) : '<span class="muted">Direct</span>'}</td>
       <td>${j.created_at ? formatDate(j.created_at) : '<span class="muted">—</span>'}</td>
       <td>${getSurveyLabel(j.survey_type || j.job_type)}</td>
@@ -187,7 +191,6 @@ function renderTable() {
       <td>${j.survey_date ? formatDate(j.survey_date) : '<span class="muted">TBC</span>'}</td>
       <td>${urgencyColorBadge(j.urgency_state)}</td>
       <td>${dispatchBadge(j.dispatch_state, j)}</td>
-      <td>${infoStatus}</td>
       <td>${surveyorCell}</td>
       <td onclick="event.stopPropagation()">${databaseSelect(j, 'setDatabase')}</td>
       <td class="tick-cell" onclick="event.stopPropagation()">${progressTick(j, 'report_drafted')}</td>
@@ -201,6 +204,7 @@ function renderTable() {
         <tr>
           ${sortTh('Reference', 'ref', sort)}
           ${sortTh('Name', 'name', sort)}
+          ${sortTh('Site address', 'address', sort)}
           ${sortTh('Introducer', 'introducer', sort)}
           ${sortTh('Date Created', 'created', sort)}
           ${sortTh('Survey Type', 'type', sort)}
@@ -208,7 +212,6 @@ function renderTable() {
           ${sortTh('Survey Date', 'surveyDate', sort)}
           ${sortTh('Urgency', 'urgency', sort)}
           ${sortTh('Stage', 'dispatch', sort)}
-          ${sortTh('Info', 'info', sort)}
           ${sortTh('Surveyor', 'surveyor', sort)}
           ${sortTh('Database', 'database', sort)}
           ${sortTh('Report Drafted', 'drafted', sort)}

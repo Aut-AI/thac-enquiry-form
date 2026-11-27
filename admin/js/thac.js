@@ -30,6 +30,7 @@ const ICON_PATHS = {
   xCircle: '<circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>',
   helpCircle: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.4 2.4 0 1 1 3.4 2.2c-.9.4-1.4 1-1.4 2.1"/><circle cx="12" cy="16.8" r="1" fill="currentColor" stroke="none"/>',
   infoCircle: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.4" r="1" fill="currentColor" stroke="none"/>',
+  trash: '<polyline points="4 7 20 7"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 13h9l1-13"/>',
   copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.6 2.1"/>',
   alarm: '<circle cx="12" cy="12.5" r="8"/><path d="M12 8.5v4.5l3 1.8"/><line x1="6.5" y1="4" x2="4.7" y2="2.3"/><line x1="17.5" y1="4" x2="19.3" y2="2.3"/>',
@@ -782,12 +783,47 @@ async function findOrCreateClient({ full_name, email, phone, address }) {
 // Introducers (who sent the work -- Trinity Claims, Plus Rooms, Heritage
 // Trees...) are `clients` rows with client_type 'agent', linked from
 // jobs.introducer_client_id / enquiries.introducer_client_id.
+//
+// Since 27 Nov 2026 any contact can be an introducer (Trevor added Trinity
+// Claims as a Company and it never showed up): this returns every firm-level
+// contact that is not archived, with introducer-type ones first. People who
+// belong to a firm (parent_client_id) are left out; they are picked as "who
+// asked" under their firm instead.
 async function loadIntroducers() {
-  const rows = await dbGet('clients', {
-    'select': 'id,full_name,company_name,email',
-    'client_type': 'eq.agent',
-  });
-  return (rows || []).sort((a, b) => introducerLabel(a).localeCompare(introducerLabel(b)));
+  let rows;
+  try {
+    rows = await dbGet('clients', {
+      'select': 'id,client_type,full_name,company_name,email,phone,default_fee,default_bill_to,parent_client_id,is_archived',
+      'is_archived': 'not.is.true',
+      'parent_client_id': 'is.null',
+      'limit': '5000',
+    });
+  } catch (e) {
+    // Before the 20261127001 migration: old behaviour.
+    rows = await dbGet('clients', { 'select': 'id,client_type,full_name,company_name,email', 'client_type': 'eq.agent' });
+  }
+  const rank = c => c.client_type === 'agent' ? 0 : 1;
+  return (rows || []).sort((a, b) => rank(a) - rank(b) || introducerLabel(a).localeCompare(introducerLabel(b)));
+}
+
+// Site street + town for a jobs table row. Website jobs keep the address on
+// the enquiry (select enquiries(site_street,site_city) alongside the job).
+function siteAddress(j) {
+  const e = j.enquiries || {};
+  return [j.site_street || e.site_street, j.site_city || e.site_city].filter(Boolean).join(', ');
+}
+
+// Splits "a@x.com, b@y.com; c@z.com" into a clean list.
+function splitEmails(v) {
+  return String(v || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+}
+// null if every address looks right, otherwise the first bad one.
+function badEmail(v) {
+  return splitEmails(v).find(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) || null;
+}
+// Several addresses as mailto links.
+function mailtoList(v) {
+  return splitEmails(v).map(e => `<a href="mailto:${escapeHtml(e)}">${escapeHtml(e)}</a>`).join('<br>');
 }
 
 function escapeHtml(val) {

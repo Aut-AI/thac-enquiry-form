@@ -405,44 +405,66 @@ export default function JobDetailScreen() {
         </View>
       ) : null}
 
-      {/* Client & Site Details */}
-      {isMine && enquiry && (enquiry.site_street || enquiry.site_city || enquiry.access_details || enquiry.parking_details || enquiry.contact_name || enquiry.report_title) ? (
-        <View style={s.card}>
-          <Text style={s.sectionTitle}>Client & Site Details</Text>
-          {(enquiry.site_street || enquiry.site_city) && (
-            <View style={{marginBottom: 10}}>
-              <Text style={s.label}>Site Address</Text>
-              {enquiry.site_street && <Text style={s.body}>{enquiry.site_street}</Text>}
-              {enquiry.site_city && <Text style={s.body}>{enquiry.site_city}</Text>}
-            </View>
-          )}
-          {enquiry.contact_name && (
-            <View style={{marginBottom: 10}}>
-              <Text style={s.label}>Contact</Text>
-              <Text style={s.body}>{enquiry.contact_name}</Text>
-              {enquiry.contact_phone && <Text style={s.body}>{enquiry.contact_phone}</Text>}
-            </View>
-          )}
-          {enquiry.report_title && (
-            <View style={{marginBottom: 10}}>
-              <Text style={s.label}>Report Title</Text>
-              <Text style={s.body}>{enquiry.report_title}</Text>
-            </View>
-          )}
-          {enquiry.access_details && (
-            <View style={{marginBottom: 10}}>
-              <Text style={s.label}>Access Details</Text>
-              <Text style={s.body}>{enquiry.access_details}</Text>
-            </View>
-          )}
-          {enquiry.parking_details && (
-            <View style={{marginBottom: 10}}>
-              <Text style={s.label}>Parking</Text>
-              <Text style={s.body}>{enquiry.parking_details}</Text>
-            </View>
-          )}
-        </View>
-      ) : null}
+      {/* Client & Site Details. Website jobs carry these on the enquiry; jobs
+          Trevor types into the CRM (New job) carry them on the job itself, so
+          fall back to the job's fields (Trevor, 27 Nov 2026: surveyors saw no
+          contact details on CRM jobs). */}
+      {isMine && (() => {
+        const street = enquiry?.site_street || job.site_street;
+        const city = enquiry?.site_city || job.site_city;
+        const contactName = enquiry?.contact_name || job.end_client_name;
+        const phones = [enquiry?.contact_phone, job.end_client_phone]
+          .filter(Boolean).join(', ').split(/[,;]+/).map((p: string) => p.trim()).filter(Boolean);
+        const uniquePhones = [...new Set(phones)];
+        const emails = String(job.end_client_email || '').split(/[,;\s]+/).filter(Boolean);
+        const access = enquiry?.access_details;
+        const parking = enquiry?.parking_details || job.parking_details;
+        const reportTitle = enquiry?.report_title;
+        if (!street && !city && !contactName && !uniquePhones.length && !emails.length && !access && !parking && !reportTitle) return null;
+        return (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Client & Site Details</Text>
+            {(street || city) && (
+              <View style={{marginBottom: 10}}>
+                <Text style={s.label}>Site Address</Text>
+                {street && <Text style={s.body}>{street}</Text>}
+                {city && <Text style={s.body}>{city}</Text>}
+                {job.site_postcode && <Text style={s.body}>{job.site_postcode}</Text>}
+              </View>
+            )}
+            {(contactName || uniquePhones.length > 0 || emails.length > 0) && (
+              <View style={{marginBottom: 10}}>
+                <Text style={s.label}>Site Contact</Text>
+                {contactName && <Text style={s.body}>{contactName}</Text>}
+                {uniquePhones.map((p: string) => (
+                  <Text key={p} style={[s.body, {color: '#1a3c2e', textDecorationLine: 'underline'}]} onPress={() => Linking.openURL(`tel:${p.replace(/\s/g, '')}`)}>{p}</Text>
+                ))}
+                {emails.map((e: string) => (
+                  <Text key={e} style={[s.body, {color: '#1a3c2e', textDecorationLine: 'underline'}]} onPress={() => Linking.openURL(`mailto:${e}`)}>{e}</Text>
+                ))}
+              </View>
+            )}
+            {reportTitle && (
+              <View style={{marginBottom: 10}}>
+                <Text style={s.label}>Report Title</Text>
+                <Text style={s.body}>{reportTitle}</Text>
+              </View>
+            )}
+            {access && (
+              <View style={{marginBottom: 10}}>
+                <Text style={s.label}>Access Details</Text>
+                <Text style={s.body}>{access}</Text>
+              </View>
+            )}
+            {parking && (
+              <View style={{marginBottom: 10}}>
+                <Text style={s.label}>Parking</Text>
+                <Text style={s.body}>{parking}</Text>
+              </View>
+            )}
+          </View>
+        );
+      })()}
 
       {/* Parking Location Map */}
       {isMine && (job.parking_lat || enquiry?.parking_lat) ? (

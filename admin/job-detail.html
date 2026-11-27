@@ -270,6 +270,7 @@
 
 <script src="js/supabase.js"></script>
 <script src="js/thac.js"></script>
+<script src="js/entry.js"></script>
 <script>
 requireAuth();
 
@@ -278,6 +279,7 @@ const jobId = params.get('id');
 let job = null;
 let enquiry = null;
 let introducers = [];
+let askerCache = null;   // the person at the introducer who asked (clients row)
 let addingIntroducer = false;
 let stage2Job = null; // child job if this is a Stage 1 two-stage job
 let paidTarget = 1;
@@ -314,6 +316,10 @@ async function loadJob() {
     job = data[0];
     document.getElementById('pageTitle').textContent = job.reference || 'Job Detail';
     introducers = await loadIntroducers();
+    if (job.introducer_contact_id) {
+      try { askerCache = (await dbGet('clients', { select: 'id,full_name,company_name,email,phone', id: `eq.${job.introducer_contact_id}` }))?.[0] || null; }
+      catch (e) { askerCache = null; }
+    }
 
     // Names for the summary strip (the customer from the New job form, and the surveyor)
     try {
@@ -580,6 +586,9 @@ function renderContactDetails() {
   const phone = enquiry?.contact_phone;
   const endName = job?.end_client_name;
   const endEmail = job?.end_client_email;
+  const endPhone = job?.end_client_phone;
+  const asker = job?.introducer_contact_id ? (introducers.find(i => i.id === job.introducer_contact_id) || askerCache) : null;
+  const billTo = job?.bill_to === 'end_client' ? 'The end client' : job?.bill_to === 'introducer' ? 'The introducer' : '';
 
   const invoiceName = job?.billing_contact_name;
   const invoiceEmail = job?.billing_contact_email;
@@ -590,7 +599,7 @@ function renderContactDetails() {
   const introducerName    = enquiry?.introducer_name;
   const introducerEmail   = enquiry?.introducer_email;
 
-  if (!name && !email && !phone && !endName && !endEmail && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
+  if (!name && !email && !phone && !endName && !endEmail && !endPhone && !billTo && !job?.lead_source && !enquiry?.lead_source && !invoiceName && !invoiceEmail && !invoiceAddress && !reportAddresseeName && !introducerName && !introducerEmail) return '';
 
   const hasInvoice = invoiceName || invoiceEmail || invoiceAddress;
   return `
@@ -602,12 +611,20 @@ function renderContactDetails() {
           ${kv('Company', escapeHtml(company || ''))}
           ${kv('Email', mailto(email))}
           ${kv('Phone', phone ? `<a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>` : '')}` : ''}
-        ${(endName || endEmail) ? `<div class="kv-group">End client / site contact</div>
+        ${asker ? `<div class="kv-group">Asked by (at the introducer)</div>
+          ${kv('Name', escapeHtml(asker.full_name || asker.company_name || ''))}
+          ${kv('Email', mailtoList(asker.email))}
+          ${kv('Phone', asker.phone ? `<a href="tel:${escapeHtml(asker.phone)}">${escapeHtml(asker.phone)}</a>` : '')}` : ''}
+        ${(endName || endEmail || endPhone) ? `<div class="kv-group">End client / site contact</div>
           ${kv('Name', escapeHtml(endName || ''))}
-          ${kv('Email', mailto(endEmail))}` : ''}
+          ${kv('Phone', endPhone ? endPhone.split(/[,;]+/).map(p => p.trim()).filter(Boolean).map(p => `<a href="tel:${escapeHtml(p)}">${escapeHtml(p)}</a>`).join('<br>') : '')}
+          ${kv('Email', mailtoList(endEmail))}` : ''}
+        ${(billTo || job?.lead_source || enquiry?.lead_source) ? `<div class="kv-group">Billing and source</div>
+          ${kv('Bill to', escapeHtml(billTo))}
+          ${kv('Found us via', escapeHtml(job?.lead_source || enquiry?.lead_source || ''))}` : ''}
         ${hasInvoice ? `<div class="kv-group">Invoice to</div>
           ${kv('Name', escapeHtml(invoiceName || ''))}
-          ${kv('Email', mailto(invoiceEmail))}
+          ${kv('Email', mailtoList(invoiceEmail))}
           ${invoiceAddress ? kv('Address', `<span style="white-space:pre-wrap">${escapeHtml(invoiceAddress)}</span>`, { full: true }) : ''}` : ''}
         ${reportAddresseeName ? `<div class="kv-group">Report addressed to</div>${kv('Name', escapeHtml(reportAddresseeName), { full: true })}` : ''}
         ${(introducerName || introducerEmail) ? `<div class="kv-group">Also copied on quote</div>
@@ -689,8 +706,10 @@ function renderSurveyAndSiteDetails() {
         </div>`}
         ${kv('Site address', address ? `${address}${postcode ? ` <a href="https://maps.google.com/?q=${encodeURIComponent(postcode)}" target="_blank" style="font-size:12px;white-space:nowrap;">Map →</a>` : ''}` : '', { full: true, always: true })}
         ${coordinates ? kv('Coordinates', `<span class="dim" style="font-size:12.5px;">${coordinates}</span>
-            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>`, { full: true })
-          : (postcode ? kv('Coordinates', `<span class="dim">Missing</span> <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">${icon('mapPin', 12)}Get coordinates</button>`, { full: true }) : '')}
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${coordinates}').then(() => this.textContent='Copied').catch(e => console.error(e)); setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
+            <button class="btn btn-secondary btn-sm" onclick="movePin()">${icon('mapPin', 12)}Move pin</button>`, { full: true })
+          : (postcode ? kv('Coordinates', `<span class="dim">Missing</span> <button class="btn btn-secondary btn-sm" onclick="geocodePostcode()">${icon('mapPin', 12)}Get coordinates</button>
+            <button class="btn btn-secondary btn-sm" onclick="movePin()">Place pin by hand</button>`, { full: true }) : '')}
       </div>
 
       ${parkingText ? `
@@ -812,7 +831,7 @@ function renderJob() {
           </div>
           <div id="financialView">
             <div class="kv">
-              ${kv('Agreed', job.agreed_amount ? `<span style="font-size:15px;font-weight:700;color:var(--green-mid);">${money(job.agreed_amount)}</span>` : '', { always: true })}
+              ${kv('Agreed', job.agreed_amount ? `<span style="font-size:15px;font-weight:700;color:var(--green-mid);">${money(job.agreed_amount)}</span>${Number(job.urgency_surcharge) ? ` <span class="dim" style="font-size:12px;">includes ${money(job.urgency_surcharge)} urgency</span>` : ''}` : '', { always: true })}
               ${kv('Quoted', money(job.quoted_amount), { always: true })}
               ${kv('Urgency fee', money(job.urgency_surcharge), { always: true })}
               ${kv('Travel cost', money(enquiry?.travel_cost), { always: true })}
@@ -832,12 +851,13 @@ function renderJob() {
           <div id="financialEdit" style="display:none;margin-top:4px;">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
               <div class="form-group">
-                <label>Agreed (£)</label>
+                <label>Agreed total (£)</label>
                 <input type="number" class="form-control" id="finAgreed" step="0.01" min="0" value="${job.agreed_amount || ''}">
+                <div class="hint">Includes the urgency fee.</div>
               </div>
               <div class="form-group">
                 <label>Urgency fee (£)</label>
-                <input type="number" class="form-control" id="finSurcharge" step="0.01" min="0" value="${job.urgency_surcharge || ''}">
+                <input type="number" class="form-control" id="finSurcharge" step="0.01" min="0" value="${job.urgency_surcharge || ''}" data-prev="${job.urgency_surcharge || 0}" oninput="finSurchargeChanged(this)">
               </div>
               <div class="form-group">
                 <label>Surveyor pay (£)</label>
@@ -1171,9 +1191,14 @@ function openEditDetails() {
       <div class="two">${f('c_name', 'Name', e.contact_name)}${f('c_company', 'Company', e.company)}</div>
       <div class="two">${f('c_email', 'Email', e.contact_email)}${f('c_phone', 'Phone', e.contact_phone)}</div>` : ''}
       <div class="kv-group" style="margin:10px 0 4px;">End client / site contact</div>
-      <div class="two">${f('end_name', 'Name', job.end_client_name)}${f('end_email', 'Email', job.end_client_email)}</div>
+      <div class="two">${f('end_name', 'Name', job.end_client_name)}${f('end_phone', 'Phone(s)', job.end_client_phone)}</div>
+      ${f('end_email', 'Email(s), separate several with commas', job.end_client_email)}
+      <div class="form-group"><label>Bill to</label><select class="form-control" id="ej_bill_to">
+        <option value="">Not set</option>
+        <option value="introducer" ${job.bill_to === 'introducer' ? 'selected' : ''}>The introducer</option>
+        <option value="end_client" ${job.bill_to === 'end_client' ? 'selected' : ''}>The end client</option></select></div>
       <div class="kv-group" style="margin:10px 0 4px;">Invoice to</div>
-      <div class="two">${f('bill_name', 'Name', job.billing_contact_name)}${f('bill_email', 'Email', job.billing_contact_email)}</div>
+      <div class="two">${f('bill_name', 'Name', job.billing_contact_name)}${f('bill_email', 'Email(s)', job.billing_contact_email)}</div>
       <div class="form-group"><label>Invoice address</label><textarea class="form-control" id="ej_bill_addr" rows="2">${escapeHtml(job.billing_address || '')}</textarea></div>
       ${f('report_to', 'Report addressed to', job.report_addressee_name)}
       <div class="modal-footer">
@@ -1191,12 +1216,17 @@ async function saveEditDetails() {
   const g = id => { const el = document.getElementById('ej_' + id); return el ? (el.value || '').trim() || null : null; };
   const reference = g('reference');
   if (!reference) { showToast('Reference cannot be empty', 'error'); return; }
+  for (const id of ['end_email', 'bill_email', 'c_email']) {
+    const bad = badEmail(g(id));
+    if (bad) { showToast(`"${bad}" does not look like an email address`, 'error'); return; }
+  }
   const postcode = (g('postcode') || '').toUpperCase() || null;
   const jobUpd = {
     reference,
     survey_type: document.getElementById('ej_type').value || null,
     site_street: g('street'), site_city: g('city'), site_postcode: postcode,
-    end_client_name: g('end_name'), end_client_email: g('end_email'),
+    end_client_name: g('end_name'), end_client_email: g('end_email'), end_client_phone: g('end_phone'),
+    bill_to: document.getElementById('ej_bill_to').value || null,
     billing_contact_name: g('bill_name'), billing_contact_email: g('bill_email'),
     billing_address: g('bill_addr'), report_addressee_name: g('report_to'),
   };
@@ -1225,6 +1255,28 @@ async function saveEditDetails() {
   }
 }
 
+
+// Urgency fee edited in the financials form: move the total by the same amount.
+function finSurchargeChanged(el) {
+  const prev = Number(el.dataset.prev) || 0, now = Number(el.value) || 0;
+  const agreed = document.getElementById('finAgreed');
+  if (agreed.value !== '') agreed.value = Math.round((Number(agreed.value) - prev + now) * 100) / 100;
+  el.dataset.prev = now;
+}
+
+// Drag-the-pin editor for the site location.
+function movePin() {
+  openPinEditor({
+    lat: job.site_lat, lng: job.site_lng, postcode: job.site_postcode,
+    onSave: async ({ lat, lng }) => {
+      await dbUpdate('jobs', `id=eq.${jobId}`, { site_lat: lat, site_lng: lng });
+      Object.assign(job, { site_lat: lat, site_lng: lng });
+      showToast('Pin saved');
+      renderJob();
+    },
+  });
+}
+
 async function updateStates() {
   const urgency_state = document.getElementById('urgencySelect').value;
   const dispatch_state = document.getElementById('dispatchSelect').value;
@@ -1235,6 +1287,21 @@ async function updateStates() {
   if (tier && urgency_state !== job.urgency_state) {
     updates.deadline_tier = tier.tier;
     updates.sla_deadline  = addWorkingDays(new Date(), tier.days);
+    // Offer to move the urgency fee (and the total it is part of) to the
+    // amount in Settings for the new deadline.
+    try {
+      const tiers = await loadSurchargeTiers();
+      const newFee = tiers.find(t => t.tier === tier.tier)?.surcharge ?? 0;
+      const oldFee = Number(job.urgency_surcharge) || 0;
+      if (newFee !== oldFee) {
+        const newTotal = job.agreed_amount != null ? Number(job.agreed_amount) - oldFee + newFee : null;
+        if (confirm(`Change the urgency fee from £${oldFee} to £${newFee}` +
+            (newTotal != null ? `, making the agreed total £${newTotal}` : '') + '?\n\nCancel keeps the fee as it is.')) {
+          updates.urgency_surcharge = newFee;
+          if (newTotal != null) updates.agreed_amount = newTotal;
+        }
+      }
+    } catch (e) { /* settings unreadable: leave the fee alone */ }
   }
   try {
     await dbUpdate('jobs', `id=eq.${jobId}`, updates);
@@ -2374,8 +2441,7 @@ async function createStage2Job() {
 
   try {
     // Same options and surcharges as the enquiry form
-    const surchargeMap = { '3days': 200, '5days': 150, '10days': 75, '15days': 0 };
-    const urgency_surcharge = surchargeMap[deadline] || 0;
+    const urgency_surcharge = (await loadSurchargeTiers()).find(t => t.tier === deadline)?.surcharge || 0;
     const urgency_state = urgencyFromTier(deadline);
 
     const stage2Reference = job.reference ? `${job.reference}-1` : null;

@@ -18,6 +18,7 @@ requireAuth();
 
 let allClients = [];
 let activeFilter = 'all';
+let showArchived = false;
 let searchQuery = '';
 let sort = { key: null, dir: 'asc' };
 let activeIntroducer = 'all';
@@ -55,6 +56,8 @@ async function init() {
             <select class="form-control" id="introducerFilter" style="max-width:320px;" onchange="setIntroducer(this.value)">
               <option value="all">Introduced by: anyone</option>
             </select>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-left:12px;cursor:pointer;">
+              <input type="checkbox" onchange="showArchived = this.checked; renderTable();"> Show archived</label>
           </div>
           <div id="clientsTable"><div class="loading"><div class="spinner"></div><br>Loading clients...</div></div>
         </div>
@@ -67,7 +70,7 @@ async function init() {
 async function loadClients() {
   try {
     const data = await dbGet('clients', {
-      'select': 'id,client_type,client_category,full_name,company_name,email,phone,address_city,address_county,created_at',
+      'select': '*',
       'order': 'created_at.desc',
       'limit': 1000
     });
@@ -89,7 +92,7 @@ async function loadClients() {
     document.getElementById('introducerFilter').innerHTML = `
       <option value="all">Introduced by: anyone</option>
       <option value="none" ${activeIntroducer === 'none' ? 'selected' : ''}>Direct (no introducer)</option>
-      ${introducers.map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}`;
+      ${introducers.filter(i => introducedCount[i.id]).map(i => `<option value="${i.id}" ${activeIntroducer === i.id ? 'selected' : ''}>${escapeHtml(introducerLabel(i))}</option>`).join('')}`;
     renderTable();
   } catch (e) {
     document.getElementById('clientsTable').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
@@ -102,7 +105,7 @@ function getClientName(c) {
 
 // Introducer text for a client row: who introduced them, or (for an introducer) how many jobs they sent
 function introducerText(c) {
-  if (c.client_type === 'agent') {
+  if (c.client_type === 'agent' || introducedCount[c.id]) {
     const n = introducedCount[c.id] || 0;
     return `Introducer · ${n} job${n !== 1 ? 's' : ''}`;
   }
@@ -110,7 +113,7 @@ function introducerText(c) {
 }
 
 function renderTable() {
-  let filtered = allClients;
+  let filtered = showArchived ? allClients : allClients.filter(c => !c.is_archived);
 
   if (activeIntroducer === 'none') {
     filtered = filtered.filter(c => c.client_type !== 'agent' && !introducersByClient[c.id]);

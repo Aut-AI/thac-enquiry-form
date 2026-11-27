@@ -361,10 +361,17 @@ function renderView() {
                 ${surveyor.user_id ? 'Update' : 'Link'}
               </button>
             </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
             ${surveyor.user_id && surveyor.status !== 'archived' ? `
             <button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="archiveSurveyor()">
               Archive Surveyor
             </button>` : ''}
+            ${!(surveyor.email || '').endsWith('@deleted.invalid') ? `
+            <button class="btn btn-secondary btn-sm" style="color:#dc2626;" onclick="deleteSurveyor()">
+              ${icon('trash', 13)}Delete Surveyor
+            </button>` : ''}
+            </div>
+            <div class="hint" style="margin-top:6px;">Archive hides them. Delete wipes their details and login, so their email can be used again; their past jobs stay, shown as "Deleted Surveyor".</div>
           </div>
         </div>
 
@@ -547,6 +554,26 @@ async function linkUserId() {
     showToast('App account linked — surveyor can now log in');
     renderView();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+
+// Admin delete (Trevor, 27 Nov 2026): same as the app's "Delete my account",
+// run by an admin. Frees the email for reuse. Refused while they hold a live job.
+async function deleteSurveyor() {
+  const name = surveyor.full_name || 'this surveyor';
+  if (!confirm(`Delete ${name}?\n\nTheir personal details, documents and login are removed for good, and their email can be used again. Past jobs stay, shown as "Deleted Surveyor".`)) return;
+  if (prompt('Type DELETE to confirm') !== 'DELETE') return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-surveyor-account`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surveyor_id: surveyorId }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `Error ${res.status}`);
+    showToast('Surveyor deleted');
+    setTimeout(() => { window.location.href = 'surveyors.html'; }, 700);
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function archiveSurveyor() {

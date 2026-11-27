@@ -15,6 +15,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // history. Wiping every personal field and cutting the auth link achieves
 // the same privacy outcome (no PII left, can't log in again) without
 // breaking that.
+//
+// Admin mode (Trevor, 27 Nov 2026): a CRM admin can send { surveyor_id } to
+// delete any surveyor the same way. Refused while they hold a live job
+// (allocated or survey done), so it is reallocated or taken back first. The
+// login is found by user_id, or by email for surveyors archived before this
+// existed (archiving cleared user_id but left the login, which kept the
+// email in use).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SB_THAC_SERVICE_ROLE_KEY")!;
@@ -47,13 +54,54 @@ serve(async (req) => {
   const { data: { user: caller }, error: authError } = await admin.auth.getUser(token);
   if (authError || !caller) return json({ error: "Invalid or expired session" }, 401);
 
+  let body: { surveyor_id?: string } = {};
+  try { body = await req.json(); } catch { /* self-delete sends no body */ }
+
   try {
-    const { data: surveyor, error: lookupError } = await admin
-      .from("surveyors")
-      .select("id")
-      .eq("user_id", caller.id)
-      .maybeSingle();
-    if (lookupError) throw lookupError;
+    let surveyor: { id: string } | null = null;
+    let loginId: string | null = caller.id;
+
+    if (body.surveyor_id) {
+      const { data: me } = await admin.from("users").select("role,is_active").eq("id", caller.id).maybeSingle();
+      if (!me || me.role !== "admin" || !me.is_active) return json({ error: "Only admins can delete surveyors" }, 403);
+
+      const { data: target, error: tErr } = await admin
+        .from("surveyors").select("id,user_id,email").eq("id", body.surveyor_id).maybeSingle();
+      if (tErr) throw tErr;
+      if (!target) return json({ error: "Surveyor not found" }, 404);
+
+      const { data: live } = await admin.from("jobs").select("reference")
+        .or(`surveyor_id.eq.${target.id},allocated_surveyor_id.eq.${target.id}`)
+        .in("dispatch_state", ["red", "orange", "yellow"]);
+      const holding = (live || []).filter(Boolean);
+      if (holding.length) {
+        return json({ error: `Still holds ${holding.length} live job(s): ${holding.map((j) => j.reference || "?").join(", ")}. Reallocate or take them back first.` }, 409);
+      }
+
+      surveyor = { id: target.id };
+      loginId = target.user_id;
+      if (!loginId && target.email && !target.email.endsWith("@deleted.invalid")) {
+        for (let page = 1; page <= 10 && !loginId; page++) {
+          const { data: list } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+          const hit = list?.users?.find((u) => (u.email || "").toLowerCase() === target.email.toLowerCase());
+          if (hit) loginId = hit.id;
+          if (!list?.users?.length || list.users.length < 200) break;
+        }
+      }
+      // Never delete the login of a CRM user (someone who is both).
+      if (loginId) {
+        const { data: crm } = await admin.from("users").select("id").eq("id", loginId).maybeSingle();
+        if (crm) loginId = null;
+      }
+    } else {
+      const { data, error: lookupError } = await admin
+        .from("surveyors")
+        .select("id")
+        .eq("user_id", caller.id)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
+      surveyor = data;
+    }
 
     // No surveyor row (e.g. still pending admin approval) -- nothing to
     // anonymise, but the account itself still needs deleting.
@@ -126,8 +174,10 @@ serve(async (req) => {
     // Cuts off login for good -- the part that actually satisfies "delete
     // my account", everything above is just making sure nothing personal
     // is left behind once it does.
-    const { error: deleteError } = await admin.auth.admin.deleteUser(caller.id);
-    if (deleteError) throw deleteError;
+    if (loginId) {
+      const { error: deleteError } = await admin.auth.admin.deleteUser(loginId);
+      if (deleteError) throw deleteError;
+    }
 
     return json({ success: true });
   } catch (e) {

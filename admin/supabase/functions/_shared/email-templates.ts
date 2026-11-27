@@ -122,7 +122,20 @@ export function detailRow(label: string, value: string): string {
 
 // ── Send via Resend ─────────────────────────────────────────
 export async function sendEmail(to: string | string[], subject: string, html: string) {
-  const toList = Array.isArray(to) ? to : [to];
+  // Any field may hold several addresses ("a@x.com, b@y.com; c@z.com"):
+  // everyone on the list gets the email (Trevor, 27 Nov 2026). Duplicates
+  // and blanks are dropped.
+  const toList = [...new Set((Array.isArray(to) ? to : [to])
+    .flatMap((t) => String(t || '').split(/[,;\s]+/))
+    .map((t) => t.trim())
+    .filter((t) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)))];
+  if (!toList.length) throw new Error('No valid email address to send to');
+  // Alerts to Trevor say where and why they were sent, so it is clear which
+  // inbox CRM emails land in.
+  if (toList.some((t) => t.toLowerCase() === ADMIN_EMAIL.toLowerCase())) {
+    html = html.replace('This is an automated notification.',
+      `This is an automated notification from the THAC CRM, sent to ${ADMIN_EMAIL} because it is the CRM's admin inbox.`);
+  }
   const cc = TESTING_CC && !toList.includes(TESTING_CC) ? [TESTING_CC] : undefined;
 
   const res = await fetch('https://api.resend.com/emails', {

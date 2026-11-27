@@ -73,11 +73,22 @@ serve(async (req) => {
 
     // 1. Insert the enquiry. The on_enquiry_insert DB trigger fires
     //    notify-new-enquiry automatically, same as always.
-    const enqRes = await sbFetch("enquiries", {
+    let enqRes = await sbFetch("enquiries", {
       method: "POST",
       headers: { "Prefer": "return=representation" },
       body: JSON.stringify(payload),
     });
+    // "How did you hear about us?" (27 Nov 2026) needs the lead_source
+    // column; if the migration hasn't run yet, save the enquiry without it
+    // rather than losing it.
+    if (!enqRes.ok && payload.lead_source) {
+      delete payload.lead_source;
+      enqRes = await sbFetch("enquiries", {
+        method: "POST",
+        headers: { "Prefer": "return=representation" },
+        body: JSON.stringify(payload),
+      });
+    }
 
     if (!enqRes.ok) {
       console.error("Enquiry insert failed:", await enqRes.text());
